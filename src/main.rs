@@ -1,258 +1,231 @@
+// src/main.rs
+use anyhow::{anyhow, Result};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use std::env;
-use std::fs;
-use std::io::{self, Write};
-use log::{debug, error, info, warn};
-use env_logger;
+use serde_json::{json, Value};
+use std::{env, fs};
+use tokio::io::{self, AsyncBufReadExt};
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-struct ChatMessage {
-    role: String,
-    // content is optional because tool calls don't include content
-    content: Option<String>,
-    // the name of the tool when the role is "tool"
-    name: Option<String>,
-    // capture any tool calls the assistant makes
-    function_call: Option<FunctionCall>,
+#[tokio::main]
+async fn main() -> Result<()> {
+    dotenvy::dotenv().ok();
+    let api_key = env::var("OPENAI_API_KEY")
+        .map_err(|_| anyhow!("Set the OPENAI_API_KEY environment variable"))?;
+
+    let client = Client::new();
+    let mut messages: Vec<Message> = vec![Message::system(
+        "You are a helpful assistant. Feel free to call the read_file function when useful.",
+    )];
+
+    let tools = [Tool::read_file_schema()];
+
+    let stdin = io::BufReader::new(io::stdin());
+    let mut lines = stdin.lines();
+
+    println!("👋  Type your message (Ctrl-C to quit):");
+
+    while let Ok(Some(user_input)) = lines.next_line().await {
+        if user_input.trim().is_empty() {
+            continue;
+        }
+        messages.push(Message::user(user_input));
+
+        // --- 1. Ask the model (may or may not include a tool call) --------------------------
+        let mut response = create_chat_completion(&client, &api_key, &messages, &tools).await?;
+
+        // --- 2. If the model decided to call tools, execute them and loop once -------------
+        if let Some(tool_calls) = response.tool_calls.take() {
+            for tc in tool_calls {
+                if tc.function.name == "read_file" {
+                    // Parse {"path":"..."}
+                    #[derive(Deserialize)]
+                    struct Args {
+                        path: String,
+                    }
+                    let Args { path } = serde_json::from_str(&tc.function.arguments)?;
+                    let file_contents = fs::read_to_string(&path)
+                        .map_err(|e| anyhow!("read_file error on {path:?}: {e}"))?;
+
+                    // Append tool result so the model can craft its answer
+                    messages.push(Message::tool(
+                        &tc.id,
+                        &file_contents
+                            .chars()
+                            .take(8_000) // keep context small – truncate big files
+                            .collect::<String>(),
+                    ));
+                }
+            }
+            // Ask the model again, this time including the tool results
+            response = create_chat_completion(&client, &api_key, &messages, &tools).await?;
+        }
+
+        // --- 3. Show final assistant answer and store it in the chat history ---------------
+        if let Some(content) = response.content {
+            println!("\n🤖 {content}\n");
+            messages.push(Message::assistant(content));
+        } else {
+            println!("(No assistant content returned)\n");
+        }
+        print!("💬  ");
+    }
+    Ok(())
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-struct FunctionCall {
-    name: String,
-    arguments: String, // JSON string in the new API
+// ------------------------------------------------------------------------------------------
+// OpenAI helper -----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------
+
+#[derive(Serialize)]
+struct ChatRequest<'a> {
+    model: &'static str,
+    messages: &'a [Message],
+    tools: &'a [Tool],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_choice: Option<&'static str>,
 }
 
-#[derive(Serialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-struct ChatRequest {
-    model: String,
-    messages: Vec<ChatMessage>,
-    // list of tools we offer
-    functions: Option<Vec<Tool>>,
-}
-
-#[derive(Serialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-struct Tool {
-    #[serde(rename = "type")]
-    tool_type: String,
-    function: FunctionDefinition,
-}
-
-#[derive(Serialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-struct FunctionDefinition {
-    name: String,
-    description: String,
-    parameters: serde_json::Value,
-}
-
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct ChatResponse {
     choices: Vec<Choice>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Choice {
-    message: ChatMessage,
+    message: AssistantMessage,
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
-    dotenv::dotenv().ok();
-    let api_key = match env::var("OPENAI_API_KEY") {
-        Ok(key) => {
-            debug!("API key loaded successfully");
-            key
-        },
-        Err(e) => {
-            error!("Failed to load API key: {}", e);
-            return Err(e.into());
-        }
-    };
-    
-    let client = Client::new();
-    let mut conversation_history = Vec::new();
+#[derive(Deserialize)]
+struct AssistantMessage {
+    #[serde(default)]
+    content: Option<String>,
+    #[serde(default)]
+    tool_calls: Option<Vec<ToolCall>>,
+}
 
-    // define our tools using the new format
-    let tools = vec![
+#[derive(Deserialize)]
+struct ToolCall {
+    id: String,
+    #[serde(rename = "type")]
+    _type: String,
+    function: ToolCallFunction,
+}
+
+#[derive(Deserialize)]
+struct ToolCallFunction {
+    name: String,
+    arguments: String,
+}
+
+async fn create_chat_completion(
+    client: &Client,
+    api_key: &str,
+    messages: &[Message],
+    tools: &[Tool],
+) -> Result<AssistantMessage> {
+    let req_body = ChatRequest {
+        model: "gpt-4o-mini", // or any chat-model that supports function calling
+        messages,
+        tools,
+        tool_choice: Some("auto"),
+    };
+    let res = client
+        .post("https://api.openai.com/v1/chat/completions")
+        .bearer_auth(api_key)
+        .json(&req_body)
+        .send()
+        .await?
+        .error_for_status()?;
+
+    let chat_res: ChatResponse = res.json().await?;
+    Ok(chat_res.choices.into_iter().next().unwrap().message)
+}
+
+// ------------------------------------------------------------------------------------------
+// Schema & message helpers -----------------------------------------------------------------
+// ------------------------------------------------------------------------------------------
+
+#[derive(Clone, Serialize, Deserialize)]
+struct Tool {
+    #[serde(rename = "type")]
+    _type: &'static str,
+    function: ToolSchema,
+}
+
+impl Tool {
+    fn read_file_schema() -> Self {
         Tool {
-            tool_type: "function".to_string(),
-            function: FunctionDefinition {
-                name: "read_file".to_string(),
-                description: "Read a file from the local filesystem".to_string(),
+            _type: "function",
+            function: ToolSchema {
+                name: "read_file",
+                description: "Read the content of a UTF-8 text file given an absolute or relative path.",
                 parameters: json!({
                     "type": "object",
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "The file system path to read"
+                            "description": "Absolute or relative path to the text file on disk."
                         }
                     },
-                    "required": ["path"]
+                    "required": ["path"],
+                    "additionalProperties": false
                 }),
-            }
+                strict: true,
+            },
         }
-    ];
-
-    info!("Starting code-g CLI");
-    println!("Welcome to the code-g CLI! (Type 'quit' to exit)");
-
-    loop {
-        print!("> ");
-        io::stdout().flush()?;
-        let mut user_input = String::new();
-        io::stdin().read_line(&mut user_input)?;
-        let user_input = user_input.trim();
-        if user_input.eq_ignore_ascii_case("quit") {
-            info!("User requested to quit");
-            println!("Goodbye!");
-            break;
-        }
-
-        debug!("Received user input: {}", user_input);
-
-        // user message
-        conversation_history.push(ChatMessage {
-            role: "user".into(),
-            content: Some(user_input.to_string()),
-            name: None,
-            function_call: None,
-        });
-
-        debug!("Making API request to OpenAI");
-        // first call: with tools enabled
-        let body = ChatRequest {
-            model: "gpt-4.1".into(),
-            messages: conversation_history.clone(),
-            functions: Some(tools.clone()),
-        };
-
-        debug!("Body: {:?}", body);
-
-        let resp: ChatResponse = match client
-            .post("https://api.openai.com/v1/chat/completions")
-            .bearer_auth(&api_key)
-            .json(&body)
-            .send()
-            .await {
-                Ok(response) => {
-                    debug!("Received response from OpenAI");
-                    match response.json().await {
-                        Ok(json) => json,
-                        Err(e) => {
-                            error!("Failed to parse OpenAI response: {}", e);
-                            return Err(e.into());
-                        }
-                    }
-                },
-                Err(e) => {
-                    error!("Failed to send request to OpenAI: {}", e);
-                    return Err(e.into());
-                }
-            };
-
-        debug!("Response: {:?}", resp);
-
-        let mut assistant_msg: ChatMessage = resp.choices[0].message.clone();
-
-        debug!("Assistant message: {:?}", assistant_msg);
-
-        // if the model made tool calls…
-        if let Some(function_call) = &assistant_msg.function_call {
-            debug!("Assistant requested {} tool call(s)", function_call.name);
-            
-            // Add the assistant's message with tool calls to history
-            conversation_history.push(assistant_msg.clone());
-            
-            // Process each tool call
-            if function_call.name == "read_file" {
-                debug!("Processing read_file tool call with id: {}", function_call.name);
-                
-                    // parse the arguments (now a JSON string)
-                    let args: serde_json::Value = match serde_json::from_str(&function_call.arguments) {
-                        Ok(args) => args,
-                        Err(e) => {
-                            error!("Failed to parse tool call arguments: {}", e);
-                            continue;
-                        }
-                    };
-                    
-                    let path = args
-                        .get("path")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
-                    debug!("Attempting to read file: {}", path);
-                    
-                    // actually read the file
-                    let file_content = match fs::read_to_string(path) {
-                        Ok(txt) => {
-                            debug!("Successfully read file: {}", path);
-                            txt
-                        },
-                        Err(e) => {
-                            warn!("Error reading file {}: {}", path, e);
-                            format!("Error reading {}: {}", path, e)
-                        }
-                    };
-
-                    // push our tool response
-                    conversation_history.push(ChatMessage {
-                        role: "tool".into(),
-                        name: None,
-                        content: Some(file_content),
-                        function_call: None,
-                    });
-            }
-
-            debug!("Making follow-up API request to OpenAI");
-            // now ask the model to continue, without re-including tools
-            let followup = ChatRequest {
-                model: "gpt-4.1".into(),
-                messages: conversation_history.clone(),
-                functions: None, // no need to supply again
-            };
-
-            let resp2: ChatResponse = match client
-                .post("https://api.openai.com/v1/chat/completions")
-                .bearer_auth(&api_key)
-                .json(&followup)
-                .send()
-                .await {
-                    Ok(response) => {
-                        debug!("Received follow-up response from OpenAI");
-                        match response.json().await {
-                            Ok(json) => json,
-                            Err(e) => {
-                                error!("Failed to parse follow-up OpenAI response: {}", e);
-                                return Err(e.into());
-                            }
-                        }
-                    },
-                    Err(e) => {
-                        error!("Failed to send follow-up request to OpenAI: {}", e);
-                        return Err(e.into());
-                    }
-                };
-
-            assistant_msg = resp2.choices[0].message.clone();
-        }
-
-        // print assistant output
-        if let Some(content) = &assistant_msg.content {
-            debug!("Printing assistant response");
-            println!("\nAssistant: {}\n", content);
-        }
-
-        // add assistant to history
-        conversation_history.push(assistant_msg);
-        debug!("Conversation history updated, length: {}", conversation_history.len());
     }
+}
 
-    Ok(())
+#[derive(Clone, Serialize, Deserialize)]
+struct ToolSchema {
+    name: &'static str,
+    description: &'static str,
+    parameters: Value,
+    strict: bool,
+}
+
+#[derive(Clone, Serialize)]
+struct Message {
+    role: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_call_id: Option<String>,
+}
+
+impl Message {
+    fn system<S: Into<String>>(text: S) -> Self {
+        Message {
+            role: "system",
+            content: Some(text.into()),
+            name: None,
+            tool_call_id: None,
+        }
+    }
+    fn user<S: Into<String>>(text: S) -> Self {
+        Message {
+            role: "user",
+            content: Some(text.into()),
+            name: None,
+            tool_call_id: None,
+        }
+    }
+    fn assistant<S: Into<String>>(text: S) -> Self {
+        Message {
+            role: "assistant",
+            content: Some(text.into()),
+            name: None,
+            tool_call_id: None,
+        }
+    }
+    fn tool<S: Into<String>>(call_id: &str, result: S) -> Self {
+        Message {
+            role: "tool",
+            content: Some(result.into()),
+            name: None,
+            tool_call_id: Some(call_id.to_string()),
+        }
+    }
 }

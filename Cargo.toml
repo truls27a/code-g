@@ -3,12 +3,10 @@ name = "code-g"
 version = "0.1.0"
 edition = "2024"
 
-# Cargo.toml
 [dependencies]
-reqwest = { version = "0.11", features = ["json"] }
-tokio = { version = "1", features = ["full"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-dotenv = "0.15"  # Optional for .env support
-log = "0.4"
-env_logger = "0.10"
+reqwest = { version = "0.12", features = ["json", "stream"] }
+tokio   = { version = "1.37", features = ["full"] }
+serde   = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow  = "1.0"
+dotenvy = "0.15"          # optional convenience – picks up `OPENAI_API_KEY` from `.env`
