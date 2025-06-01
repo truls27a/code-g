@@ -1,11 +1,14 @@
 // src/main.rs
+mod tui;
+
 use anyhow::{anyhow, Result};
 use log::{debug, error, info, warn};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::{env, fs};
-use tokio::io::{self, AsyncBufReadExt};
+use std::{env, fs, sync::Arc};
+use tokio::sync::{mpsc, Mutex};
+use tui::{ChatMessage, TuiEvent};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -26,94 +29,154 @@ async fn main() -> Result<()> {
     let client = Client::new();
     debug!("HTTP client initialized");
     
-    let mut messages: Vec<Message> = vec![Message::system(
+    let messages: Arc<Mutex<Vec<Message>>> = Arc::new(Mutex::new(vec![Message::system(
         "You are a helpful assistant. Feel free to call the read_file function when useful.",
-    )];
+    )]));
     debug!("Initial system message added to conversation");
 
     let tools = [Tool::read_file_schema()];
     debug!("Tools schema initialized");
 
-    let stdin = io::BufReader::new(io::stdin());
-    let mut lines = stdin.lines();
+    // Start the TUI and get communication channels
+    let (tui_message_tx, mut tui_event_rx) = tui::run_tui().await?;
+    info!("TUI started successfully");
 
-    println!("👋  Type your message (Ctrl-C to quit):");
-
-    while let Ok(Some(user_input)) = lines.next_line().await {
-        if user_input.trim().is_empty() {
-            continue;
-        }
-        
-        info!("User input received: {}", user_input.chars().take(100).collect::<String>());
-        messages.push(Message::user(user_input));
-
-        // --- 1. Ask the model (may or may not include a tool call) --------------------------
-        debug!("Sending chat completion request to OpenAI");
-        let mut response = create_chat_completion(&client, &api_key, &messages, &tools).await?;
-
-        // --- 2. If the model decided to call tools, execute them and loop once -------------
-        if let Some(tool_calls) = response.tool_calls.take() {
-            info!("Model requested {} tool call(s)", tool_calls.len());
-            
-            // First, add the assistant message with tool calls to the conversation
-            messages.push(Message::assistant_with_tool_calls(tool_calls.clone()));
-            
-            for tc in tool_calls {
-                debug!("Processing tool call: {} ({})", tc.function.name, tc.id);
-                
-                if tc.function.name == "read_file" {
-                    // Parse {"path":"..."}
-                    #[derive(Deserialize)]
-                    struct Args {
-                        path: String,
-                    }
-                    let Args { path } = serde_json::from_str(&tc.function.arguments)
-                        .map_err(|e| {
-                            error!("Failed to parse tool call arguments: {}", e);
-                            anyhow!("Invalid tool call arguments: {}", e)
-                        })?;
-                    
-                    info!("Reading file: {}", path);
-                    let file_contents = fs::read_to_string(&path)
-                        .map_err(|e| {
-                            error!("Failed to read file '{}': {}", path, e);
-                            anyhow!("read_file error on {path:?}: {e}")
-                        })?;
-
-                    let truncated_content = file_contents
-                        .chars()
-                        .take(8_000) // keep context small – truncate big files
-                        .collect::<String>();
-                    
-                    if file_contents.len() > 8_000 {
-                        warn!("File '{}' was truncated from {} to 8000 characters", path, file_contents.len());
-                    }
-                    
-                    debug!("File read successfully, content length: {} characters", truncated_content.len());
-
-                    // Append tool result so the model can craft its answer
-                    messages.push(Message::tool(&tc.id, &truncated_content));
+    // Handle events from the TUI
+    while let Some(event) = tui_event_rx.recv().await {
+        match event {
+            TuiEvent::UserInput(user_input) => {
+                if user_input.trim().is_empty() {
+                    continue;
                 }
+                
+                info!("User input received: {}", user_input.chars().take(100).collect::<String>());
+                
+                // Clone what we need for this iteration
+                let client = client.clone();
+                let api_key = api_key.clone();
+                let messages_clone = Arc::clone(&messages);
+                let tools = tools.clone();
+                let tui_tx = tui_message_tx.clone();
+                
+                // Handle the chat request in a separate task to avoid blocking the TUI
+                tokio::spawn(async move {
+                    if let Err(e) = handle_chat_request(client, api_key, messages_clone, tools, user_input, tui_tx).await {
+                        error!("Error handling chat request: {}", e);
+                    }
+                });
             }
-            
-            // Ask the model again, this time including the tool results
-            debug!("Sending follow-up chat completion request with tool results");
-            response = create_chat_completion(&client, &api_key, &messages, &tools).await?;
+            TuiEvent::Quit => {
+                info!("Quit event received");
+                break;
+            }
         }
-
-        // --- 3. Show final assistant answer and store it in the chat history ---------------
-        if let Some(content) = response.content {
-            info!("Assistant response received, length: {} characters", content.len());
-            println!("\n🤖 {content}\n");
-            messages.push(Message::assistant(content));
-        } else {
-            warn!("No assistant content returned in response");
-            println!("(No assistant content returned)\n");
-        }
-        print!("💬  ");
     }
     
     info!("Chat application shutting down");
+    Ok(())
+}
+
+async fn handle_chat_request(
+    client: Client,
+    api_key: String,
+    messages: Arc<Mutex<Vec<Message>>>,
+    tools: [Tool; 1],
+    user_input: String,
+    tui_tx: mpsc::UnboundedSender<ChatMessage>,
+) -> Result<()> {
+    // Add user message
+    {
+        let mut msgs = messages.lock().await;
+        msgs.push(Message::user(user_input));
+    }
+
+    // --- 1. Ask the model (may or may not include a tool call) --------------------------
+    debug!("Sending chat completion request to OpenAI");
+    let msgs = {
+        let msgs = messages.lock().await;
+        msgs.clone()
+    };
+    
+    let mut response = create_chat_completion(&client, &api_key, &msgs, &tools).await?;
+
+    // --- 2. If the model decided to call tools, execute them and loop once -------------
+    if let Some(tool_calls) = response.tool_calls.take() {
+        info!("Model requested {} tool call(s)", tool_calls.len());
+        
+        // First, add the assistant message with tool calls to the conversation
+        {
+            let mut msgs = messages.lock().await;
+            msgs.push(Message::assistant_with_tool_calls(tool_calls.clone()));
+        }
+        
+        for tc in tool_calls {
+            debug!("Processing tool call: {} ({})", tc.function.name, tc.id);
+            
+            if tc.function.name == "read_file" {
+                // Parse {"path":"..."}
+                #[derive(Deserialize)]
+                struct Args {
+                    path: String,
+                }
+                let Args { path } = serde_json::from_str(&tc.function.arguments)
+                    .map_err(|e| {
+                        error!("Failed to parse tool call arguments: {}", e);
+                        anyhow!("Invalid tool call arguments: {}", e)
+                    })?;
+                
+                info!("Reading file: {}", path);
+                let file_contents = fs::read_to_string(&path)
+                    .map_err(|e| {
+                        error!("Failed to read file '{}': {}", path, e);
+                        anyhow!("read_file error on {path:?}: {e}")
+                    })?;
+
+                let truncated_content = file_contents
+                    .chars()
+                    .take(8_000) // keep context small – truncate big files
+                    .collect::<String>();
+                
+                if file_contents.len() > 8_000 {
+                    warn!("File '{}' was truncated from {} to 8000 characters", path, file_contents.len());
+                }
+                
+                debug!("File read successfully, content length: {} characters", truncated_content.len());
+
+                // Append tool result so the model can craft its answer
+                {
+                    let mut msgs = messages.lock().await;
+                    msgs.push(Message::tool(&tc.id, &truncated_content));
+                }
+            }
+        }
+        
+        // Ask the model again, this time including the tool results
+        debug!("Sending follow-up chat completion request with tool results");
+        let msgs = {
+            let msgs = messages.lock().await;
+            msgs.clone()
+        };
+        response = create_chat_completion(&client, &api_key, &msgs, &tools).await?;
+    }
+
+    // --- 3. Show final assistant answer and store it in the chat history ---------------
+    if let Some(content) = response.content {
+        info!("Assistant response received, length: {} characters", content.len());
+        
+        // Send message to TUI
+        let _ = tui_tx.send(ChatMessage {
+            role: "assistant".to_string(),
+            content: content.clone(),
+        });
+        
+        {
+            let mut msgs = messages.lock().await;
+            msgs.push(Message::assistant(content));
+        }
+    } else {
+        warn!("No assistant content returned in response");
+    }
+    
     Ok(())
 }
 
