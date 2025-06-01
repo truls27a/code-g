@@ -12,7 +12,7 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame, Terminal,
 };
-use std::{io, time::Duration};
+use std::{io, time::{Duration, Instant}};
 use tokio::sync::mpsc;
 
 #[derive(Clone)]
@@ -26,6 +26,9 @@ pub struct App {
     pub input: String,
     pub input_mode: InputMode,
     pub should_quit: bool,
+    pub is_loading: bool,
+    pub loading_spinner_frame: usize,
+    pub last_spinner_update: Instant,
 }
 
 #[derive(PartialEq)]
@@ -36,8 +39,12 @@ pub enum InputMode {
 
 pub enum TuiEvent {
     UserInput(String),
+    Loading(bool),
     Quit,
 }
+
+const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const SPINNER_INTERVAL: Duration = Duration::from_millis(150);
 
 impl Default for App {
     fn default() -> App {
@@ -49,6 +56,9 @@ impl Default for App {
             input: String::new(),
             input_mode: InputMode::Editing,
             should_quit: false,
+            is_loading: false,
+            loading_spinner_frame: 0,
+            last_spinner_update: Instant::now(),
         }
     }
 }
@@ -56,6 +66,21 @@ impl Default for App {
 impl App {
     pub fn add_message(&mut self, message: ChatMessage) {
         self.messages.push(message);
+    }
+
+    pub fn set_loading(&mut self, loading: bool) {
+        self.is_loading = loading;
+        if loading {
+            self.loading_spinner_frame = 0;
+            self.last_spinner_update = Instant::now();
+        }
+    }
+
+    pub fn update_spinner(&mut self) {
+        if self.is_loading && self.last_spinner_update.elapsed() >= SPINNER_INTERVAL {
+            self.loading_spinner_frame = (self.loading_spinner_frame + 1) % SPINNER_FRAMES.len();
+            self.last_spinner_update = Instant::now();
+        }
     }
 
     pub fn submit_message(&mut self) -> Option<String> {
@@ -96,7 +121,11 @@ pub async fn run_tui() -> Result<(mpsc::UnboundedSender<ChatMessage>, mpsc::Unbo
             // Check for incoming chat messages
             while let Ok(message) = message_rx.try_recv() {
                 app.add_message(message);
+                app.set_loading(false); // Stop loading when we receive a message
             }
+
+            // Update spinner animation
+            app.update_spinner();
 
             // Draw the interface
             if let Err(_) = terminal.draw(|f| ui(f, &app)) {
@@ -104,8 +133,8 @@ pub async fn run_tui() -> Result<(mpsc::UnboundedSender<ChatMessage>, mpsc::Unbo
                 break;
             }
 
-            // Handle input events with a timeout so UI can refresh automatically
-            if let Ok(has_event) = event::poll(Duration::from_millis(100)) {
+            // Handle input events with a shorter timeout for smoother animation
+            if let Ok(has_event) = event::poll(Duration::from_millis(50)) {
                 if has_event {
                     if let Ok(Event::Key(key)) = event::read() {
                         if key.kind == KeyEventKind::Press {
@@ -121,17 +150,24 @@ pub async fn run_tui() -> Result<(mpsc::UnboundedSender<ChatMessage>, mpsc::Unbo
                                 },
                                 InputMode::Editing => match key.code {
                                     KeyCode::Enter => {
-                                        if let Some(message) = app.submit_message() {
-                                            if event_tx_clone.send(TuiEvent::UserInput(message)).is_err() {
-                                                break;
+                                        if !app.is_loading {
+                                            if let Some(message) = app.submit_message() {
+                                                app.set_loading(true); // Start loading when sending message
+                                                if event_tx_clone.send(TuiEvent::UserInput(message)).is_err() {
+                                                    break;
+                                                }
                                             }
                                         }
                                     }
                                     KeyCode::Char(c) => {
-                                        app.input.push(c);
+                                        if !app.is_loading {
+                                            app.input.push(c);
+                                        }
                                     }
                                     KeyCode::Backspace => {
-                                        app.input.pop();
+                                        if !app.is_loading {
+                                            app.input.pop();
+                                        }
                                     }
                                     KeyCode::Esc => {
                                         app.input_mode = InputMode::Normal;
@@ -171,7 +207,7 @@ fn ui(f: &mut Frame, app: &App) {
         .constraints([Constraint::Min(1), Constraint::Length(3)].as_ref())
         .split(f.area());
 
-    let messages: Vec<ListItem> = app
+    let mut messages: Vec<ListItem> = app
         .messages
         .iter()
         .enumerate()
@@ -204,30 +240,53 @@ fn ui(f: &mut Frame, app: &App) {
         })
         .collect();
 
+    // Add animated loading indicator if assistant is responding
+    if app.is_loading {
+        let spinner = SPINNER_FRAMES[app.loading_spinner_frame];
+        let loading_content = Text::from(vec![Line::from(vec![
+            Span::styled("Assistant: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            Span::styled(spinner, Style::default().fg(Color::Green)),
+        ])]);
+        messages.push(ListItem::new(loading_content));
+    }
+
     let messages_list = List::new(messages)
         .block(Block::default().borders(Borders::ALL).title("Chat"));
     f.render_widget(messages_list, chunks[0]);
 
+    let input_title = if app.is_loading { "Input (AI is responding...)" } else { "Input" };
     let input = Paragraph::new(app.input.as_str())
         .style(match app.input_mode {
             InputMode::Normal => Style::default(),
-            InputMode::Editing => Style::default().fg(Color::Yellow),
+            InputMode::Editing => if app.is_loading {
+                Style::default().fg(Color::Gray)
+            } else {
+                Style::default().fg(Color::Yellow)
+            },
         })
-        .block(Block::default().borders(Borders::ALL).title("Input"));
+        .block(Block::default().borders(Borders::ALL).title(input_title));
     f.render_widget(input, chunks[1]);
 
     match app.input_mode {
         InputMode::Normal => {}
         InputMode::Editing => {
-            f.set_cursor_position((
-                chunks[1].x + app.input.len() as u16 + 1,
-                chunks[1].y + 1,
-            ));
+            if !app.is_loading {
+                f.set_cursor_position((
+                    chunks[1].x + app.input.len() as u16 + 1,
+                    chunks[1].y + 1,
+                ));
+            }
         }
     }
 
     // Instructions
-    let instructions = Paragraph::new("Press Esc to stop editing, Enter to send message, 'q' to quit")
+    let instruction_text = if app.is_loading {
+        "Please wait while the assistant responds..."
+    } else {
+        "Press Esc to stop editing, Enter to send message, 'q' to quit"
+    };
+    
+    let instructions = Paragraph::new(instruction_text)
         .style(Style::default().fg(Color::Gray))
         .block(Block::default().borders(Borders::NONE))
         .wrap(Wrap { trim: true });
