@@ -1,6 +1,6 @@
 use anyhow::Result;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -24,7 +24,6 @@ pub struct ChatMessage {
 pub struct App {
     pub messages: Vec<ChatMessage>,
     pub input: String,
-    pub input_mode: InputMode,
     pub should_quit: bool,
     pub is_loading: bool,
     pub loading_spinner_frame: usize,
@@ -32,11 +31,6 @@ pub struct App {
     pub scroll_offset: usize,
 }
 
-#[derive(PartialEq)]
-pub enum InputMode {
-    Normal,
-    Editing,
-}
 
 pub enum TuiEvent {
     UserInput(String),
@@ -55,7 +49,6 @@ impl Default for App {
                 content: "Welcome! Start typing your message and press Enter to send.".to_string(),
             }],
             input: String::new(),
-            input_mode: InputMode::Editing,
             should_quit: false,
             is_loading: false,
             loading_spinner_frame: 0,
@@ -114,8 +107,7 @@ impl App {
         if self.scroll_offset > 0 {
             self.scroll_offset -= 1;
         }
-        }
-
+    }
 
     pub fn get_visible_messages(&self, chat_height: usize) -> (Vec<&ChatMessage>, bool) {
         let num_messages = self.messages.len();
@@ -196,51 +188,41 @@ pub async fn run_tui() -> Result<(mpsc::UnboundedSender<ChatMessage>, mpsc::Unbo
                 if has_event {
                     if let Ok(Event::Key(key)) = event::read() {
                         if key.kind == KeyEventKind::Press {
-                            match app.input_mode {
-                                InputMode::Normal => match key.code {
-                                    KeyCode::Char('e') => {
-                                        app.input_mode = InputMode::Editing;
-                                    }
-                                    KeyCode::Char('q') => {
-                                        app.should_quit = true;
-                                    }
-                                    KeyCode::Up | KeyCode::Char('k') => {
-                                        app.scroll_up();
-                                    }
-                                    KeyCode::Down | KeyCode::Char('j') => {
-                                        app.scroll_down();
-                                    }
-                                    KeyCode::End => {
-                                        app.scroll_to_bottom();
-                                    }
-                                    _ => {}
-                                },
-                                InputMode::Editing => match key.code {
-                                    KeyCode::Enter => {
-                                        if !app.is_loading {
-                                            if let Some(message) = app.submit_message() {
-                                                app.set_loading(true); // Start loading when sending message
-                                                if event_tx_clone.send(TuiEvent::UserInput(message)).is_err() {
-                                                    break;
-                                                }
+                            // Always in editing mode - handle all keys in one place
+                            match key.code {
+                                KeyCode::Enter => {
+                                    if !app.is_loading {
+                                        if let Some(message) = app.submit_message() {
+                                            app.set_loading(true); // Start loading when sending message
+                                            if event_tx_clone.send(TuiEvent::UserInput(message)).is_err() {
+                                                break;
                                             }
                                         }
                                     }
-                                    KeyCode::Char(c) => {
-                                        if !app.is_loading {
-                                            app.input.push(c);
-                                        }
+                                }
+                                KeyCode::Char(c) => {
+                                    // Handle Ctrl+C to quit
+                                    if c == 'c' && key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) {
+                                        app.should_quit = true;
+                                    } else if !app.is_loading {
+                                        app.input.push(c);
                                     }
-                                    KeyCode::Backspace => {
-                                        if !app.is_loading {
-                                            app.input.pop();
-                                        }
+                                }
+                                KeyCode::Backspace => {
+                                    if !app.is_loading {
+                                        app.input.pop();
                                     }
-                                    KeyCode::Esc => {
-                                        app.input_mode = InputMode::Normal;
-                                    }
-                                    _ => {}
-                                },
+                                }
+                                KeyCode::Up => {
+                                    app.scroll_up();
+                                }
+                                KeyCode::Down => {
+                                    app.scroll_down();
+                                }
+                                KeyCode::End => {
+                                    app.scroll_to_bottom();
+                                }
+                                _ => {}
                             }
                         }
                     }
@@ -328,37 +310,27 @@ fn ui(f: &mut Frame, app: &App) {
 
     let input_title = if app.is_loading { "Input (AI is responding...)" } else { "Input" };
     let input = Paragraph::new(app.input.as_str())
-        .style(match app.input_mode {
-            InputMode::Normal => Style::default(),
-            InputMode::Editing => if app.is_loading {
-                Style::default().fg(Color::Gray)
-            } else {
-                Style::default().fg(Color::Yellow)
-            },
+        .style(if app.is_loading {
+            Style::default().fg(Color::Gray)
+        } else {
+            Style::default().fg(Color::Yellow)
         })
         .block(Block::default().borders(Borders::ALL).title(input_title));
     f.render_widget(input, chunks[1]);
 
-    match app.input_mode {
-        InputMode::Normal => {}
-        InputMode::Editing => {
-            if !app.is_loading {
-                f.set_cursor_position((
-                    chunks[1].x + app.input.len() as u16 + 1,
-                    chunks[1].y + 1,
-                ));
-            }
-        }
+    // Always show cursor when not loading
+    if !app.is_loading {
+        f.set_cursor_position((
+            chunks[1].x + app.input.len() as u16 + 1,
+            chunks[1].y + 1,
+        ));
     }
 
     // Instructions
     let instruction_text = if app.is_loading {
         "Please wait while the assistant responds..."
     } else {
-        match app.input_mode {
-            InputMode::Editing => "Press Esc to stop editing, Enter to send message",
-            InputMode::Normal => "Press 'e' to edit, ↑/↓ or j/k to scroll, End to scroll to bottom, 'q' to quit",
-        }
+        "Type your message and press Enter to send. Use ↑/↓ to scroll, End to scroll to bottom, Ctrl+C to quit"
     };
     
     let instructions = Paragraph::new(instruction_text)
