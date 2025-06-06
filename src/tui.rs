@@ -29,6 +29,7 @@ pub struct App {
     pub is_loading: bool,
     pub loading_spinner_frame: usize,
     pub last_spinner_update: Instant,
+    pub scroll_offset: usize,
 }
 
 #[derive(PartialEq)]
@@ -59,6 +60,7 @@ impl Default for App {
             is_loading: false,
             loading_spinner_frame: 0,
             last_spinner_update: Instant::now(),
+            scroll_offset: 0,
         }
     }
 }
@@ -66,6 +68,8 @@ impl Default for App {
 impl App {
     pub fn add_message(&mut self, message: ChatMessage) {
         self.messages.push(message);
+        // Auto-scroll to bottom when new message is added
+        self.scroll_to_bottom();
     }
 
     pub fn set_loading(&mut self, loading: bool) {
@@ -95,6 +99,68 @@ impl App {
         } else {
             None
         }
+    }
+
+    pub fn scroll_to_bottom(&mut self) {
+        self.scroll_offset = 0; // 0 means show from the bottom
+    }
+
+    pub fn scroll_up(&mut self, chat_height: usize) {
+        let max_messages = self.total_message_count();
+        if max_messages > chat_height {
+            let max_scroll = max_messages - chat_height;
+            if self.scroll_offset < max_scroll {
+                self.scroll_offset += 1;
+            }
+        }
+    }
+
+    pub fn scroll_down(&mut self) {
+        if self.scroll_offset > 0 {
+            self.scroll_offset -= 1;
+        }
+    }
+
+    fn total_message_count(&self) -> usize {
+        let mut count = self.messages.len();
+        if self.is_loading {
+            count += 1; // Add one for the loading indicator
+        }
+        count
+    }
+
+    pub fn get_visible_messages(&self, chat_height: usize) -> (Vec<&ChatMessage>, bool) {
+        let total_messages = self.total_message_count();
+        
+        if total_messages <= chat_height {
+            // All messages fit, show all
+            return (self.messages.iter().collect(), self.is_loading);
+        }
+
+        // Calculate which messages to show
+        let start_idx = if self.scroll_offset == 0 {
+            // Show from bottom
+            if self.is_loading {
+                total_messages.saturating_sub(chat_height)
+            } else {
+                self.messages.len().saturating_sub(chat_height)
+            }
+        } else {
+            // Show from specific offset
+            total_messages.saturating_sub(chat_height + self.scroll_offset)
+        };
+
+        let end_idx = if self.is_loading && self.scroll_offset == 0 {
+            // When loading and at bottom, show fewer messages to make room for spinner
+            self.messages.len().min(start_idx + chat_height - 1)
+        } else {
+            self.messages.len().min(start_idx + chat_height)
+        };
+
+        let visible_messages = self.messages[start_idx..end_idx].iter().collect();
+        let show_loading = self.is_loading && self.scroll_offset == 0;
+        
+        (visible_messages, show_loading)
     }
 }
 
@@ -145,6 +211,17 @@ pub async fn run_tui() -> Result<(mpsc::UnboundedSender<ChatMessage>, mpsc::Unbo
                                     }
                                     KeyCode::Char('q') => {
                                         app.should_quit = true;
+                                    }
+                                    KeyCode::Up | KeyCode::Char('k') => {
+                                        // Estimate chat height (total area minus input area and margins)
+                                        let chat_height = 20; // This is an approximation
+                                        app.scroll_up(chat_height);
+                                    }
+                                    KeyCode::Down | KeyCode::Char('j') => {
+                                        app.scroll_down();
+                                    }
+                                    KeyCode::End => {
+                                        app.scroll_to_bottom();
                                     }
                                     _ => {}
                                 },
@@ -207,11 +284,13 @@ fn ui(f: &mut Frame, app: &App) {
         .constraints([Constraint::Min(1), Constraint::Length(3)].as_ref())
         .split(f.area());
 
-    let mut messages: Vec<ListItem> = app
-        .messages
+    // Calculate available height for chat messages
+    let chat_height = chunks[0].height.saturating_sub(2) as usize; // Subtract 2 for borders
+    let (visible_messages, show_loading) = app.get_visible_messages(chat_height);
+
+    let mut messages: Vec<ListItem> = visible_messages
         .iter()
-        .enumerate()
-        .map(|(_, m)| {
+        .map(|m| {
             let content = match m.role.as_str() {
                 "user" => {
                     let lines = vec![Line::from(vec![
@@ -240,8 +319,8 @@ fn ui(f: &mut Frame, app: &App) {
         })
         .collect();
 
-    // Add animated loading indicator if assistant is responding
-    if app.is_loading {
+    // Add animated loading indicator if needed
+    if show_loading {
         let spinner = SPINNER_FRAMES[app.loading_spinner_frame];
         let loading_content = Text::from(vec![Line::from(vec![
             Span::styled("Assistant: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
@@ -250,8 +329,16 @@ fn ui(f: &mut Frame, app: &App) {
         messages.push(ListItem::new(loading_content));
     }
 
+    // Create title with scroll indicator
+    let total_messages = app.total_message_count();
+    let chat_title = if total_messages > chat_height && app.scroll_offset > 0 {
+        format!("Chat (↑{} more above)", app.scroll_offset)
+    } else {
+        "Chat".to_string()
+    };
+
     let messages_list = List::new(messages)
-        .block(Block::default().borders(Borders::ALL).title("Chat"));
+        .block(Block::default().borders(Borders::ALL).title(chat_title));
     f.render_widget(messages_list, chunks[0]);
 
     let input_title = if app.is_loading { "Input (AI is responding...)" } else { "Input" };
@@ -283,7 +370,10 @@ fn ui(f: &mut Frame, app: &App) {
     let instruction_text = if app.is_loading {
         "Please wait while the assistant responds..."
     } else {
-        "Press Esc to stop editing, Enter to send message, 'q' to quit"
+        match app.input_mode {
+            InputMode::Editing => "Press Esc to stop editing, Enter to send message",
+            InputMode::Normal => "Press 'e' to edit, ↑/↓ or j/k to scroll, End to scroll to bottom, 'q' to quit",
+        }
     };
     
     let instructions = Paragraph::new(instruction_text)
