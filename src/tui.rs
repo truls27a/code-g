@@ -105,58 +105,50 @@ impl App {
         self.scroll_offset = 0; // 0 means show from the bottom
     }
 
-    pub fn scroll_up(&mut self, chat_height: usize) {
-        let max_messages = self.total_message_count();
-        if max_messages > chat_height {
-            let max_scroll = max_messages - chat_height;
-            if self.scroll_offset < max_scroll {
-                self.scroll_offset += 1;
-            }
-        }
+    pub fn scroll_up(&mut self) {
+        // Simple increment - bounds checking will be done in get_visible_messages
+        self.scroll_offset += 1;
     }
 
     pub fn scroll_down(&mut self) {
         if self.scroll_offset > 0 {
             self.scroll_offset -= 1;
         }
-    }
-
-    fn total_message_count(&self) -> usize {
-        let mut count = self.messages.len();
-        if self.is_loading {
-            count += 1; // Add one for the loading indicator
         }
-        count
-    }
+
 
     pub fn get_visible_messages(&self, chat_height: usize) -> (Vec<&ChatMessage>, bool) {
-        let total_messages = self.total_message_count();
+        let num_messages = self.messages.len();
         
-        if total_messages <= chat_height {
+        // Reserve space for loading indicator if at bottom and loading
+        let available_height = if self.is_loading && self.scroll_offset == 0 {
+            chat_height.saturating_sub(1)
+        } else {
+            chat_height
+        };
+        
+        if num_messages <= available_height {
             // All messages fit, show all
-            return (self.messages.iter().collect(), self.is_loading);
+            return (self.messages.iter().collect(), self.is_loading && self.scroll_offset == 0);
         }
 
+        // Calculate the maximum valid scroll offset
+        let max_scroll = num_messages.saturating_sub(available_height);
+        
+        // Clamp scroll_offset to valid range
+        let effective_scroll = self.scroll_offset.min(max_scroll);
+        
         // Calculate which messages to show
-        let start_idx = if self.scroll_offset == 0 {
-            // Show from bottom
-            if self.is_loading {
-                total_messages.saturating_sub(chat_height)
-            } else {
-                self.messages.len().saturating_sub(chat_height)
-            }
+        let start_idx = if effective_scroll == 0 {
+            // Show from bottom (most recent messages)
+            num_messages - available_height
         } else {
-            // Show from specific offset
-            total_messages.saturating_sub(chat_height + self.scroll_offset)
+            // Show older messages based on scroll offset
+            max_scroll - effective_scroll
         };
 
-        let end_idx = if self.is_loading && self.scroll_offset == 0 {
-            // When loading and at bottom, show fewer messages to make room for spinner
-            self.messages.len().min(start_idx + chat_height - 1)
-        } else {
-            self.messages.len().min(start_idx + chat_height)
-        };
-
+        let end_idx = start_idx + available_height;
+        
         let visible_messages = self.messages[start_idx..end_idx].iter().collect();
         let show_loading = self.is_loading && self.scroll_offset == 0;
         
@@ -213,9 +205,7 @@ pub async fn run_tui() -> Result<(mpsc::UnboundedSender<ChatMessage>, mpsc::Unbo
                                         app.should_quit = true;
                                     }
                                     KeyCode::Up | KeyCode::Char('k') => {
-                                        // Estimate chat height (total area minus input area and margins)
-                                        let chat_height = 20; // This is an approximation
-                                        app.scroll_up(chat_height);
+                                        app.scroll_up();
                                     }
                                     KeyCode::Down | KeyCode::Char('j') => {
                                         app.scroll_down();
@@ -330,12 +320,7 @@ fn ui(f: &mut Frame, app: &App) {
     }
 
     // Create title with scroll indicator
-    let total_messages = app.total_message_count();
-    let chat_title = if total_messages > chat_height && app.scroll_offset > 0 {
-        format!("Chat (↑{} more above)", app.scroll_offset)
-    } else {
-        "Chat".to_string()
-    };
+    let chat_title = "Chat".to_string();
 
     let messages_list = List::new(messages)
         .block(Block::default().borders(Borders::ALL).title(chat_title));
