@@ -1,0 +1,1 @@
+This is a really cool project I am working to learn rust. It is a terminal based code chat application that helps developers code (like cursor, codex, or claude code). Right now I have only added a simple tool for reading files, But I will add tools for writing in files and searching for files too. I will also write real documentation :)
