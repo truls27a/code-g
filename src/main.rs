@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{env, fs, sync::Arc};
 use tokio::sync::{mpsc, Mutex};
-use tui::{ChatMessage, TuiEvent};
+use tui::{ChatMessage, MessageType, TuiEvent};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -125,6 +125,15 @@ async fn handle_chat_request(
                         anyhow!("Invalid tool call arguments: {}", e)
                     })?;
                 
+                // Send tool call notification to TUI
+                let _ = tui_tx.send(ChatMessage {
+                    role: "assistant".to_string(),
+                    content: format!("Reading file: {}", path),
+                    message_type: MessageType::ToolCall { 
+                        tool_name: "read_file".to_string() 
+                    },
+                });
+                
                 info!("Reading file: {}", path);
                 let file_contents = fs::read_to_string(&path)
                     .map_err(|e| {
@@ -168,6 +177,7 @@ async fn handle_chat_request(
         let _ = tui_tx.send(ChatMessage {
             role: "assistant".to_string(),
             content: content.clone(),
+            message_type: MessageType::Regular,
         });
         
         {

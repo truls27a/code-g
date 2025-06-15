@@ -19,6 +19,13 @@ use tokio::sync::mpsc;
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
+    pub message_type: MessageType,
+}
+
+#[derive(Clone)]
+pub enum MessageType {
+    Regular,
+    ToolCall { tool_name: String },
 }
 
 pub struct App {
@@ -49,6 +56,7 @@ impl Default for App {
             messages: vec![ChatMessage {
                 role: "system".to_string(),
                 content: "Welcome! Start typing your message and press Enter to send.".to_string(),
+                message_type: MessageType::Regular,
             }],
             input: String::new(),
             should_quit: false,
@@ -88,6 +96,7 @@ impl App {
             self.add_message(ChatMessage {
                 role: "user".to_string(),
                 content: message.clone(),
+                message_type: MessageType::Regular,
             });
             self.input.clear();
             Some(message)
@@ -255,18 +264,31 @@ fn ui(f: &mut Frame, app: &App) {
     let mut all_lines = Vec::new();
     
     for message in &app.messages {
-        let (role_prefix, role_style) = match message.role.as_str() {
-            "user" => ("You: ", Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD)),
-            "assistant" => ("Assistant: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-            "system" => ("System: ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-            _ => ("", Style::default()),
-        };
+        match &message.message_type {
+            MessageType::ToolCall { tool_name } => {
+                // Display tool calls with a special style
+                all_lines.push(Line::from(vec![
+                    Span::styled("🔧 Tool: ", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                    Span::styled(tool_name, Style::default().fg(Color::Cyan).add_modifier(Modifier::ITALIC)),
+                    Span::raw(" - "),
+                    Span::styled(message.content.clone(), Style::default().fg(Color::Gray)),
+                ]));
+            }
+            MessageType::Regular => {
+                let (role_prefix, role_style) = match message.role.as_str() {
+                    "user" => ("You: ", Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD)),
+                    "assistant" => ("Assistant: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    "system" => ("System: ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                    _ => ("", Style::default()),
+                };
 
-        // Create a single line with role prefix and content, let Paragraph widget handle wrapping
-        all_lines.push(Line::from(vec![
-            Span::styled(role_prefix, role_style),
-            Span::raw(message.content.clone()),
-        ]));
+                // Create a single line with role prefix and content, let Paragraph widget handle wrapping
+                all_lines.push(Line::from(vec![
+                    Span::styled(role_prefix, role_style),
+                    Span::raw(message.content.clone()),
+                ]));
+            }
+        }
         
         // Add a blank line between messages for readability
         if message.role != "system" {
