@@ -9,7 +9,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Margin},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, Paragraph, Wrap},
     Frame, Terminal,
 };
 use std::{io, time::{Duration, Instant}};
@@ -33,75 +33,15 @@ pub struct App {
 
 pub enum TuiEvent {
     UserInput(String),
-    Loading(bool),
     Quit,
 }
 
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const SPINNER_INTERVAL: Duration = Duration::from_millis(150);
 
-// Helper function to wrap text to a specific width
-fn wrap_text(text: &str, width: usize) -> Vec<String> {
-    if width == 0 {
-        return vec![text.to_string()];
-    }
-    
-    let mut lines = Vec::new();
-    let mut current_line = String::new();
-    let mut current_width = 0;
-    
-    for word in text.split_whitespace() {
-        let word_len = word.len();
-        
-        // If adding this word would exceed the width, start a new line
-        if current_width + word_len + (if current_line.is_empty() { 0 } else { 1 }) > width {
-            if !current_line.is_empty() {
-                lines.push(current_line);
-                current_line = String::new();
-                current_width = 0;
-            }
-        }
-        
-        // Add the word to the current line
-        if !current_line.is_empty() {
-            current_line.push(' ');
-            current_width += 1;
-        }
-        current_line.push_str(word);
-        current_width += word_len;
-        
-        // If a single word is longer than the width, we need to break it
-        if current_width > width && current_line.len() == word_len {
-            lines.push(current_line);
-            current_line = String::new();
-            current_width = 0;
-        }
-    }
-    
-    if !current_line.is_empty() {
-        lines.push(current_line);
-    }
-    
-    if lines.is_empty() {
-        lines.push(String::new());
-    }
-    
-    lines
-}
 
-// Helper function to calculate the rendered height of a message
-fn calculate_message_height(message: &ChatMessage, message_width: usize) -> usize {
-    let role_prefix_len = match message.role.as_str() {
-        "user" => "You: ".len(),
-        "assistant" => "Assistant: ".len(),
-        "system" => "System: ".len(),
-        _ => 0,
-    };
-    
-    let content_width = message_width.saturating_sub(role_prefix_len);
-    let wrapped_lines = wrap_text(&message.content, content_width);
-    wrapped_lines.len()
-}
+
+
 
 impl Default for App {
     fn default() -> App {
@@ -188,84 +128,7 @@ impl App {
         }
     }
 
-    pub fn get_visible_messages(&self, chat_height: usize, message_width: usize) -> (Vec<&ChatMessage>, bool) {
-        let num_messages = self.messages.len();
-        if num_messages == 0 {
-            return (vec![], self.is_loading && self.scroll_offset == 0);
-        }
-        
-        // Reserve space for loading indicator if at bottom and loading
-        let available_height = if self.is_loading && self.scroll_offset == 0 {
-            chat_height.saturating_sub(1)
-        } else {
-            chat_height
-        };
-        
-        // Calculate the rendered height of each message
-        let message_heights: Vec<usize> = self.messages
-            .iter()
-            .map(|msg| calculate_message_height(msg, message_width))
-            .collect();
-        
-        // Calculate total rendered height of all messages
-        let total_height: usize = message_heights.iter().sum();
-        
-        // If all messages fit, show all
-        if total_height <= available_height {
-            return (self.messages.iter().collect(), self.is_loading && self.scroll_offset == 0);
-        }
-        
-        // Calculate the maximum valid scroll offset (in lines)
-        let max_scroll_lines = total_height.saturating_sub(available_height);
-        
-        // Clamp scroll_offset to valid range
-        let effective_scroll = self.scroll_offset.min(max_scroll_lines);
-        
-        // Determine which messages to show based on scroll offset
-        let mut visible_messages = Vec::new();
-        
-        if effective_scroll == 0 {
-            // Show from bottom (most recent messages)
-            let mut accumulated_height = 0;
-            for (i, &msg_height) in message_heights.iter().enumerate().rev() {
-                if accumulated_height + msg_height <= available_height {
-                    accumulated_height += msg_height;
-                    visible_messages.insert(0, &self.messages[i]);
-                } else {
-                    break;
-                }
-            }
-        } else {
-            // Calculate which messages to show based on scroll offset
-            let mut lines_to_skip = max_scroll_lines - effective_scroll;
-            let mut start_message_idx = 0;
-            
-            // Find the first message to show (skip lines_to_skip lines from the top)
-            for (i, &msg_height) in message_heights.iter().enumerate() {
-                if lines_to_skip >= msg_height {
-                    lines_to_skip -= msg_height;
-                } else {
-                    start_message_idx = i;
-                    break;
-                }
-            }
-            
-            // Collect messages that fit in the available height
-            let mut remaining_height = available_height;
-            for i in start_message_idx..num_messages {
-                let msg_height = message_heights[i];
-                if remaining_height >= msg_height {
-                    visible_messages.push(&self.messages[i]);
-                    remaining_height -= msg_height;
-                } else {
-                    break;
-                }
-            }
-        }
-        
-        let show_loading = self.is_loading && self.scroll_offset == 0;
-        (visible_messages, show_loading)
-    }
+
 }
 
 pub async fn run_tui() -> Result<(mpsc::UnboundedSender<ChatMessage>, mpsc::UnboundedReceiver<TuiEvent>)> {
@@ -388,63 +251,97 @@ fn ui(f: &mut Frame, app: &App) {
     // Calculate available width for message content (subtract borders and padding)
     let message_width = chunks[0].width.saturating_sub(4) as usize; // 2 for borders + 2 for padding
     
-    let (visible_messages, show_loading) = app.get_visible_messages(chat_height, message_width);
+    // Build all chat content as a single scrollable text - let Paragraph handle wrapping
+    let mut all_lines = Vec::new();
+    
+    for message in &app.messages {
+        let (role_prefix, role_style) = match message.role.as_str() {
+            "user" => ("You: ", Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD)),
+            "assistant" => ("Assistant: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            "system" => ("System: ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            _ => ("", Style::default()),
+        };
 
-    let mut messages: Vec<ListItem> = visible_messages
-        .iter()
-        .map(|m| {
-            let (role_prefix, role_style) = match m.role.as_str() {
-                "user" => ("You: ".to_string(), Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD)),
-                "assistant" => ("Assistant: ".to_string(), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-                "system" => ("System: ".to_string(), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                _ => ("".to_string(), Style::default()),
-            };
-
-            // Calculate available width for content (subtract role prefix length)
-            let content_width = message_width.saturating_sub(role_prefix.len());
-            
-            // Wrap the message content
-            let wrapped_lines = wrap_text(&m.content, content_width);
-            
-            // Create lines with the role prefix on the first line only
-            let mut lines = Vec::new();
-            for (i, line) in wrapped_lines.iter().enumerate() {
-                if i == 0 {
-                    // First line includes the role prefix
-                    lines.push(Line::from(vec![
-                        Span::styled(role_prefix.clone(), role_style),
-                        Span::raw(line.clone()),
-                    ]));
-                } else {
-                    // Subsequent lines are indented to align with content
-                    let indent = " ".repeat(role_prefix.len());
-                    lines.push(Line::from(vec![
-                        Span::raw(indent),
-                        Span::raw(line.clone()),
-                    ]));
-                }
-            }
-            
-            ListItem::new(Text::from(lines))
-        })
-        .collect();
-
-    // Add animated loading indicator if needed
-    if show_loading {
-        let spinner = SPINNER_FRAMES[app.loading_spinner_frame];
-        let loading_content = Text::from(vec![Line::from(vec![
-            Span::styled("Assistant: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-            Span::styled(spinner, Style::default().fg(Color::Green)),
-        ])]);
-        messages.push(ListItem::new(loading_content));
+        // Create a single line with role prefix and content, let Paragraph widget handle wrapping
+        all_lines.push(Line::from(vec![
+            Span::styled(role_prefix, role_style),
+            Span::raw(message.content.clone()),
+        ]));
+        
+        // Add a blank line between messages for readability
+        if message.role != "system" {
+            all_lines.push(Line::from(""));
+        }
     }
 
-    // Create title with scroll indicator
-    let chat_title = "Chat".to_string();
+    // Add animated loading indicator if needed
+    if app.is_loading {
+        let spinner = SPINNER_FRAMES[app.loading_spinner_frame];
+        all_lines.push(Line::from(vec![
+            Span::styled("Assistant: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            Span::styled(spinner, Style::default().fg(Color::Green)),
+        ]));
+    }
 
-    let messages_list = List::new(messages)
-        .block(Block::default().borders(Borders::ALL).title(chat_title));
-    f.render_widget(messages_list, chunks[0]);
+    // Calculate dynamic scroll based on actual content
+    let total_logical_lines = all_lines.len();
+    
+    // Estimate the actual rendered height by accounting for text wrapping
+    let mut estimated_rendered_lines = 0;
+    for line in &all_lines {
+        // Calculate the text content length for this line
+        let line_text_length: usize = line.spans.iter()
+            .map(|span| span.content.len())
+            .sum();
+        
+        // Estimate how many wrapped lines this will create
+        let available_width = message_width.max(20); // Ensure minimum width
+        let wrapped_line_count = if line_text_length == 0 {
+            1 // Empty lines still take 1 line
+        } else {
+            ((line_text_length + available_width - 1) / available_width).max(1)
+        };
+        
+        estimated_rendered_lines += wrapped_line_count;
+    }
+    
+    // Calculate scroll offset dynamically
+    let scroll_offset = if app.scroll_offset == 0 {
+        // Show from bottom - scroll to show the most recent content
+        if estimated_rendered_lines > chat_height {
+            estimated_rendered_lines.saturating_sub(chat_height)
+        } else {
+            0 // All content fits, no scrolling needed
+        }
+    } else {
+        // When scrolling up from bottom
+        let max_scroll = if estimated_rendered_lines > chat_height {
+            estimated_rendered_lines.saturating_sub(chat_height)
+        } else {
+            0
+        };
+        
+        if app.scroll_offset >= max_scroll {
+            0 // Scrolled to top
+        } else {
+            max_scroll.saturating_sub(app.scroll_offset)
+        }
+    };
+    
+    // Debug logging
+    if log::log_enabled!(log::Level::Debug) {
+        log::debug!("Dynamic scroll: logical_lines={}, estimated_rendered={}, chat_height={}, app.scroll_offset={}, final_scroll={}", 
+            total_logical_lines, estimated_rendered_lines, chat_height, app.scroll_offset, scroll_offset);
+    }
+
+    // Create the chat content as a paragraph
+    let chat_content = Text::from(all_lines);
+    let chat_paragraph = Paragraph::new(chat_content)
+        .block(Block::default().borders(Borders::ALL).title("Chat"))
+        .wrap(Wrap { trim: false })
+        .scroll((scroll_offset as u16, 0));
+    
+    f.render_widget(chat_paragraph, chunks[0]);
 
     let input_title = if app.is_loading { "Input (AI is responding...)" } else { "Input" };
     let input = Paragraph::new(app.input.as_str())
@@ -459,19 +356,12 @@ fn ui(f: &mut Frame, app: &App) {
 
     // Always show cursor when not loading
     if !app.is_loading {
-        // Calculate cursor position considering text wrapping
-        let input_width = chunks[1].width.saturating_sub(2) as usize; // Subtract borders
-        let wrapped_input = wrap_text(&app.input, input_width);
-        let cursor_line = wrapped_input.len().saturating_sub(1);
-        let cursor_col = if wrapped_input.is_empty() {
-            0
-        } else {
-            wrapped_input[cursor_line].len()
-        };
+        // Simple cursor positioning - place at end of input text
+        let cursor_col = app.input.len().min(chunks[1].width.saturating_sub(2) as usize);
         
         f.set_cursor_position((
             chunks[1].x + cursor_col as u16 + 1,
-            chunks[1].y + cursor_line as u16 + 1,
+            chunks[1].y + 1,
         ));
     }
 

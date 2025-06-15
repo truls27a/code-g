@@ -65,10 +65,7 @@ async fn main() -> Result<()> {
                     }
                 });
             }
-            TuiEvent::Loading(_is_loading) => {
-                // Loading state is handled internally by the TUI
-                // We don't need to do anything here
-            }
+
             TuiEvent::Quit => {
                 info!("Quit event received");
                 break;
