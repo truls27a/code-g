@@ -36,11 +36,17 @@ pub struct App {
     pub loading_spinner_frame: usize,
     pub last_spinner_update: Instant,
     pub scroll_offset: usize,
+    pub current_tool_call: Option<String>,
 }
 
 pub enum TuiEvent {
     UserInput(String),
     Quit,
+}
+
+pub enum TuiCommand {
+    AddMessage(ChatMessage),
+    SetToolCall(String),
 }
 
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -64,6 +70,7 @@ impl Default for App {
             loading_spinner_frame: 0,
             last_spinner_update: Instant::now(),
             scroll_offset: 0,
+            current_tool_call: None,
         }
     }
 }
@@ -80,7 +87,14 @@ impl App {
         if loading {
             self.loading_spinner_frame = 0;
             self.last_spinner_update = Instant::now();
+        } else {
+            // Clear tool call info when loading stops
+            self.current_tool_call = None;
         }
+    }
+
+    pub fn set_tool_call_info(&mut self, tool_info: String) {
+        self.current_tool_call = Some(tool_info);
     }
 
     pub fn update_spinner(&mut self) {
@@ -140,7 +154,7 @@ impl App {
 
 }
 
-pub async fn run_tui() -> Result<(mpsc::UnboundedSender<ChatMessage>, mpsc::UnboundedReceiver<TuiEvent>)> {
+pub async fn run_tui() -> Result<(mpsc::UnboundedSender<TuiCommand>, mpsc::UnboundedReceiver<TuiEvent>)> {
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -150,7 +164,7 @@ pub async fn run_tui() -> Result<(mpsc::UnboundedSender<ChatMessage>, mpsc::Unbo
 
     // Create channels for communication
     let (event_tx, event_rx) = mpsc::unbounded_channel::<TuiEvent>();
-    let (message_tx, mut message_rx) = mpsc::unbounded_channel::<ChatMessage>();
+    let (command_tx, mut command_rx) = mpsc::unbounded_channel::<TuiCommand>();
 
     // Clone the event sender for the input task
     let event_tx_clone = event_tx.clone();
@@ -160,10 +174,17 @@ pub async fn run_tui() -> Result<(mpsc::UnboundedSender<ChatMessage>, mpsc::Unbo
         let mut app = App::default();
         
         loop {
-            // Check for incoming chat messages
-            while let Ok(message) = message_rx.try_recv() {
-                app.add_message(message);
-                app.set_loading(false); // Stop loading when we receive a message
+            // Check for incoming commands
+            while let Ok(command) = command_rx.try_recv() {
+                match command {
+                    TuiCommand::AddMessage(message) => {
+                        app.add_message(message);
+                        app.set_loading(false); // Stop loading when we receive a message
+                    }
+                    TuiCommand::SetToolCall(tool_info) => {
+                        app.set_tool_call_info(tool_info);
+                    }
+                }
             }
 
             // Update spinner animation
@@ -243,8 +264,8 @@ pub async fn run_tui() -> Result<(mpsc::UnboundedSender<ChatMessage>, mpsc::Unbo
         let _ = terminal.show_cursor();
     });
 
-    // Return the sender for messages and receiver for events
-    Ok((message_tx, event_rx))
+    // Return the sender for commands and receiver for events
+    Ok((command_tx, event_rx))
 }
 
 fn ui(f: &mut Frame, app: &App) {
@@ -268,7 +289,7 @@ fn ui(f: &mut Frame, app: &App) {
             MessageType::ToolCall { tool_name } => {
                 // Display tool calls with a special style
                 all_lines.push(Line::from(vec![
-                    Span::styled("🔧 Tool: ", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                    Span::styled("Tool: ", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
                     Span::styled(tool_name, Style::default().fg(Color::Cyan).add_modifier(Modifier::ITALIC)),
                     Span::raw(" - "),
                     Span::styled(message.content.clone(), Style::default().fg(Color::Gray)),
@@ -299,10 +320,22 @@ fn ui(f: &mut Frame, app: &App) {
     // Add animated loading indicator if needed
     if app.is_loading {
         let spinner = SPINNER_FRAMES[app.loading_spinner_frame];
-        all_lines.push(Line::from(vec![
-            Span::styled("Assistant: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-            Span::styled(spinner, Style::default().fg(Color::Green)),
-        ]));
+        
+        if let Some(tool_info) = &app.current_tool_call {
+            // Show tool call information during loading
+            all_lines.push(Line::from(vec![
+                Span::styled("Assistant: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                Span::styled(spinner, Style::default().fg(Color::Green)),
+                Span::raw(" "),
+                Span::styled(tool_info, Style::default().fg(Color::Gray).add_modifier(Modifier::ITALIC)),
+            ]));
+        } else {
+            // Show regular loading indicator
+            all_lines.push(Line::from(vec![
+                Span::styled("Assistant: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                Span::styled(spinner, Style::default().fg(Color::Green)),
+            ]));
+        }
     }
 
     // Calculate dynamic scroll based on actual content

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{env, fs, sync::Arc};
 use tokio::sync::{mpsc, Mutex};
-use tui::{ChatMessage, MessageType, TuiEvent};
+use tui::{ChatMessage, MessageType, TuiCommand, TuiEvent};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
     debug!("Tools schema initialized");
 
     // Start the TUI and get communication channels
-    let (tui_message_tx, mut tui_event_rx) = tui::run_tui().await?;
+    let (tui_command_tx, mut tui_event_rx) = tui::run_tui().await?;
     info!("TUI started successfully");
 
     // Handle events from the TUI
@@ -56,7 +56,7 @@ async fn main() -> Result<()> {
                 let api_key = api_key.clone();
                 let messages_clone = Arc::clone(&messages);
                 let tools = tools.clone();
-                let tui_tx = tui_message_tx.clone();
+                let tui_tx = tui_command_tx.clone();
                 
                 // Handle the chat request in a separate task to avoid blocking the TUI
                 tokio::spawn(async move {
@@ -82,8 +82,8 @@ async fn handle_chat_request(
     api_key: String,
     messages: Arc<Mutex<Vec<Message>>>,
     tools: [Tool; 1],
-    user_input: String,
-    tui_tx: mpsc::UnboundedSender<ChatMessage>,
+    user_input: String,  
+    tui_tx: mpsc::UnboundedSender<TuiCommand>,
 ) -> Result<()> {
     // Add user message
     {
@@ -126,13 +126,9 @@ async fn handle_chat_request(
                     })?;
                 
                 // Send tool call notification to TUI
-                let _ = tui_tx.send(ChatMessage {
-                    role: "assistant".to_string(),
-                    content: format!("Reading file: {}", path),
-                    message_type: MessageType::ToolCall { 
-                        tool_name: "read_file".to_string() 
-                    },
-                });
+                let _ = tui_tx.send(TuiCommand::SetToolCall(
+                    format!("Reading file: {}", path)
+                ));
                 
                 info!("Reading file: {}", path);
                 let file_contents = fs::read_to_string(&path)
@@ -174,11 +170,11 @@ async fn handle_chat_request(
         info!("Assistant response received: {}", content);
         
         // Send message to TUI
-        let _ = tui_tx.send(ChatMessage {
+        let _ = tui_tx.send(TuiCommand::AddMessage(ChatMessage {
             role: "assistant".to_string(),
             content: content.clone(),
             message_type: MessageType::Regular,
-        });
+        }));
         
         {
             let mut msgs = messages.lock().await;
