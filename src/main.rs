@@ -165,7 +165,7 @@ async fn handle_chat_request(
 
     // --- 3. Show final assistant answer and store it in the chat history ---------------
     if let Some(content) = response.content {
-        info!("Assistant response received, length: {} characters", content.len());
+        info!("Assistant response received: {}", content);
         
         // Send message to TUI
         let _ = tui_tx.send(ChatMessage {
