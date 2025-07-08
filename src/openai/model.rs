@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -31,18 +30,6 @@ pub enum OpenAiModel {
     GptO4MiniHigh,
 }
 
-impl fmt::Display for OpenAiModel {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let model_str = match self {
-            OpenAiModel::Gpt4o => "gpt-4o",
-            OpenAiModel::Gpt4oMini => "gpt-4o-mini",
-            OpenAiModel::GptO3 => "gpt-o3",
-            OpenAiModel::GptO4Mini => "gpt-o4-mini",
-            OpenAiModel::GptO4MiniHigh => "gpt-o4-mini-high",
-        };
-        write!(f, "{}", model_str)
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]

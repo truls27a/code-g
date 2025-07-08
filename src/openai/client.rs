@@ -25,7 +25,6 @@ impl OpenAIClient {
             model: model.clone(),
             messages: chat_history.to_vec(),
             tools: tools.to_vec(),
-            tool_choice: Some("auto".to_string()),
         };
 
         let response = self.client.post("https://api.openai.com/v1/chat/completions")
@@ -46,7 +45,7 @@ impl OpenAIClient {
             reqwest::StatusCode::FORBIDDEN => Err(OpenAIError::InsufficientCredits),
             reqwest::StatusCode::TOO_MANY_REQUESTS => Err(OpenAIError::RateLimitExceeded),
             reqwest::StatusCode::INTERNAL_SERVER_ERROR => Err(OpenAIError::ServiceUnavailable),
-            reqwest::StatusCode::NOT_FOUND => Err(OpenAIError::InvalidModel(model.clone())),
+            reqwest::StatusCode::NOT_FOUND => Err(OpenAIError::InvalidModel),
             _ => Err(OpenAIError::Other(format!("Unexpected HTTP status: {}", response.status()))),
         }
     }

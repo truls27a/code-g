@@ -1,10 +1,9 @@
 use thiserror::Error;
-use crate::openai::model::OpenAiModel;
 
 #[derive(Error, Debug)]
 pub enum OpenAIError {
-    #[error("Invalid model: {0}")]
-    InvalidModel(OpenAiModel),
+    #[error("Invalid model")]
+    InvalidModel,
 
     #[error("Chat history cannot be empty")]
     EmptyChatHistory,

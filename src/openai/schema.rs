@@ -8,8 +8,6 @@ pub struct ChatCompletionRequest  {
     pub model: OpenAiModel,
     pub messages: Vec<ChatMessage>,
     pub tools: Vec<Tool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tool_choice: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
