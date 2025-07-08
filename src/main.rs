@@ -1,12 +1,12 @@
 use std::env;
 use code_g::openai::client::OpenAIClient;
-use code_g::openai::model::{ChatMessage, Role};
+use code_g::openai::model::{ChatMessage, Role, OpenAiModel};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_key = env::var("OPENAI_API_KEY")?;
     let client = OpenAIClient::new(api_key);
-    let response = client.create_chat_completion("gpt-4o-mini", vec![
+    let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, &[
         ChatMessage {
             role: Role::User,
             content: "Say 'hi' in Swedish in all lowercase, nothing else.".to_string(),

@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
-use crate::openai::model::{ChatMessage, Role};
+use crate::openai::model::{ChatMessage, Role, OpenAiModel};
 
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChatCompletionRequest  {
-    pub model: String,
+    pub model: OpenAiModel,
     pub messages: Vec<ChatMessage>,
 }
 

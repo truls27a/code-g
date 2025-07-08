@@ -1,6 +1,6 @@
 use reqwest::Client;
 use crate::openai::schema::{ChatCompletionRequest, ChatCompletionResponse};
-use crate::openai::model::ChatMessage;
+use crate::openai::model::{ChatMessage, OpenAiModel};
 use crate::openai::error::OpenAIError;
 
 pub struct OpenAIClient {
@@ -16,10 +16,10 @@ impl OpenAIClient {
         }
     }
 
-    pub async fn create_chat_completion(&self, model: &str, chat_history: Vec<ChatMessage>) -> Result<String, OpenAIError> {
+    pub async fn create_chat_completion(&self, model: &OpenAiModel, chat_history: &[ChatMessage]) -> Result<String, OpenAIError> {
         let request_body = ChatCompletionRequest {
-            model: model.to_string(),
-            messages: chat_history,
+            model: model.clone(),
+            messages: chat_history.to_vec(),
         };
 
         let response = self.client.post("https://api.openai.com/v1/chat/completions")
@@ -46,7 +46,7 @@ impl OpenAIClient {
             reqwest::StatusCode::FORBIDDEN => Err(OpenAIError::InsufficientCredits),
             reqwest::StatusCode::TOO_MANY_REQUESTS => Err(OpenAIError::RateLimitExceeded),
             reqwest::StatusCode::INTERNAL_SERVER_ERROR => Err(OpenAIError::ServiceUnavailable),
-            reqwest::StatusCode::NOT_FOUND => Err(OpenAIError::InvalidModel),
+            reqwest::StatusCode::NOT_FOUND => Err(OpenAIError::InvalidModel(model.clone())),
             _ => Err(OpenAIError::Other(format!("Unexpected HTTP status: {}", response.status()))),
         }
     }
@@ -60,13 +60,13 @@ mod tests {
     #[tokio::test]
     async fn create_chat_completion_responds_to_user_message() {
         let client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
-        let chat_history = vec![
+        let chat_history = &[
             ChatMessage {
                 role: Role::User,
                 content: "Say 'hi' in Swedish in all lowercase, nothing else.".to_string(),
             },
         ];
-        let response = client.create_chat_completion("gpt-4o-mini", chat_history).await.unwrap();
+        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history).await.unwrap();
         assert_eq!("hej", response);
     }
 }

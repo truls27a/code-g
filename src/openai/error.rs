@@ -1,9 +1,10 @@
 use thiserror::Error;
+use crate::openai::model::OpenAiModel;
 
 #[derive(Error, Debug)]
 pub enum OpenAIError {
-    #[error("Invalid model")]
-    InvalidModel,
+    #[error("Invalid model: {0}")]
+    InvalidModel(OpenAiModel),
 
     #[error("Invalid API key")]
     InvalidApiKey,
