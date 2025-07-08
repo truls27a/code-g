@@ -46,6 +46,7 @@ impl OpenAIClient {
             reqwest::StatusCode::FORBIDDEN => Err(OpenAIError::InsufficientCredits),
             reqwest::StatusCode::TOO_MANY_REQUESTS => Err(OpenAIError::RateLimitExceeded),
             reqwest::StatusCode::INTERNAL_SERVER_ERROR => Err(OpenAIError::ServiceUnavailable),
+            reqwest::StatusCode::NOT_FOUND => Err(OpenAIError::InvalidModel),
             _ => Err(OpenAIError::Other(format!("Unexpected HTTP status: {}", response.status()))),
         }
     }

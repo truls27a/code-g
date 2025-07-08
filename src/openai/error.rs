@@ -2,8 +2,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum OpenAIError {
-    #[error("HTTP request failed: {0}")]
-    HttpError(#[from] reqwest::Error),
+    #[error("Invalid model")]
+    InvalidModel,
 
     #[error("Invalid API key")]
     InvalidApiKey,
@@ -25,6 +25,9 @@ pub enum OpenAIError {
 
     #[error("Service unavailable")]
     ServiceUnavailable,
+
+    #[error("HTTP request failed: {0}")]
+    HttpError(#[from] reqwest::Error),
 
     #[error("Other error: {0}")]
     Other(String),
