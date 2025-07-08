@@ -1,4 +1,4 @@
-use crate::openai::schema::{ChatMessageRequest, ToolCallResponse};
+use crate::openai::schema::{ChatMessageRequest, Role, ToolCallResponse};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -10,35 +10,58 @@ pub enum ChatResult {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct ChatMessage {
-    pub role: Role,
-    pub content: Option<String>,
-    pub tool_calls: Option<Vec<ToolCall>>,
+pub enum ChatMessage {
+    System {
+        content: String,
+    },
+    User {
+        content: String,
+    },
+    Assistant {
+        content: Option<String>,
+        tool_calls: Option<Vec<ToolCall>>,
+    },
+    Tool {
+        content: String,
+        tool_call_id: String,
+    },
 }
 
+
 impl From<ChatMessageRequest> for ChatMessage {
-    fn from(chat_message_request: ChatMessageRequest) -> Self {
-        Self {
-            role: chat_message_request.role,
-            content: chat_message_request.content,
-            tool_calls: chat_message_request.tool_calls.map(|tool_calls| {
-                tool_calls
-                    .into_iter()
-                    .map(|tool_call| ToolCall::from(tool_call))
-                    .collect()
-            }),
+    fn from(req: ChatMessageRequest) -> Self {
+        match req.role {
+            Role::System => ChatMessage::System {
+                content: req.content.expect("System message must have content"),
+            },
+            Role::User => ChatMessage::User {
+                content: req.content.expect("User message must have content"),
+            },
+            Role::Assistant => ChatMessage::Assistant {
+                content: req.content,
+                tool_calls: req.tool_calls.map(|calls| {
+                    calls
+                        .into_iter()
+                        .map(ToolCall::from)
+                        .collect()
+                }),
+            },
+            Role::Tool => {
+                let content = req.content.expect("Tool message must have content");
+                let tool_call_id = req.tool_calls
+                    .and_then(|mut calls| calls.pop())
+                    .map(|call| call.id)
+                    .expect("Tool message must have a tool_call_id");
+
+                ChatMessage::Tool {
+                    content,
+                    tool_call_id,
+                }
+            }
         }
     }
 }
 
-// Role
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum Role {
-    System,
-    User,
-    Assistant,
-}
 
 // Model
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

@@ -78,16 +78,13 @@ impl OpenAIClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::openai::model::Role;
 
     #[tokio::test]
     async fn create_chat_completion_responds_to_user_message() {
         let client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
         let chat_history = &[
-            ChatMessage {
-                role: Role::User,
-                content: Some("Say 'hi' in Swedish in all lowercase. Do not add any other text.".to_string()),
-                tool_calls: None,
+            ChatMessage::User {
+                content: "Say 'hi' in Swedish in all lowercase. Do not add any other text.".to_string(),
             },
         ];
         let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap();
@@ -98,20 +95,15 @@ mod tests {
     async fn create_chat_completion_responds_to_multiple_messages() {
         let client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
         let chat_history = &[
-            ChatMessage {
-                role: Role::User,
-                content: Some("How are you dude?".to_string()),
-                tool_calls: None,
+            ChatMessage::User {
+                content: "How are you dude?".to_string(),
             },
-            ChatMessage {
-                role: Role::Assistant,
+            ChatMessage::Assistant {
                 content: Some("Yo bro, I feel great!".to_string()),
                 tool_calls: None,
             },
-            ChatMessage {
-                role: Role::User,
-                content: Some("What did you say? I didn't hear you. Repeat what you said exactly like you said it. Do not add any other text.".to_string()),
-                tool_calls: None,
+            ChatMessage::User {
+                content: "What did you say? I didn't hear you. Repeat what you said exactly like you said it. Do not add any other text.".to_string(),
             },
         ];
         let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap();
@@ -122,15 +114,11 @@ mod tests {
     async fn create_chat_completion_adheres_to_system_message() {
         let client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
         let chat_history = &[
-            ChatMessage {
-                role: Role::System,
-                content: Some("Always respond in french with all lowercase. Do not add any other text.".to_string()),
-                tool_calls: None,
+            ChatMessage::System {
+                content: "Always respond in french with all lowercase. Do not add any other text.".to_string(),
             },
-            ChatMessage {
-                role: Role::User,
-                content: Some("How do you say 'hello' in french?".to_string()),
-                tool_calls: None,
+            ChatMessage::User {
+                content: "How do you say 'hello' in french?".to_string(),
             },
         ];
         let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap();
@@ -142,10 +130,8 @@ mod tests {
     async fn create_chat_completion_returns_invalid_api_key_error_when_api_key_is_invalid() {
         let client = OpenAIClient::new("invalid_api_key".to_string());
         let chat_history = &[
-            ChatMessage {
-                role: Role::User,
-                content: Some("I am too broke for api key".to_string()),
-                tool_calls: None,
+            ChatMessage::User {
+                content: "I am too broke for api key".to_string(),
             },
         ];
         let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap_err();

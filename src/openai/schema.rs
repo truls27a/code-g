@@ -1,4 +1,4 @@
-use crate::openai::model::{ChatMessage, OpenAiModel, Role, Tool, ToolType, ToolCall};
+use crate::openai::model::{ChatMessage, OpenAiModel, Tool, ToolType, ToolCall};
 use serde::{Deserialize, Serialize};
 
 // Request
@@ -18,17 +18,52 @@ pub struct ChatMessageRequest {
 
 impl From<ChatMessage> for ChatMessageRequest {
     fn from(chat_message: ChatMessage) -> Self {
-        Self {
-            role: chat_message.role,
-            content: chat_message.content,
-            tool_calls: chat_message.tool_calls.map(|tool_calls| {
-                tool_calls
-                    .into_iter()
-                    .map(|tool_call| ToolCallResponse::from(tool_call))
-                    .collect()
-            }),
+        match chat_message {
+            ChatMessage::System { content } => ChatMessageRequest {
+                role: Role::System,
+                content: Some(content),
+                tool_calls: None,
+            },
+            ChatMessage::User { content } => ChatMessageRequest {
+                role: Role::User,
+                content: Some(content),
+                tool_calls: None,
+            },
+            ChatMessage::Assistant { content, tool_calls } => ChatMessageRequest {
+                role: Role::Assistant,
+                content,
+                tool_calls: tool_calls.map(|calls| {
+                    calls
+                        .into_iter()
+                        .map(ToolCallResponse::from)
+                        .collect()
+                }),
+            },
+            ChatMessage::Tool { content, tool_call_id } => ChatMessageRequest {
+                role: Role::Tool,
+                content: Some(content),
+                tool_calls: Some(vec![ToolCallResponse {
+                    id: tool_call_id,
+                    tool_type: ToolType::Function,
+                    function: FunctionResponse {
+                        name: "function".to_string(),
+                        arguments: "".to_string(),
+                    },
+                }]),
+            },
         }
     }
+}
+
+
+// Role
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum Role {
+    System,
+    User,
+    Assistant,
+    Tool,
 }
 
 // Response

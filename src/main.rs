@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env};
 use code_g::openai::client::OpenAIClient;
-use code_g::openai::model::{ChatMessage, Role, OpenAiModel, Tool, ToolType, Parameters, Property, Function};
+use code_g::openai::model::{ChatMessage, OpenAiModel, Tool, ToolType, Parameters, Property, Function};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -8,10 +8,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = OpenAIClient::new(api_key);
 
     let mut messages = vec![
-        ChatMessage {
-            role: Role::User,
-            content: Some("What is in the poem.txt file?".to_string()),
-            tool_calls: None,
+        ChatMessage::User {
+            content: "What is in the poem.txt file?".to_string(),
         },
     ];
 
