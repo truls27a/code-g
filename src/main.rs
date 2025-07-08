@@ -11,7 +11,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &[
             ChatMessage {
                 role: Role::User,
-                content: "Say 'hi' in Swedish in all lowercase, nothing else.".to_string(),
+                content: "What is in the poem.txt file?".to_string(),
             },
         ],
         &[Tool {

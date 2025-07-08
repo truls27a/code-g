@@ -23,7 +23,8 @@ pub enum OpenAIError {
     #[error("No choices found")]
     NoChoicesFound,
 
-
+    #[error("No content found")]
+    NoContentFound,
 
     #[error("Rate limit exceeded")]
     RateLimitExceeded,

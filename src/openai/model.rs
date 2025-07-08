@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
+// Chat
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatMessage {
@@ -8,6 +9,7 @@ pub struct ChatMessage {
     pub content: String,
 }
 
+// Role
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum Role {
@@ -16,6 +18,7 @@ pub enum Role {
     Assistant,
 }
 
+// Model
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum OpenAiModel {
     #[serde(rename = "gpt-4o")]
@@ -30,13 +33,19 @@ pub enum OpenAiModel {
     GptO4MiniHigh,
 }
 
-
+// Tool
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Tool {
     #[serde(rename = "type")]
     pub tool_type: ToolType,
     pub function: Function,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum ToolType {
+    Function,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -66,8 +75,4 @@ pub struct Property {
     pub description: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub enum ToolType {
-    Function,
-}
+

@@ -33,12 +33,13 @@ impl OpenAIClient {
             .send()
             .await?;
 
+
         match response.status() {
             reqwest::StatusCode::OK => {
                 let completions: ChatCompletionResponse = response.json().await.map_err(|_| OpenAIError::NoCompletionFound)?;
                 let choice_response = completions.choices.get(0).ok_or(OpenAIError::NoChoicesFound)?;
                 
-                let message_content = &choice_response.message.content;
+                let message_content = choice_response.message.content.as_ref().ok_or(OpenAIError::NoContentFound)?;
                 Ok(message_content.to_string())
             }
             reqwest::StatusCode::UNAUTHORIZED => Err(OpenAIError::InvalidApiKey),
