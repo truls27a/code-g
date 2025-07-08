@@ -30,14 +30,8 @@ impl OpenAIClient {
 
         match response.status() {
             reqwest::StatusCode::OK => {
-                let completions: ChatCompletionResponse = match response.json().await {
-                    Ok(completions) => completions,
-                    Err(_) => return Err(OpenAIError::NoCompletionFound),
-                };
-                let choice_response = match completions.choices.get(0) {
-                    Some(choice) => choice,
-                    None => return Err(OpenAIError::NoChoicesFound),
-                };
+                let completions: ChatCompletionResponse = response.json().await.map_err(|_| OpenAIError::NoCompletionFound)?;
+                let choice_response = completions.choices.get(0).ok_or(OpenAIError::NoChoicesFound)?;
                 
                 let message_content = &choice_response.message.content;
                 Ok(message_content.to_string())
@@ -63,10 +57,61 @@ mod tests {
         let chat_history = &[
             ChatMessage {
                 role: Role::User,
-                content: "Say 'hi' in Swedish in all lowercase, nothing else.".to_string(),
+                content: "Say 'hi' in Swedish in all lowercase. Do not add any other text.".to_string(),
             },
         ];
         let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history).await.unwrap();
         assert_eq!("hej", response);
+    }
+
+    #[tokio::test]
+    async fn create_chat_completion_responds_to_multiple_messages() {
+        let client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
+        let chat_history = &[
+            ChatMessage {
+                role: Role::User,
+                content: "How are you dude?".to_string(),
+            },
+            ChatMessage {
+                role: Role::Assistant,
+                content: "Yo bro, I feel great!".to_string(),
+            },
+            ChatMessage {
+                role: Role::User,
+                content: "What did you say? I didn't hear you. Repeat what you said exactly like you said it. Do not add any other text.".to_string(),
+            },
+        ];
+        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history).await.unwrap();
+        assert_eq!("Yo bro, I feel great!", response);
+    }
+
+    #[tokio::test]
+    async fn create_chat_completion_adheres_to_system_message() {
+        let client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
+        let chat_history = &[
+            ChatMessage {
+                role: Role::System,
+                content: "Always respond in french with all lowercase. Do not add any other text.".to_string(),
+            },
+            ChatMessage {
+                role: Role::User,
+                content: "How do you say 'hello' in french?".to_string(),
+            },
+        ];
+        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history).await.unwrap();
+        assert_eq!("bonjour", response);
+    }
+
+    #[tokio::test]
+    async fn create_chat_completion_returns_invalid_api_key_error_when_api_key_is_invalid() {
+        let client = OpenAIClient::new("invalid_api_key".to_string());
+        let chat_history = &[
+            ChatMessage {
+                role: Role::User,
+                content: "I am too broke for api key".to_string(),
+            },
+        ];
+        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history).await.unwrap_err();
+        assert!(matches!(response, OpenAIError::InvalidApiKey));
     }
 }

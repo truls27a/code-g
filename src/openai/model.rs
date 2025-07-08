@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ChatMessage {
     pub role: Role,
     pub content: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {
     System,
@@ -15,7 +15,7 @@ pub enum Role {
     Assistant,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum OpenAiModel {
     #[serde(rename = "gpt-4o")]
     Gpt4o,
