@@ -6,6 +6,9 @@ pub enum OpenAIError {
     #[error("Invalid model: {0}")]
     InvalidModel(OpenAiModel),
 
+    #[error("Chat history cannot be empty")]
+    EmptyChatHistory,
+
     #[error("Invalid API key")]
     InvalidApiKey,
 
@@ -20,6 +23,8 @@ pub enum OpenAIError {
 
     #[error("No choices found")]
     NoChoicesFound,
+
+
 
     #[error("Rate limit exceeded")]
     RateLimitExceeded,

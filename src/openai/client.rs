@@ -17,6 +17,10 @@ impl OpenAIClient {
     }
 
     pub async fn create_chat_completion(&self, model: &OpenAiModel, chat_history: &[ChatMessage]) -> Result<String, OpenAIError> {
+        if chat_history.is_empty() {
+            return Err(OpenAIError::EmptyChatHistory);
+        }
+
         let request_body = ChatCompletionRequest {
             model: model.clone(),
             messages: chat_history.to_vec(),
@@ -102,6 +106,7 @@ mod tests {
         assert_eq!("bonjour", response);
     }
 
+
     #[tokio::test]
     async fn create_chat_completion_returns_invalid_api_key_error_when_api_key_is_invalid() {
         let client = OpenAIClient::new("invalid_api_key".to_string());
@@ -113,5 +118,13 @@ mod tests {
         ];
         let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history).await.unwrap_err();
         assert!(matches!(response, OpenAIError::InvalidApiKey));
+    }
+
+    #[tokio::test]
+    async fn create_chat_completion_returns_empty_chat_history_error_when_chat_history_is_empty() {
+        let client = OpenAIClient::new("any_api_key".to_string());
+        let chat_history: &[ChatMessage] = &[];
+        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history).await.unwrap_err();
+        assert!(matches!(response, OpenAIError::EmptyChatHistory));
     }
 }

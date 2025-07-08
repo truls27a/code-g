@@ -6,12 +6,7 @@ use code_g::openai::model::{ChatMessage, Role, OpenAiModel};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_key = env::var("OPENAI_API_KEY")?;
     let client = OpenAIClient::new(api_key);
-    let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, &[
-        ChatMessage {
-            role: Role::User,
-            content: "Say 'hi' in Swedish in all lowercase, nothing else.".to_string(),
-        },
-    ]).await?;
+    let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, &[]).await?;
     println!("Response: {}", response);
     Ok(())
 }
