@@ -1,5 +1,6 @@
 use reqwest::Client;
-use crate::openai::schema::{ChatCompletionRequest, ChatMessage, ChatCompletionResponse, Role};
+use crate::openai::schema::{ChatCompletionRequest, ChatCompletionResponse};
+use crate::openai::model::{ChatMessage, Role};
 
 pub struct OpenAIClient {
     client: Client,

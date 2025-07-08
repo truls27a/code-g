@@ -1,10 +1,6 @@
 use serde::{Deserialize, Serialize};
+use crate::openai::model::{ChatMessage, Role};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ChatMessage {
-    pub role: Role,
-    pub content: String,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChatCompletionRequest  {
@@ -14,11 +10,11 @@ pub struct ChatCompletionRequest  {
 
 #[derive(Deserialize, Debug)]
 pub struct ChatCompletionResponse {
-    pub choices: Vec<Choice>,
+    pub choices: Vec<ChoiceResponse>,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Choice {
+pub struct ChoiceResponse {
     pub message: MessageResponse,
 }
 
@@ -26,12 +22,4 @@ pub struct Choice {
 pub struct MessageResponse {
     pub role: Role,
     pub content: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Role {
-    System,
-    User,
-    Assistant,
 }

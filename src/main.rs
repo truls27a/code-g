@@ -1,6 +1,6 @@
 use std::env;
 use code_g::openai::client::OpenAIClient;
-use code_g::openai::schema::{ChatMessage, Role};
+use code_g::openai::model::{ChatMessage, Role};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
