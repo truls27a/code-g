@@ -1,6 +1,6 @@
 use reqwest::Client;
 use crate::openai::schema::{ChatCompletionRequest, ChatCompletionResponse};
-use crate::openai::model::{ChatMessage, OpenAiModel};
+use crate::openai::model::{ChatMessage, OpenAiModel, Tool};
 use crate::openai::error::OpenAIError;
 
 pub struct OpenAIClient {
@@ -16,7 +16,7 @@ impl OpenAIClient {
         }
     }
 
-    pub async fn create_chat_completion(&self, model: &OpenAiModel, chat_history: &[ChatMessage]) -> Result<String, OpenAIError> {
+    pub async fn create_chat_completion(&self, model: &OpenAiModel, chat_history: &[ChatMessage], tools: &[Tool]) -> Result<String, OpenAIError> {
         if chat_history.is_empty() {
             return Err(OpenAIError::EmptyChatHistory);
         }
@@ -24,6 +24,8 @@ impl OpenAIClient {
         let request_body = ChatCompletionRequest {
             model: model.clone(),
             messages: chat_history.to_vec(),
+            tools: tools.to_vec(),
+            tool_choice: Some("auto".to_string()),
         };
 
         let response = self.client.post("https://api.openai.com/v1/chat/completions")
@@ -64,7 +66,7 @@ mod tests {
                 content: "Say 'hi' in Swedish in all lowercase. Do not add any other text.".to_string(),
             },
         ];
-        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history).await.unwrap();
+        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap();
         assert_eq!("hej", response);
     }
 
@@ -85,7 +87,7 @@ mod tests {
                 content: "What did you say? I didn't hear you. Repeat what you said exactly like you said it. Do not add any other text.".to_string(),
             },
         ];
-        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history).await.unwrap();
+        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap();
         assert_eq!("Yo bro, I feel great!", response);
     }
 
@@ -102,7 +104,7 @@ mod tests {
                 content: "How do you say 'hello' in french?".to_string(),
             },
         ];
-        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history).await.unwrap();
+        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap();
         assert_eq!("bonjour", response);
     }
 
@@ -116,7 +118,7 @@ mod tests {
                 content: "I am too broke for api key".to_string(),
             },
         ];
-        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history).await.unwrap_err();
+        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap_err();
         assert!(matches!(response, OpenAIError::InvalidApiKey));
     }
 
@@ -124,7 +126,7 @@ mod tests {
     async fn create_chat_completion_returns_empty_chat_history_error_when_chat_history_is_empty() {
         let client = OpenAIClient::new("any_api_key".to_string());
         let chat_history: &[ChatMessage] = &[];
-        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history).await.unwrap_err();
+        let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap_err();
         assert!(matches!(response, OpenAIError::EmptyChatHistory));
     }
 }

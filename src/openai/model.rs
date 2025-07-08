@@ -1,14 +1,16 @@
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatMessage {
     pub role: Role,
     pub content: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "camelCase")]
 pub enum Role {
     System,
     User,
@@ -40,4 +42,45 @@ impl fmt::Display for OpenAiModel {
         };
         write!(f, "{}", model_str)
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Tool {
+    #[serde(rename = "type")]
+    pub tool_type: ToolType,
+    pub function: Function,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Function {
+    pub name: String,
+    pub description: String,
+    pub parameters: Parameters,
+    pub strict: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Parameters {
+    #[serde(rename = "type")]
+    pub param_type: String, // usually "object"
+    pub properties: HashMap<String, Property>,
+    pub required: Vec<String>,
+    pub additional_properties: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Property {
+    #[serde(rename = "type")]
+    pub prop_type: String,
+    pub description: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum ToolType {
+    Function,
 }
