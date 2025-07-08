@@ -6,15 +6,17 @@ use code_g::openai::model::{ChatMessage, Role, OpenAiModel, Tool, ToolType, Para
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_key = env::var("OPENAI_API_KEY")?;
     let client = OpenAIClient::new(api_key);
-    let response = client.create_chat_completion(
-        &OpenAiModel::Gpt4oMini,
-        &[
-            ChatMessage {
-                role: Role::User,
-                content: "What is in the poem.txt file?".to_string(),
-            },
-        ],
-        &[Tool {
+
+    let mut messages = vec![
+        ChatMessage {
+            role: Role::User,
+            content: Some("What is in the poem.txt file?".to_string()),
+            tool_calls: None,
+        },
+    ];
+
+    let tools = vec![
+        Tool {
             tool_type: ToolType::Function,
             function: Function {
                 name: "read_file".to_string(),
@@ -32,8 +34,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 },
                 strict: true,
             },
-        }]
+        }
+    ];
+
+    let response = client.create_chat_completion(
+        &OpenAiModel::Gpt4oMini,
+        &messages,
+        &tools,
     ).await?;
     println!("Response: {:?}", response);
+
+
     Ok(())
 }

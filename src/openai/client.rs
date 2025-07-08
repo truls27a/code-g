@@ -1,6 +1,6 @@
 use reqwest::Client;
 use std::collections::HashMap;
-use crate::openai::schema::{ChatCompletionRequest, ChatCompletionResponse};
+use crate::openai::schema::{ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest};
 use crate::openai::model::{ChatMessage, OpenAiModel, Tool, ChatResult, ToolCall};
 use crate::openai::error::OpenAIError;
 
@@ -24,8 +24,8 @@ impl OpenAIClient {
 
         let request_body = ChatCompletionRequest {
             model: model.clone(),
-            messages: chat_history.to_vec(),
-            tools: tools.to_vec(),
+            messages: chat_history.iter().map(|m| ChatMessageRequest::from(m.clone())).collect(),
+            tools: Some(tools.to_vec()),
         };
 
         let response = self.client.post("https://api.openai.com/v1/chat/completions")
@@ -37,57 +37,7 @@ impl OpenAIClient {
 
         match response.status() {
             reqwest::StatusCode::OK => {
-                // println!("Response: {:?}", response.text().await?); ->:
-                /*
-                {
-                    "id": "chatcmpl-Br617zJWJrO4xzC414ma0d6toHLkf",
-                    "object": "chat.completion",
-                    "created": 1751994213,
-                    "model": "gpt-4o-mini-2024-07-18",
-                    "choices": [
-                        {
-                        "index": 0,
-                        "message": {
-                            "role": "assistant",
-                            "content": null,
-                            "tool_calls": [
-                            {
-                                "id": "call_FfysjRfMtcW08stTt7Nd52XS",
-                                "type": "function",
-                                "function": {
-                                "name": "read_file",
-                                "arguments": "{\"path\":\"poem.txt\"}"
-                                }
-                            }
-                            ],
-                            "refusal": null,
-                            "annotations": []
-                        },
-                        "logprobs": null,
-                        "finish_reason": "tool_calls"
-                        }
-                    ],
-                    "usage": {
-                        "prompt_tokens": 61,
-                        "completion_tokens": 16,
-                        "total_tokens": 77,
-                        "prompt_tokens_details": {
-                        "cached_tokens": 0,
-                        "audio_tokens": 0
-                        },
-                        "completion_tokens_details": {
-                        "reasoning_tokens": 0,
-                        "audio_tokens": 0,
-                        "accepted_prediction_tokens": 0,
-                        "rejected_prediction_tokens": 0
-                        }
-                    },
-                    "service_tier": "default",
-                    "system_fingerprint": "fp_34a54ae93c"
-                    }
-
-                 */
-                let completions: ChatCompletionResponse = response.json().await.map_err(|_| OpenAIError::NoCompletionFound)?; // -> Err(OpenAIError::NoCompletionFound)
+                let completions: ChatCompletionResponse = response.json().await.map_err(|_| OpenAIError::NoCompletionFound)?;
                 let choice = completions.choices.get(0).ok_or(OpenAIError::NoChoicesFound)?;
                 
                 let message = &choice.message;
@@ -136,7 +86,8 @@ mod tests {
         let chat_history = &[
             ChatMessage {
                 role: Role::User,
-                content: "Say 'hi' in Swedish in all lowercase. Do not add any other text.".to_string(),
+                content: Some("Say 'hi' in Swedish in all lowercase. Do not add any other text.".to_string()),
+                tool_calls: None,
             },
         ];
         let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap();
@@ -149,15 +100,18 @@ mod tests {
         let chat_history = &[
             ChatMessage {
                 role: Role::User,
-                content: "How are you dude?".to_string(),
+                content: Some("How are you dude?".to_string()),
+                tool_calls: None,
             },
             ChatMessage {
                 role: Role::Assistant,
-                content: "Yo bro, I feel great!".to_string(),
+                content: Some("Yo bro, I feel great!".to_string()),
+                tool_calls: None,
             },
             ChatMessage {
                 role: Role::User,
-                content: "What did you say? I didn't hear you. Repeat what you said exactly like you said it. Do not add any other text.".to_string(),
+                content: Some("What did you say? I didn't hear you. Repeat what you said exactly like you said it. Do not add any other text.".to_string()),
+                tool_calls: None,
             },
         ];
         let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap();
@@ -170,11 +124,13 @@ mod tests {
         let chat_history = &[
             ChatMessage {
                 role: Role::System,
-                content: "Always respond in french with all lowercase. Do not add any other text.".to_string(),
+                content: Some("Always respond in french with all lowercase. Do not add any other text.".to_string()),
+                tool_calls: None,
             },
             ChatMessage {
                 role: Role::User,
-                content: "How do you say 'hello' in french?".to_string(),
+                content: Some("How do you say 'hello' in french?".to_string()),
+                tool_calls: None,
             },
         ];
         let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap();
@@ -188,7 +144,8 @@ mod tests {
         let chat_history = &[
             ChatMessage {
                 role: Role::User,
-                content: "I am too broke for api key".to_string(),
+                content: Some("I am too broke for api key".to_string()),
+                tool_calls: None,
             },
         ];
         let response = client.create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[]).await.unwrap_err();
