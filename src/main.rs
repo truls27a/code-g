@@ -34,6 +34,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             },
         }]
     ).await?;
-    println!("Response: {}", response);
+    println!("Response: {:?}", response);
     Ok(())
 }

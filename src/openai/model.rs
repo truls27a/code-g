@@ -3,7 +3,12 @@ use serde::{Deserialize, Serialize};
 
 // Chat
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
+pub enum ChatResult {
+    Message(String),
+    ToolCalls(Vec<ToolCall>),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ChatMessage {
     pub role: Role,
     pub content: String,
@@ -11,7 +16,7 @@ pub struct ChatMessage {
 
 // Role
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "snake_case")]
 pub enum Role {
     System,
     User,
@@ -35,7 +40,6 @@ pub enum OpenAiModel {
 
 // Tool
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
 pub struct Tool {
     #[serde(rename = "type")]
     pub tool_type: ToolType,
@@ -43,13 +47,12 @@ pub struct Tool {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "snake_case")]
 pub enum ToolType {
     Function,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
 pub struct Function {
     pub name: String,
     pub description: String,
@@ -75,4 +78,9 @@ pub struct Property {
     pub description: String,
 }
 
-
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ToolCall {
+    pub id: String,
+    pub name: String,
+    pub arguments: HashMap<String, String>,
+}

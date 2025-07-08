@@ -26,6 +26,9 @@ pub enum OpenAIError {
     #[error("No content found")]
     NoContentFound,
 
+    #[error("Invalid tool call arguments")]
+    InvalidToolCallArguments,
+
     #[error("Rate limit exceeded")]
     RateLimitExceeded,
 

@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use crate::openai::model::{ChatMessage, Role, OpenAiModel, Tool, ToolType};
 
