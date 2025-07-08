@@ -1,6 +1,7 @@
 use reqwest::Client;
 use crate::openai::schema::{ChatCompletionRequest, ChatCompletionResponse};
-use crate::openai::model::{ChatMessage, Role};
+use crate::openai::model::ChatMessage;
+use crate::openai::error::OpenAIError;
 
 pub struct OpenAIClient {
     client: Client,
@@ -15,7 +16,7 @@ impl OpenAIClient {
         }
     }
 
-    pub async fn create_chat_completion(&self, model: &str, chat_history: Vec<ChatMessage>) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn create_chat_completion(&self, model: &str, chat_history: Vec<ChatMessage>) -> Result<String, OpenAIError> {
         let request_body = ChatCompletionRequest {
             model: model.to_string(),
             messages: chat_history,
@@ -27,26 +28,33 @@ impl OpenAIClient {
             .send()
             .await?;
 
-        if !response.status().is_success() {
-            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Failed to create chat completion"))); // TODO: Add custom error type
+        match response.status() {
+            reqwest::StatusCode::OK => {
+                let completions: ChatCompletionResponse = match response.json().await {
+                    Ok(completions) => completions,
+                    Err(_) => return Err(OpenAIError::NoCompletionFound),
+                };
+                let choice_response = match completions.choices.get(0) {
+                    Some(choice) => choice,
+                    None => return Err(OpenAIError::NoChoicesFound),
+                };
+                
+                let message_content = &choice_response.message.content;
+                Ok(message_content.to_string())
+            }
+            reqwest::StatusCode::UNAUTHORIZED => Err(OpenAIError::InvalidApiKey),
+            reqwest::StatusCode::FORBIDDEN => Err(OpenAIError::InsufficientCredits),
+            reqwest::StatusCode::TOO_MANY_REQUESTS => Err(OpenAIError::RateLimitExceeded),
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR => Err(OpenAIError::ServiceUnavailable),
+            _ => Err(OpenAIError::Other(format!("Unexpected HTTP status: {}", response.status()))),
         }
-
-        let completions: ChatCompletionResponse = response.json().await?;
-
-        println!("Completions: {:?}", completions);
-
-        let response = match completions.choices.get(0) {
-            Some(choice) => choice.message.content.clone(),
-            None => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "No completion found"))),
-        };
-
-        Ok(response)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::openai::model::Role;
 
     #[tokio::test]
     async fn create_chat_completion_responds_to_user_message() {
