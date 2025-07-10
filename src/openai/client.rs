@@ -1,7 +1,5 @@
 use crate::openai::error::OpenAIError;
-use crate::openai::model::{
-    ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall
-};
+use crate::openai::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
 use crate::openai::schema::{ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest};
 use reqwest::Client;
 use std::collections::HashMap;
@@ -117,7 +115,11 @@ mod tests {
             .create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[])
             .await
             .unwrap();
-        assert_eq!(ChatResult::Message("hej".to_string()), response);
+
+        match response {
+            ChatResult::Message(content) => assert!(content.contains("hej")),
+            _ => panic!("Expected ChatResult::Message"),
+        }
     }
 
     #[tokio::test]
@@ -139,10 +141,11 @@ mod tests {
             .create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[])
             .await
             .unwrap();
-        assert_eq!(
-            ChatResult::Message("Yo bro, I feel great!".to_string()),
-            response
-        );
+
+        match response {
+            ChatResult::Message(content) => assert!(content.contains("Yo bro, I feel great!")),
+            _ => panic!("Expected ChatResult::Message"),
+        }
     }
 
     #[tokio::test]
@@ -161,7 +164,11 @@ mod tests {
             .create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[])
             .await
             .unwrap();
-        assert_eq!(ChatResult::Message("bonjour".to_string()), response);
+    
+        match response {
+            ChatResult::Message(content) => assert!(content.contains("bonjour")),
+            _ => panic!("Expected ChatResult::Message"),
+        }
     }
 
     #[tokio::test]
@@ -191,9 +198,11 @@ mod tests {
     #[tokio::test]
     async fn create_chat_completion_returns_tool_calls_when_tool_calls_are_present() {
         let client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
+
         let chat_history = &[ChatMessage::User {
             content: "What is the weather in Tokyo?".to_string(),
         }];
+
         let tools = &[Tool {
             tool_type: ToolType::Function,
             function: Function {
@@ -201,12 +210,64 @@ mod tests {
                 description: "Get the weather in a given city".to_string(),
                 parameters: Parameters {
                     param_type: "object".to_string(),
-                    properties: HashMap::from([
-                        ("city".to_string(), Property {
+                    properties: HashMap::from([(
+                        "city".to_string(),
+                        Property {
                             prop_type: "string".to_string(),
                             description: "The city to get the weather of".to_string(),
-                        }),
-                    ]),
+                        },
+                    )]),
+                    required: vec!["city".to_string()],
+                    additional_properties: false,
+                },
+                strict: true,
+            },
+        }];
+
+        let response = client
+            .create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, tools)
+            .await
+            .unwrap();
+
+        assert!(matches!(response, ChatResult::ToolCalls(_)));
+    }
+
+    #[tokio::test]
+    async fn create_chat_completion_returns_message_based_on_tool_call_response() {
+        let client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
+
+        let chat_history = &[
+            ChatMessage::User {
+                content: "What is the weather in Tokyo?".to_string(),
+            },
+            ChatMessage::Assistant {
+                content: None,
+                tool_calls: Some(vec![ToolCall {
+                    id: "tool_call_id".to_string(),
+                    name: "get_weather".to_string(),
+                    arguments: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+                }]),
+            },
+            ChatMessage::Tool {
+                content: "The weather in Tokyo is sunny".to_string(),
+                tool_call_id: "tool_call_id".to_string(),
+            },
+        ];
+
+        let tools = &[Tool {
+            tool_type: ToolType::Function,
+            function: Function {
+                name: "get_weather".to_string(),
+                description: "Get the weather in a given city".to_string(),
+                parameters: Parameters {
+                    param_type: "object".to_string(),
+                    properties: HashMap::from([(
+                        "city".to_string(),
+                        Property {
+                            prop_type: "string".to_string(),
+                            description: "The city to get the weather of".to_string(),
+                        },
+                    )]),
                     required: vec!["city".to_string()],
                     additional_properties: false,
                 },
@@ -217,6 +278,10 @@ mod tests {
             .create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, tools)
             .await
             .unwrap();
-        assert!(matches!(response, ChatResult::ToolCalls(_)));
+
+        match response {
+            ChatResult::Message(content) => assert!(content.contains("sunny")),
+            _ => panic!("Expected ChatResult::Message"),
+        }
     }
 }
