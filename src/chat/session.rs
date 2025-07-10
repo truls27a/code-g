@@ -46,23 +46,44 @@ impl ChatSession {
                 return Ok(content);
             }
             ChatResult::ToolCalls(tool_calls) => {
-                for tool_call in tool_calls {
-                    let tool_call_response = ChatMessage::Assistant {
-                        content: None,
-                        tool_calls: Some(vec![tool_call]),
+                // 1. Add assistant message with tool_calls
+                let assistant_msg = ChatMessage::Assistant {
+                    content: None,
+                    tool_calls: Some(tool_calls.clone()),
+                };
+                self.memory.add_message(assistant_msg);
+
+                // 2. Call each tool and collect responses
+                for tool_call in &tool_calls {
+                    let tool_response = "To be or not to be, that is the question".to_string(); // TODO: Implement this
+                    let tool_msg = ChatMessage::Tool {
+                        content: tool_response,
+                        tool_call_id: tool_call.id.clone(),
                     };
-                    self.memory.add_message(tool_call_response);
+                    self.memory.add_message(tool_msg);
                 }
 
-                // For each tool call:
-                // 1. Call the tool
-                // 2. Add the tool call response to the memory
-                // Finally, call the chat completion again
+                // 3. Re-call OpenAI with tool responses in memory
+                let followup_response = self
+                    .client
+                    .create_chat_completion(
+                        &OpenAiModel::Gpt4oMini,
+                        &self.memory.get_memory(),
+                        &self.tools,
+                    )
+                    .await?;
 
-                // TODO: Implement tool call response
-                return Ok("".to_string());
+                // 4. Push final assistant message
+                if let ChatResult::Message(content) = followup_response {
+                    self.memory.add_message(ChatMessage::Assistant {
+                        content: Some(content.clone()),
+                        tool_calls: None,
+                    });
+                    return Ok(content);
+                } else {
+                    Err("Expected final assistant message, got tool calls again".into()) // TODO: Allow for further tool calls
+                }
             }
-        };
-
+        }
     }
 }
