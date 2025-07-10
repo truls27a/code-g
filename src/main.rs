@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env};
 use code_g::openai::client::OpenAIClient;
-use code_g::openai::model::{ChatMessage, OpenAiModel, Tool, ToolType, Parameters, Property, Function};
+use code_g::openai::model::{ChatMessage, OpenAiModel, Tool, ToolType, Parameters, Property, Function, ChatResult};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -40,7 +40,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &messages,
         &tools,
     ).await?;
-    println!("Response: {:?}", response);
+
+    println!("Response: {:?}", response.clone());
+
+    match response {
+        ChatResult::Message(content) => {
+            messages.push(ChatMessage::Assistant {
+                content: Some(content),
+                tool_calls: None,
+            });
+        }
+        ChatResult::ToolCalls(tool_calls) => {
+            messages.push(ChatMessage::Assistant {
+                content: None,
+                tool_calls: Some(tool_calls.clone()),
+            });
+            messages.push(ChatMessage::Tool { content: "To be or not to be, that is the question!".to_string(), tool_call_id: tool_calls[0].id.clone() });
+        }
+    };
+
+    println!("Messages: {:?}", messages.clone());
+
+    let response = client.create_chat_completion(
+        &OpenAiModel::Gpt4oMini,
+        &messages,
+        &tools,
+    ).await?;
+
+    println!("Response: {:?}", response.clone());
+
+
 
 
     Ok(())

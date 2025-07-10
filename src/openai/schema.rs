@@ -1,4 +1,4 @@
-use crate::openai::model::{ChatMessage, OpenAiModel, Tool, ToolType, ToolCall};
+use crate::openai::model::{ChatMessage, OpenAiModel, Tool, ToolCall, ToolType};
 use serde::{Deserialize, Serialize};
 
 // Request
@@ -14,6 +14,7 @@ pub struct ChatMessageRequest {
     pub role: Role,
     pub content: Option<String>,
     pub tool_calls: Option<Vec<ToolCallResponse>>,
+    pub tool_call_id: Option<String>,
 }
 
 impl From<ChatMessage> for ChatMessageRequest {
@@ -23,38 +24,36 @@ impl From<ChatMessage> for ChatMessageRequest {
                 role: Role::System,
                 content: Some(content),
                 tool_calls: None,
+                tool_call_id: None,
             },
             ChatMessage::User { content } => ChatMessageRequest {
                 role: Role::User,
                 content: Some(content),
                 tool_calls: None,
+                tool_call_id: None,
             },
-            ChatMessage::Assistant { content, tool_calls } => ChatMessageRequest {
+            ChatMessage::Assistant {
+                content,
+                tool_calls,
+            } => ChatMessageRequest {
                 role: Role::Assistant,
                 content,
-                tool_calls: tool_calls.map(|calls| {
-                    calls
-                        .into_iter()
-                        .map(ToolCallResponse::from)
-                        .collect()
-                }),
+                tool_calls: tool_calls
+                    .map(|calls| calls.into_iter().map(ToolCallResponse::from).collect()),
+                tool_call_id: None,
             },
-            ChatMessage::Tool { content, tool_call_id } => ChatMessageRequest {
+            ChatMessage::Tool {
+                content,
+                tool_call_id,
+            } => ChatMessageRequest {
                 role: Role::Tool,
                 content: Some(content),
-                tool_calls: Some(vec![ToolCallResponse {
-                    id: tool_call_id,
-                    tool_type: ToolType::Function,
-                    function: FunctionResponse {
-                        name: "function".to_string(),
-                        arguments: "".to_string(),
-                    },
-                }]),
+                tool_calls: None,
+                tool_call_id: Some(tool_call_id),
             },
         }
     }
 }
-
 
 // Role
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
