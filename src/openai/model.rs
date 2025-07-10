@@ -9,7 +9,7 @@ pub enum ChatResult {
     ToolCalls(Vec<ToolCall>),
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum ChatMessage {
     System {
         content: String,
@@ -18,13 +18,18 @@ pub enum ChatMessage {
         content: String,
     },
     Assistant {
-        content: Option<String>,
-        tool_calls: Option<Vec<ToolCall>>,
+        message: AssistantMessage,
     },
     Tool {
         content: String,
         tool_call_id: String,
     },
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub enum AssistantMessage {
+    Content(String),
+    ToolCalls(Vec<ToolCall>),
 }
 
 
@@ -38,13 +43,13 @@ impl From<ChatMessageRequest> for ChatMessage {
                 content: req.content.expect("User message must have content"),
             },
             Role::Assistant => ChatMessage::Assistant {
-                content: req.content,
-                tool_calls: req.tool_calls.map(|calls| {
-                    calls
-                        .into_iter()
-                        .map(ToolCall::from)
-                        .collect()
-                }),
+                message: if let Some(content) = req.content {
+                    AssistantMessage::Content(content)
+                } else if let Some(tool_calls) = req.tool_calls {
+                    AssistantMessage::ToolCalls(tool_calls.into_iter().map(ToolCall::from).collect())
+                } else {
+                    AssistantMessage::Content("".to_string()) // TODO: handle error
+                },
             },
             Role::Tool => {
                 let content = req.content.expect("Tool message must have content");
@@ -118,7 +123,7 @@ pub struct Property {
     pub description: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct ToolCall {
     pub id: String,
     pub name: String,

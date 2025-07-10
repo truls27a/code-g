@@ -1,5 +1,5 @@
 use crate::openai::error::OpenAIError;
-use crate::openai::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
+use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
 use crate::openai::schema::{ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest};
 use reqwest::Client;
 use std::collections::HashMap;
@@ -130,8 +130,7 @@ mod tests {
                 content: "How are you dude?".to_string(),
             },
             ChatMessage::Assistant {
-                content: Some("Yo bro, I feel great!".to_string()),
-                tool_calls: None,
+                message: AssistantMessage::Content("Yo bro, I feel great!".to_string()),
             },
             ChatMessage::User {
                 content: "What did you say? I didn't hear you. Repeat what you said exactly like you said it. Do not add any other text.".to_string(),
@@ -241,8 +240,7 @@ mod tests {
                 content: "What is the weather in Tokyo?".to_string(),
             },
             ChatMessage::Assistant {
-                content: None,
-                tool_calls: Some(vec![ToolCall {
+                message: AssistantMessage::ToolCalls(vec![ToolCall {
                     id: "tool_call_id".to_string(),
                     name: "get_weather".to_string(),
                     arguments: HashMap::from([("city".to_string(), "Tokyo".to_string())]),

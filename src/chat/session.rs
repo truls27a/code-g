@@ -1,6 +1,6 @@
 use crate::chat::memory::ChatMemory;
 use crate::openai::client::OpenAIClient;
-use crate::openai::model::{ChatMessage, ChatResult, OpenAiModel, Tool};
+use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel, Tool};
 
 pub struct ChatSession {
     memory: ChatMemory,
@@ -40,16 +40,14 @@ impl ChatSession {
         match response {
             ChatResult::Message(content) => {
                 self.memory.add_message(ChatMessage::Assistant {
-                    content: Some(content.clone()),
-                    tool_calls: None,
+                    message: AssistantMessage::Content(content.clone()),
                 });
                 return Ok(content);
             }
             ChatResult::ToolCalls(tool_calls) => {
                 // 1. Add assistant message with tool_calls
                 let assistant_msg = ChatMessage::Assistant {
-                    content: None,
-                    tool_calls: Some(tool_calls.clone()),
+                    message: AssistantMessage::ToolCalls(tool_calls.clone()),
                 };
                 self.memory.add_message(assistant_msg);
 
@@ -76,8 +74,7 @@ impl ChatSession {
                 // 4. Push final assistant message
                 if let ChatResult::Message(content) = followup_response {
                     self.memory.add_message(ChatMessage::Assistant {
-                        content: Some(content.clone()),
-                        tool_calls: None,
+                        message: AssistantMessage::Content(content.clone()),
                     });
                     return Ok(content);
                 } else {
