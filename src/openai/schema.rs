@@ -32,18 +32,19 @@ impl From<ChatMessage> for ChatMessageRequest {
                 tool_calls: None,
                 tool_call_id: None,
             },
-            ChatMessage::Assistant {
-                message,
-            } => ChatMessageRequest {
-                role: Role::Assistant,
-                content: match message {
-                    AssistantMessage::Content(content) => Some(content),
-                    AssistantMessage::ToolCalls(tool_calls) => {
-                        Some(serde_json::to_string(&tool_calls).unwrap()) // TODO: handle error
-                    }
+            ChatMessage::Assistant { message } => match message {
+                AssistantMessage::Content(content) => ChatMessageRequest {
+                    role: Role::Assistant,
+                    content: Some(content),
+                    tool_calls: None,
+                    tool_call_id: None,
                 },
-                tool_calls: None,
-                tool_call_id: None,
+                AssistantMessage::ToolCalls(tool_calls) => ChatMessageRequest {
+                    role: Role::Assistant,
+                    content: None,
+                    tool_calls: Some(tool_calls.into_iter().map(ToolCallResponse::from).collect()),
+                    tool_call_id: None,
+                },
             },
             ChatMessage::Tool {
                 content,
