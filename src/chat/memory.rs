@@ -1,5 +1,6 @@
 use crate::openai::model::ChatMessage;
 
+#[derive(Debug, PartialEq, Clone)]
 pub struct ChatMemory {
     memory: Vec<ChatMessage>,
 }

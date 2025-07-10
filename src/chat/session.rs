@@ -1,5 +1,6 @@
 use crate::chat::memory::ChatMemory;
 use crate::openai::client::OpenAIClient;
+use crate::openai::error::OpenAIError;
 use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel, Tool};
 
 pub struct ChatSession {
@@ -17,10 +18,7 @@ impl ChatSession {
         }
     }
 
-    pub async fn send_message(
-        &mut self,
-        message: &str,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn send_message(&mut self, message: &str) -> Result<String, OpenAIError> {
         // TODO: Add custom error type
         let user_message = ChatMessage::User {
             content: message.to_string(),
@@ -28,14 +26,18 @@ impl ChatSession {
 
         self.memory.add_message(user_message);
 
-        let response = self
+        let response = match self
             .client
             .create_chat_completion(
                 &OpenAiModel::Gpt4oMini, // TODO: Make this configurable
                 &self.memory.get_memory(),
                 &self.tools,
             )
-            .await?;
+            .await
+        {
+            Ok(res) => res,
+            Err(e) => return Err(e), // Just bubble up the error here
+        };
 
         match response {
             ChatResult::Message(content) => {
@@ -62,14 +64,18 @@ impl ChatSession {
                 }
 
                 // 3. Re-call OpenAI with tool responses in memory
-                let followup_response = self
+                let followup_response = match self
                     .client
                     .create_chat_completion(
                         &OpenAiModel::Gpt4oMini,
                         &self.memory.get_memory(),
                         &self.tools,
                     )
-                    .await?;
+                    .await
+                {
+                    Ok(res) => res,
+                    Err(e) => return Err(e), // Just bubble up the error here
+                };
 
                 // 4. Push final assistant message
                 if let ChatResult::Message(content) = followup_response {
@@ -78,7 +84,9 @@ impl ChatSession {
                     });
                     return Ok(content);
                 } else {
-                    Err("Expected final assistant message, got tool calls again".into()) // TODO: Allow for further tool calls
+                    Err(OpenAIError::Other(
+                        "Expected final assistant message, got tool calls again".to_string(),
+                    )) // TODO: Allow for further tool calls
                 }
             }
         }
