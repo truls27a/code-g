@@ -1,5 +1,5 @@
 use crate::openai::error::OpenAIError;
-use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
+use crate::openai::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
 use crate::openai::schema::{ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest};
 use reqwest::Client;
 use std::collections::HashMap;
@@ -102,7 +102,7 @@ impl OpenAIClient {
 mod tests {
     use super::*;
     use crate::openai::model::{
-        ChatMessage, ChatResult, Function, OpenAiModel, Parameters, Property, Tool, ToolType,
+        AssistantMessage, ChatMessage, ChatResult, Function, OpenAiModel, Parameters, Property, Tool, ToolType,
     };
 
     #[tokio::test]
