@@ -1,4 +1,4 @@
-use crate::openai::model::{ChatMessage, OpenAiModel, Tool, ToolCall, ToolType};
+use crate::openai::model::{AssistantMessage, ChatMessage, OpenAiModel, Tool, ToolCall, ToolType};
 use serde::{Deserialize, Serialize};
 
 // Request
@@ -33,13 +33,16 @@ impl From<ChatMessage> for ChatMessageRequest {
                 tool_call_id: None,
             },
             ChatMessage::Assistant {
-                content,
-                tool_calls,
+                message,
             } => ChatMessageRequest {
                 role: Role::Assistant,
-                content,
-                tool_calls: tool_calls
-                    .map(|calls| calls.into_iter().map(ToolCallResponse::from).collect()),
+                content: match message {
+                    AssistantMessage::Content(content) => Some(content),
+                    AssistantMessage::ToolCalls(tool_calls) => {
+                        Some(serde_json::to_string(&tool_calls).unwrap()) // TODO: handle error
+                    }
+                },
+                tool_calls: None,
                 tool_call_id: None,
             },
             ChatMessage::Tool {
