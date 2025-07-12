@@ -1,5 +1,5 @@
 use crate::openai::model::Tool as OpenAiTool;
-use crate::tools::{read_file::ReadFileTool, tool::Tool};
+use crate::tools::tool::Tool;
 use std::collections::HashMap;
 
 pub struct ToolRegistry {

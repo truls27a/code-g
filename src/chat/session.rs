@@ -1,7 +1,7 @@
 use crate::chat::memory::ChatMemory;
 use crate::openai::client::OpenAIClient;
 use crate::openai::error::OpenAIError;
-use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel, Tool};
+use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
 use crate::tools::registry::ToolRegistry;
 
 pub struct ChatSession {
@@ -76,7 +76,7 @@ impl ChatSession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::openai::model::{Function, Parameters, Property, Tool as OpenAiTool, ToolType};
+    use crate::openai::model::{Parameters, Property};
     use crate::tools::tool::Tool;
     use std::collections::HashMap;
 
@@ -138,38 +138,38 @@ mod tests {
     async fn send_message_uses_tools_when_tools_are_provided() {
         let openai_client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
 
-        pub struct TestTool;
+        struct TestTool;
 
         impl Tool for TestTool {
             fn name(&self) -> String {
                 "read_file".to_string()
             }
 
-            fn call(&self, args: HashMap<String, String>) -> Result<String, String> {
-                Ok("Hello, world!".to_string())
+            fn description(&self) -> String {
+                "Read the content of a file".to_string()
             }
 
-            fn to_openai_tool(&self) -> OpenAiTool {
-                OpenAiTool {
-                    tool_type: ToolType::Function,
-                    function: Function {
-                        name: self.name(),
-                        description: "Read the content of a file".to_string(),
-                        parameters: Parameters {
-                            param_type: "object".to_string(),
-                            properties: HashMap::from([(
-                                "path".to_string(),
-                                Property {
-                                    prop_type: "string".to_string(),
-                                    description: "The path to the file to read".to_string(),
-                                },
-                            )]),
-                            required: vec!["path".to_string()],
-                            additional_properties: false,
+            fn parameters(&self) -> Parameters {
+                Parameters {
+                    param_type: "object".to_string(),
+                    properties: HashMap::from([(
+                        "path".to_string(),
+                        Property {
+                            prop_type: "string".to_string(),
+                            description: "The path to the file to read".to_string(),
                         },
-                        strict: true,
-                    },
+                    )]),
+                    required: vec!["path".to_string()],
+                    additional_properties: false,
                 }
+            }
+
+            fn strict(&self) -> bool {
+                true
+            }
+
+            fn call(&self, _args: HashMap<String, String>) -> Result<String, String> {
+                Ok("Hello, world!".to_string())
             }
         }
 
