@@ -102,7 +102,8 @@ impl OpenAIClient {
 mod tests {
     use super::*;
     use crate::openai::model::{
-        AssistantMessage, ChatMessage, ChatResult, Function, OpenAiModel, Parameters, Property, Tool, ToolType,
+        AssistantMessage, ChatMessage, ChatResult, Function, OpenAiModel, Parameters, Property,
+        Tool, ToolType,
     };
 
     #[tokio::test]
@@ -163,7 +164,7 @@ mod tests {
             .create_chat_completion(&OpenAiModel::Gpt4oMini, chat_history, &[])
             .await
             .unwrap();
-    
+
         match response {
             ChatResult::Message(content) => assert!(content.contains("bonjour")),
             _ => panic!("Expected ChatResult::Message"),
