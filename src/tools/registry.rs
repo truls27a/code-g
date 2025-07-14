@@ -1,4 +1,5 @@
 use crate::openai::model::Tool as OpenAiTool;
+use crate::tools::read_file::ReadFileTool;
 use crate::tools::tool::Tool;
 use std::collections::HashMap;
 
@@ -8,12 +9,32 @@ pub struct ToolRegistry {
 
 impl ToolRegistry {
     pub fn new() -> Self {
-        Self {
-            tools: vec![],
-        }
+        Self { tools: vec![] }
     }
 
     pub fn from(tools: Vec<Box<dyn Tool>>) -> Self {
+        Self { tools }
+    }
+
+    /// Creates a ToolRegistry with read-only tools (search files and read file)
+    pub fn read_only_tools() -> Self {
+        let tools: Vec<Box<dyn Tool>> = vec![
+            Box::new(ReadFileTool),
+            // TODO: Add SearchFilesTool when implemented
+            // Box::new(SearchFilesTool),
+        ];
+        Self { tools }
+    }
+
+    /// Creates a ToolRegistry with all available tools (read-only + write file)
+    pub fn all_tools() -> Self {
+        let tools: Vec<Box<dyn Tool>> = vec![
+            Box::new(ReadFileTool),
+            // TODO: Add SearchFilesTool when implemented
+            // Box::new(SearchFilesTool),
+            // TODO: Add WriteFileTool when implemented
+            // Box::new(WriteFileTool),
+        ];
         Self { tools }
     }
 
