@@ -1,7 +1,7 @@
 use crate::openai::model::{Parameters, Property};
 use crate::tools::tool::Tool;
-
 use std::collections::HashMap;
+use std::fs;
 
 pub struct ReadFileTool;
 
@@ -34,7 +34,11 @@ impl Tool for ReadFileTool {
     }
 
     fn call(&self, args: HashMap<String, String>) -> Result<String, String> {
-        Ok(String::from("Hello, world!"))
+        // TODO: Handle errors better
+        let path = args.get("path").ok_or("Path is required")?;
+        match fs::read_to_string(path) {
+            Ok(content) => Ok(content),
+            Err(e) => Err(format!("Error reading file: '{}': {}", path, e)),
+        }
     }
-
 }
