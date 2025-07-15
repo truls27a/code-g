@@ -22,3 +22,13 @@ Så här är till Rust, ett djärvt språk,
 I dess famn, nya historier utspelar sig.
 För dem som söker ett säkrare sätt,
 Rust leder anklagelsen, vad som än må ske.
+
+I framtidens värld, där kod står kvar,
+Med Rust vid rodret, vi seglar rar.
+Varje rad med omsorg, vi formar och skapar,
+En digital vision, där ingen risk hänger kvar.
+
+Så låt oss bygga, med mod i vårt hjärta,
+I Rusts famn, vi hittar vårt starta.
+Från nybörjare till mästare, alla är vi here,
+I denna kodens land, vi skapar vår sfär.

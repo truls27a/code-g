@@ -177,7 +177,8 @@ mod tests {
             }
         }
 
-        let mut chat_session = ChatSession::new(openai_client, ToolRegistry::from(vec![Box::new(TestTool)]));
+        let mut chat_session =
+            ChatSession::new(openai_client, ToolRegistry::from(vec![Box::new(TestTool)]));
 
         chat_session
             .send_message("Read the content of the poem.txt file")

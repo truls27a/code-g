@@ -7,13 +7,10 @@ use std::env;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_key = env::var("OPENAI_API_KEY")?;
     let openai_client = OpenAIClient::new(api_key);
-    
+
     let tools = ToolRegistry::all_tools();
 
-    let mut chat_session = ChatSession::new(
-        openai_client,
-        tools,
-    );
+    let mut chat_session = ChatSession::new(openai_client, tools);
 
     let response = chat_session
         .send_message("Tranlate the poem in poem.txt to danish")
