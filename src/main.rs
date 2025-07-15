@@ -16,13 +16,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let response = chat_session
-        .send_message("What is in the poem.txt file?")
+        .send_message("Tranlate the poem in poem.txt to danish")
         .await?;
     println!("{}", response);
-    let response = chat_session
-        .send_message("Rewrite it to swedish")
-        .await?;
-    println!("{}", response);
-
     Ok(())
 }

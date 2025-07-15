@@ -20,6 +20,7 @@ impl ChatSession {
     }
 
     pub async fn send_message(&mut self, message: &str) -> Result<String, OpenAIError> {
+        println!("Sending message: {}", message);
         let user_message = ChatMessage::User {
             content: message.to_string(),
         };
@@ -46,9 +47,11 @@ impl ChatSession {
                     self.memory.add_message(ChatMessage::Assistant {
                         message: AssistantMessage::Content(content.clone()),
                     });
+                    println!("Assistant message: {}", content);
                     return Ok(content);
                 }
                 ChatResult::ToolCalls(tool_calls) => {
+                    println!("Tool calls: {:?}", tool_calls);
                     // 1. Add assistant message with tool_calls
                     let assistant_msg = ChatMessage::Assistant {
                         message: AssistantMessage::ToolCalls(tool_calls.clone()),
@@ -61,6 +64,7 @@ impl ChatSession {
                             .tools
                             .call_tool(tool_call.name.as_str(), tool_call.arguments.clone())
                             .unwrap_or_else(|e| format!("Error calling tool: {}", e));
+                        println!("Tool response: {}", tool_response);
                         let tool_msg = ChatMessage::Tool {
                             content: tool_response,
                             tool_call_id: tool_call.id.clone(),
