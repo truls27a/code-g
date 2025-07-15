@@ -66,3 +66,50 @@ impl ToolRegistry {
         self.tools.len()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_creates_a_tool_registry_with_no_tools() {
+        let registry = ToolRegistry::new();
+        assert_eq!(registry.len(), 0);
+        assert_eq!(registry.get_tools().len(), 0);
+    }
+
+    #[test]
+    fn from_creates_a_tool_registry_with_the_given_tools() {
+        let tools: Vec<Box<dyn Tool>> = vec![Box::new(ReadFileTool), Box::new(WriteFileTool)];
+        let registry = ToolRegistry::from(tools);
+        assert_eq!(registry.len(), 2);
+        assert_eq!(registry.get_tools().len(), 2);
+
+        let tool_names: Vec<String> = registry.get_tools().iter().map(|t| t.name()).collect();
+        assert_eq!(
+            tool_names,
+            vec!["read_file".to_string(), "write_file".to_string()]
+        );
+    }
+
+    #[test]
+    fn read_only_tools_creates_a_tool_registry_with_read_only_tools() {
+        let registry = ToolRegistry::read_only_tools();
+        assert_eq!(registry.len(), 1);
+
+        let tool_names: Vec<String> = registry.get_tools().iter().map(|t| t.name()).collect();
+        assert_eq!(tool_names, vec!["read_file".to_string()]); // TODO: Add SearchFilesTool when implemented
+    }
+
+    #[test]
+    fn all_tools_creates_a_tool_registry_with_all_tools() {
+        let registry = ToolRegistry::all_tools();
+        assert_eq!(registry.len(), 2);
+
+        let tool_names: Vec<String> = registry.get_tools().iter().map(|t| t.name()).collect();
+        assert_eq!(
+            tool_names,
+            vec!["read_file".to_string(), "write_file".to_string()]
+        ); // TODO: Add SearchFilesTool when implemented
+    }
+}
