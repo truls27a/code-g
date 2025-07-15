@@ -12,9 +12,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut chat_session = ChatSession::new(openai_client, tools);
 
-    let response = chat_session
-        .send_message("Tranlate the poem in poem.txt to danish")
-        .await?;
-    println!("{}", response);
+    chat_session.run().await?;
     Ok(())
 }

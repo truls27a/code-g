@@ -59,7 +59,7 @@ impl ChatSession {
                     // 3.2 Render the memory to the TUI
                     self.tui
                         .render(&self.memory.get_memory(), &mut io::stdout())
-                        .unwrap();
+                        .unwrap(); // TODO: Handle errors
 
                     // 3.3 Return the content
                     return Ok(content);
@@ -74,7 +74,7 @@ impl ChatSession {
                     // 3.2 Render the memory to the TUI
                     self.tui
                         .render(&self.memory.get_memory(), &mut io::stdout())
-                        .unwrap();
+                        .unwrap(); // TODO: Handle errors
 
                     // 3.2 Call each tool and collect responses
                     for tool_call in &tool_calls {
@@ -93,11 +93,24 @@ impl ChatSession {
                         // 3.2.3 Render the memory to the TUI
                         self.tui
                             .render(&self.memory.get_memory(), &mut io::stdout())
-                            .unwrap();
+                            .unwrap(); // TODO: Handle errors
                     }
                 }
             }
         }
+    }
+
+    pub async fn run(&mut self) -> Result<(), OpenAIError> {
+        loop {
+            let user_input = self.tui.read_user_input(&mut io::stdin().lock()).unwrap(); // TODO: Handle errors
+
+            if user_input == "exit" {
+                break;
+            }
+
+            self.send_message(&user_input).await?;
+        }
+        Ok(())
     }
 }
 
