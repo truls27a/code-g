@@ -51,3 +51,58 @@ impl Tool for WriteFileTool {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn call_writes_to_file() {
+        let path = "tmp_file.txt";
+        let content = "Hello, world!";
+        let tool = WriteFileTool;
+        
+        let result = tool.call(HashMap::from([("path".to_string(), path.to_string()), ("content".to_string(), content.to_string())]));
+        
+        assert_eq!(result.unwrap(), "File 'tmp_file.txt' written successfully");
+        
+        let read_result = fs::read_to_string(path).unwrap();
+        assert_eq!(read_result, content);
+
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn call_returns_error_when_path_is_not_provided() {
+        let tool = WriteFileTool;
+        
+        let result = tool.call(HashMap::from([("content".to_string(), "Hello, world!".to_string())]));
+        
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn call_returns_error_when_content_is_not_provided() {
+        let tool = WriteFileTool;
+        
+        let result = tool.call(HashMap::from([("path".to_string(), "tmp_file.txt".to_string())]));
+        
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn call_overwrites_file() {
+        let path = "tmp_file.txt";
+        fs::write(path, "Hello, world!").unwrap();
+
+        let tool = WriteFileTool;
+        let result = tool.call(HashMap::from([("path".to_string(), path.to_string()), ("content".to_string(), "Hej på dig!".to_string())]));
+        assert_eq!(result.unwrap(), "File 'tmp_file.txt' written successfully");
+
+        let read_result = fs::read_to_string(path).unwrap();
+        assert_eq!(read_result, "Hej på dig!");
+
+        fs::remove_file(path).unwrap();
+    }
+}

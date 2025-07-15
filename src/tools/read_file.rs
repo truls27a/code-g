@@ -47,24 +47,27 @@ impl Tool for ReadFileTool {
 mod tests {
     use super::*;
 
-    fn create_file(path: &str, content: &str) -> String {
-        fs::write(path, content).unwrap();
-        path.to_string()
-    }
-
     #[test]
     fn call_reads_file() {
-        let path = create_file("tmp_file.txt", "Hello, world!");
+        let path = "tmp_file.txt";
+        let content = "Hello, world!";
+        fs::write(path, content).unwrap();
+
         let tool = ReadFileTool;
-        let result = tool.call(HashMap::from([("path".to_string(), path)]));
-        fs::remove_file("tmp_file.txt").unwrap();
+     
+        let result = tool.call(HashMap::from([("path".to_string(), path.to_string())]));
+     
         assert_eq!(result.unwrap(), "Hello, world!");
+        
+        fs::remove_file(path).unwrap();
     }
 
     #[test]
     fn call_returns_error_when_file_does_not_exist() {
         let tool = ReadFileTool;
+        
         let result = tool.call(HashMap::from([("path".to_string(), "non_existent_file.txt".to_string())]));
+        
         assert!(result.is_err());
     }
 
@@ -72,7 +75,9 @@ mod tests {
     #[test]
     fn call_returns_error_when_path_is_not_provided() {
         let tool = ReadFileTool;
+        
         let result = tool.call(HashMap::new());
+        
         assert!(result.is_err());
     }
 }
