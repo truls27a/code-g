@@ -28,7 +28,9 @@ impl Tui {
     }
 
     pub fn read_user_input(&self, reader: &mut impl BufRead) -> Result<String, io::Error> {
-        println!("> ");
+        print!("> ");
+        io::stdout().flush()?;
+
         let mut input = String::new();
         reader.read_line(&mut input)?;
         Ok(input.trim().to_string())

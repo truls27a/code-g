@@ -13,5 +13,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut chat_session = ChatSession::new(openai_client, tools);
 
     chat_session.run().await?;
+    
     Ok(())
 }
