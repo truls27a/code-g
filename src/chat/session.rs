@@ -3,11 +3,14 @@ use crate::openai::client::OpenAIClient;
 use crate::openai::error::OpenAIError;
 use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
 use crate::tools::registry::ToolRegistry;
+use crate::tui::tui::Tui;
+use std::io;
 
 pub struct ChatSession {
     memory: ChatMemory,
     client: OpenAIClient,
     tools: ToolRegistry,
+    tui: Tui,
 }
 
 impl ChatSession {
@@ -16,60 +19,81 @@ impl ChatSession {
             memory: ChatMemory::new(),
             client,
             tools,
+            tui: Tui::new(),
         }
     }
 
     pub async fn send_message(&mut self, message: &str) -> Result<String, OpenAIError> {
-        println!("Sending message: {}", message);
-        let user_message = ChatMessage::User {
+        // Add user message to memory
+        self.memory.add_message(ChatMessage::User {
             content: message.to_string(),
-        };
+        });
 
-        self.memory.add_message(user_message);
+        // Render the memory to the TUI
+        self.tui
+            .render(&self.memory.get_memory(), &mut io::stdout())
+            .unwrap();
 
         // TODO: Handle scenario where it does to many tool calls
+        // Loop until the client returns a message
         loop {
-            let response = match self
+            // 1. Get a response from the client
+            let response = self
                 .client
                 .create_chat_completion(
                     &OpenAiModel::Gpt4oMini, // TODO: Make this configurable
                     &self.memory.get_memory(),
                     &self.tools.to_openai_tools(),
                 )
-                .await
-            {
-                Ok(res) => res,
-                Err(e) => return Err(e), // Just bubble up the error here
-            };
+                .await?;
 
+            // 2. Handle the response from the client
             match response {
+                // 3. If the response is a message, add it to the memory and return it
                 ChatResult::Message(content) => {
+                    // 3.1 Add assistant message with content
                     self.memory.add_message(ChatMessage::Assistant {
                         message: AssistantMessage::Content(content.clone()),
                     });
-                    println!("Assistant message: {}", content);
+
+                    // 3.2 Render the memory to the TUI
+                    self.tui
+                        .render(&self.memory.get_memory(), &mut io::stdout())
+                        .unwrap();
+
+                    // 3.3 Return the content
                     return Ok(content);
                 }
+                // 3. If the response is tool calls, add them to the memory and process them, add the tool responses to the memory, and then finally start over to get the assistants response
                 ChatResult::ToolCalls(tool_calls) => {
-                    println!("Tool calls: {:?}", tool_calls);
-                    // 1. Add assistant message with tool_calls
-                    let assistant_msg = ChatMessage::Assistant {
+                    // 3.1 Add assistant message with tool_calls
+                    self.memory.add_message(ChatMessage::Assistant {
                         message: AssistantMessage::ToolCalls(tool_calls.clone()),
-                    };
-                    self.memory.add_message(assistant_msg);
+                    });
 
-                    // 2. Call each tool and collect responses
+                    // 3.2 Render the memory to the TUI
+                    self.tui
+                        .render(&self.memory.get_memory(), &mut io::stdout())
+                        .unwrap();
+
+                    // 3.2 Call each tool and collect responses
                     for tool_call in &tool_calls {
+                        // 3.2.1 Call the tool
                         let tool_response = self
                             .tools
                             .call_tool(tool_call.name.as_str(), tool_call.arguments.clone())
                             .unwrap_or_else(|e| format!("Error calling tool: {}", e));
-                        println!("Tool response: {}", tool_response);
-                        let tool_msg = ChatMessage::Tool {
+
+                        // 3.2.2 Add tool response to memory
+                        self.memory.add_message(ChatMessage::Tool {
                             content: tool_response,
                             tool_call_id: tool_call.id.clone(),
-                        };
-                        self.memory.add_message(tool_msg);
+                        });
+
+                        // 3.2.3 Render the memory to the TUI
+                        self.tui
+                            .render(&self.memory.get_memory(), &mut io::stdout())
+                            .unwrap();
                     }
                 }
             }
