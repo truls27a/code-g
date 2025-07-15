@@ -59,13 +59,13 @@ mod tests {
 
     #[test]
     fn call_writes_to_file() {
-        let path = "tmp_file.txt";
+        let path = "call_writes_to_file_tmp_file.txt";
         let content = "Hello, world!";
         let tool = WriteFileTool;
         
         let result = tool.call(HashMap::from([("path".to_string(), path.to_string()), ("content".to_string(), content.to_string())]));
         
-        assert_eq!(result.unwrap(), "File 'tmp_file.txt' written successfully");
+        assert_eq!(result.unwrap(), format!("File '{}' written successfully", path));
         
         let read_result = fs::read_to_string(path).unwrap();
         assert_eq!(read_result, content);
@@ -93,12 +93,12 @@ mod tests {
 
     #[test]
     fn call_overwrites_file() {
-        let path = "tmp_file.txt";
+        let path = "call_overwrites_file_tmp_file.txt";
         fs::write(path, "Hello, world!").unwrap();
 
         let tool = WriteFileTool;
         let result = tool.call(HashMap::from([("path".to_string(), path.to_string()), ("content".to_string(), "Hej på dig!".to_string())]));
-        assert_eq!(result.unwrap(), "File 'tmp_file.txt' written successfully");
+        assert_eq!(result.unwrap(), format!("File '{}' written successfully", path));
 
         let read_result = fs::read_to_string(path).unwrap();
         assert_eq!(read_result, "Hej på dig!");

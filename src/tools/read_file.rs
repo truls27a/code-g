@@ -49,7 +49,7 @@ mod tests {
 
     #[test]
     fn call_reads_file() {
-        let path = "tmp_file.txt";
+        let path = "call_reads_file_tmp_file.txt";
         let content = "Hello, world!";
         fs::write(path, content).unwrap();
 
