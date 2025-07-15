@@ -16,11 +16,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let response = chat_session
-        .send_message("What is in the poem.txt file? If you get an error, tell me what the error is.")
+        .send_message("What is in the poem.txt file?")
         .await?;
     println!("{}", response);
     let response = chat_session
-        .send_message("Do a litteraly analisys of the poem")
+        .send_message("Rewrite it to swedish")
         .await?;
     println!("{}", response);
 

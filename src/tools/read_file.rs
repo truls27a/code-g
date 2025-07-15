@@ -34,7 +34,6 @@ impl Tool for ReadFileTool {
     }
 
     fn call(&self, args: HashMap<String, String>) -> Result<String, String> {
-        // TODO: Handle errors better
         let path = args.get("path").ok_or("Path is required")?;
         match fs::read_to_string(path) {
             Ok(content) => Ok(content),

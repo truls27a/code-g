@@ -1,6 +1,7 @@
 use crate::openai::model::Tool as OpenAiTool;
 use crate::tools::read_file::ReadFileTool;
 use crate::tools::tool::Tool;
+use crate::tools::write_file::WriteFileTool;
 use std::collections::HashMap;
 
 pub struct ToolRegistry {
@@ -32,8 +33,7 @@ impl ToolRegistry {
             Box::new(ReadFileTool),
             // TODO: Add SearchFilesTool when implemented
             // Box::new(SearchFilesTool),
-            // TODO: Add WriteFileTool when implemented
-            // Box::new(WriteFileTool),
+            Box::new(WriteFileTool),
         ];
         Self { tools }
     }
