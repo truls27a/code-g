@@ -17,10 +17,14 @@ impl Tui {
                 ChatMessage::User { content } => writeln!(writer, "User: {}", content)?,
                 ChatMessage::Assistant { message } => match message {
                     AssistantMessage::Content(content) => writeln!(writer, "Assistant: {}", content)?,
-                    AssistantMessage::ToolCalls(tool_calls) => writeln!(writer, "Assistant: {:?}", tool_calls)?,
+                    AssistantMessage::ToolCalls(tool_calls) => {
+                        for tool_call in tool_calls {
+                            writeln!(writer, "Assistant is calling tool: {}", tool_call.name)?;
+                        }
+                    },
                 },
-                ChatMessage::Tool { content, tool_call_id: _ } => writeln!(writer, "Tool: {}", content)?,
                 ChatMessage::System { content } => writeln!(writer, "System: {}", content)?,
+                ChatMessage::Tool { content: _, tool_call_id: _ } => {},
             }
         }
 
