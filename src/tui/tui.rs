@@ -29,11 +29,7 @@ impl Tui {
                         }
                     }
                 },
-                ChatMessage::System { content } => writeln!(writer, "System: {}", content)?,
-                ChatMessage::Tool {
-                    content: _,
-                    tool_call_id: _,
-                } => {}
+                _ => {}
             }
         }
 
@@ -81,6 +77,18 @@ mod tests {
 
         let result = String::from_utf8(output).unwrap();
         assert_eq!(result, "\x1B[2J\x1B[1;1HUser: Hello\nAssistant: Hello human!\n");
+    }
+
+    #[test]
+    fn render_does_not_print_system_messages() {
+        let tui = Tui::new();
+        let messages = vec![ChatMessage::System { content: "Hello".to_string() }];
+
+        let mut output = Vec::new();
+        tui.render(&messages, &mut output).unwrap();
+
+        let result = String::from_utf8(output).unwrap();
+        assert_eq!(result, "\x1B[2J\x1B[1;1H");
     }
 
     #[test]
