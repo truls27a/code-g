@@ -1,5 +1,6 @@
 use crate::openai::model::Tool as OpenAiTool;
 use crate::tools::read_file::ReadFileTool;
+use crate::tools::search_files::SearchFilesTool;
 use crate::tools::tool::Tool;
 use crate::tools::write_file::WriteFileTool;
 use std::collections::HashMap;
@@ -19,11 +20,7 @@ impl ToolRegistry {
 
     /// Creates a ToolRegistry with read-only tools (search files and read file)
     pub fn read_only_tools() -> Self {
-        let tools: Vec<Box<dyn Tool>> = vec![
-            Box::new(ReadFileTool),
-            // TODO: Add SearchFilesTool when implemented
-            // Box::new(SearchFilesTool),
-        ];
+        let tools: Vec<Box<dyn Tool>> = vec![Box::new(ReadFileTool), Box::new(SearchFilesTool)];
         Self { tools }
     }
 
@@ -31,8 +28,7 @@ impl ToolRegistry {
     pub fn all_tools() -> Self {
         let tools: Vec<Box<dyn Tool>> = vec![
             Box::new(ReadFileTool),
-            // TODO: Add SearchFilesTool when implemented
-            // Box::new(SearchFilesTool),
+            Box::new(SearchFilesTool),
             Box::new(WriteFileTool),
         ];
         Self { tools }
@@ -95,21 +91,28 @@ mod tests {
     #[test]
     fn read_only_tools_creates_a_tool_registry_with_read_only_tools() {
         let registry = ToolRegistry::read_only_tools();
-        assert_eq!(registry.len(), 1);
-
-        let tool_names: Vec<String> = registry.get_tools().iter().map(|t| t.name()).collect();
-        assert_eq!(tool_names, vec!["read_file".to_string()]); // TODO: Add SearchFilesTool when implemented
-    }
-
-    #[test]
-    fn all_tools_creates_a_tool_registry_with_all_tools() {
-        let registry = ToolRegistry::all_tools();
         assert_eq!(registry.len(), 2);
 
         let tool_names: Vec<String> = registry.get_tools().iter().map(|t| t.name()).collect();
         assert_eq!(
             tool_names,
-            vec!["read_file".to_string(), "write_file".to_string()]
-        ); // TODO: Add SearchFilesTool when implemented
+            vec!["read_file".to_string(), "search_files".to_string()]
+        );
+    }
+
+    #[test]
+    fn all_tools_creates_a_tool_registry_with_all_tools() {
+        let registry = ToolRegistry::all_tools();
+        assert_eq!(registry.len(), 3);
+
+        let tool_names: Vec<String> = registry.get_tools().iter().map(|t| t.name()).collect();
+        assert_eq!(
+            tool_names,
+            vec![
+                "read_file".to_string(),
+                "search_files".to_string(),
+                "write_file".to_string()
+            ]
+        );
     }
 }
