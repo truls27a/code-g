@@ -1,4 +1,4 @@
-use code_g::chat::session::ChatSession;
+use code_g::chat::session::{ChatSession, SystemPromptConfig};
 use code_g::openai::client::OpenAIClient;
 use code_g::tools::registry::ToolRegistry;
 use std::env;
@@ -10,7 +10,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let tools = ToolRegistry::all_tools();
 
-    let mut chat_session = ChatSession::new(openai_client, tools, None);
+    let mut chat_session =
+        ChatSession::new(openai_client, tools, SystemPromptConfig::Default, false);
 
     chat_session.run().await?;
 

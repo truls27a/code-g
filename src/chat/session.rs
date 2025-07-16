@@ -7,22 +7,41 @@ use crate::tools::registry::ToolRegistry;
 use crate::tui::tui::Tui;
 use std::io;
 
+#[derive(Debug, Clone)]
+pub enum SystemPromptConfig {
+    /// No system prompt will be added
+    None,
+    /// Use the default system prompt
+    Default,
+    /// Use a custom system prompt
+    Custom(String),
+}
+
 pub struct ChatSession {
     memory: ChatMemory,
     client: OpenAIClient,
     tools: ToolRegistry,
     tui: Tui,
+    silent: bool,
 }
 
 impl ChatSession {
-    pub fn new(client: OpenAIClient, tools: ToolRegistry, system_prompt: Option<String>) -> Self {
-        let memory = match system_prompt {
-            Some(system_prompt) => ChatMemory::from(vec![ChatMessage::System {
-                content: system_prompt,
-            }]),
-            None => ChatMemory::from(vec![ChatMessage::System {
+    pub fn new(
+        client: OpenAIClient,
+        tools: ToolRegistry,
+        system_prompt_config: SystemPromptConfig,
+        silent: bool,
+    ) -> Self {
+        let memory = match system_prompt_config {
+            SystemPromptConfig::None => ChatMemory::from(vec![]),
+            SystemPromptConfig::Default => ChatMemory::from(vec![ChatMessage::System {
                 content: SYSTEM_PROMPT.to_string(),
             }]),
+            SystemPromptConfig::Custom(custom_prompt) => {
+                ChatMemory::from(vec![ChatMessage::System {
+                    content: custom_prompt,
+                }])
+            }
         };
 
         Self {
@@ -30,6 +49,7 @@ impl ChatSession {
             client,
             tools,
             tui: Tui::new(),
+            silent,
         }
     }
 
@@ -39,10 +59,12 @@ impl ChatSession {
             content: message.to_string(),
         });
 
-        // Render the memory to the TUI
-        self.tui
-            .render(&self.memory.get_memory(), &mut io::stdout())
-            .unwrap();
+        // Render the memory to the TUI (only if not silent)
+        if !self.silent {
+            self.tui
+                .render(&self.memory.get_memory(), &mut io::stdout())
+                .unwrap();
+        }
 
         // TODO: Handle scenario where it does to many tool calls
         // Loop until the client returns a message
@@ -66,10 +88,12 @@ impl ChatSession {
                         message: AssistantMessage::Content(content.clone()),
                     });
 
-                    // 3.2 Render the memory to the TUI
-                    self.tui
-                        .render(&self.memory.get_memory(), &mut io::stdout())
-                        .unwrap(); // TODO: Handle errors
+                    // 3.2 Render the memory to the TUI (only if not silent)
+                    if !self.silent {
+                        self.tui
+                            .render(&self.memory.get_memory(), &mut io::stdout())
+                            .unwrap(); // TODO: Handle errors
+                    }
 
                     // 3.3 Return the content
                     return Ok(content);
@@ -81,10 +105,12 @@ impl ChatSession {
                         message: AssistantMessage::ToolCalls(tool_calls.clone()),
                     });
 
-                    // 3.2 Render the memory to the TUI
-                    self.tui
-                        .render(&self.memory.get_memory(), &mut io::stdout())
-                        .unwrap(); // TODO: Handle errors
+                    // 3.2 Render the memory to the TUI (only if not silent)
+                    if !self.silent {
+                        self.tui
+                            .render(&self.memory.get_memory(), &mut io::stdout())
+                            .unwrap(); // TODO: Handle errors
+                    }
 
                     // 3.2 Call each tool and collect responses
                     for tool_call in &tool_calls {
@@ -100,10 +126,12 @@ impl ChatSession {
                             tool_call_id: tool_call.id.clone(),
                         });
 
-                        // 3.2.3 Render the memory to the TUI
-                        self.tui
-                            .render(&self.memory.get_memory(), &mut io::stdout())
-                            .unwrap(); // TODO: Handle errors
+                        // 3.2.3 Render the memory to the TUI (only if not silent)
+                        if !self.silent {
+                            self.tui
+                                .render(&self.memory.get_memory(), &mut io::stdout())
+                                .unwrap(); // TODO: Handle errors
+                        }
                     }
                 }
             }
@@ -134,21 +162,36 @@ mod tests {
     #[test]
     fn new_creates_a_chat_session_with_empty_memory() {
         let openai_client = OpenAIClient::new("any_api_key".to_string());
-        let chat_session = ChatSession::new(openai_client, ToolRegistry::new(), None);
+        let chat_session = ChatSession::new(
+            openai_client,
+            ToolRegistry::new(),
+            SystemPromptConfig::None,
+            true,
+        );
         assert_eq!(chat_session.memory.get_memory().len(), 0);
     }
 
     #[test]
     fn new_creates_a_chat_session_with_empty_tools() {
         let openai_client = OpenAIClient::new("any_api_key".to_string());
-        let chat_session = ChatSession::new(openai_client, ToolRegistry::new(), None);
+        let chat_session = ChatSession::new(
+            openai_client,
+            ToolRegistry::new(),
+            SystemPromptConfig::None,
+            true,
+        );
         assert_eq!(chat_session.tools.len(), 0);
     }
 
     #[tokio::test]
     async fn send_message_adds_user_message_to_memory() {
         let openai_client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
-        let mut chat_session = ChatSession::new(openai_client, ToolRegistry::new(), None);
+        let mut chat_session = ChatSession::new(
+            openai_client,
+            ToolRegistry::new(),
+            SystemPromptConfig::None,
+            true,
+        );
         chat_session.send_message("Hello").await.unwrap();
         assert_eq!(
             chat_session.memory.get_memory()[0],
@@ -161,7 +204,12 @@ mod tests {
     #[tokio::test]
     async fn send_message_adds_assistant_message_to_memory() {
         let openai_client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
-        let mut chat_session = ChatSession::new(openai_client, ToolRegistry::new(), None);
+        let mut chat_session = ChatSession::new(
+            openai_client,
+            ToolRegistry::new(),
+            SystemPromptConfig::None,
+            true,
+        );
         chat_session
             .send_message("Respond with 'Hello', nothing else.")
             .await
@@ -177,7 +225,12 @@ mod tests {
     #[tokio::test]
     async fn send_message_returns_message_when_message_is_sent() {
         let openai_client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
-        let mut chat_session = ChatSession::new(openai_client, ToolRegistry::new(), None);
+        let mut chat_session = ChatSession::new(
+            openai_client,
+            ToolRegistry::new(),
+            SystemPromptConfig::None,
+            true,
+        );
         let response = chat_session
             .send_message("Say 'Hello', nothing else.")
             .await
@@ -224,8 +277,12 @@ mod tests {
             }
         }
 
-        let mut chat_session =
-            ChatSession::new(openai_client, ToolRegistry::from(vec![Box::new(TestTool)]), None);
+        let mut chat_session = ChatSession::new(
+            openai_client,
+            ToolRegistry::from(vec![Box::new(TestTool)]),
+            SystemPromptConfig::None,
+            true,
+        );
 
         chat_session
             .send_message("Read the content of the poem.txt file")

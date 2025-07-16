@@ -14,7 +14,7 @@ impl Tui {
         messages: &[ChatMessage],
         writer: &mut impl Write,
     ) -> Result<(), io::Error> {
-        println!("\x1B[2J\x1B[1;1H"); // clear screen
+        write!(writer, "\x1B[2J\x1B[1;1H")?; // clear screen
 
         for message in messages {
             match message {
@@ -80,7 +80,7 @@ mod tests {
         tui.render(&messages, &mut output).unwrap();
 
         let result = String::from_utf8(output).unwrap();
-        assert_eq!(result, "User: Hello\nAssistant: Hello human!\n");
+        assert_eq!(result, "\x1B[2J\x1B[1;1HUser: Hello\nAssistant: Hello human!\n");
     }
 
     #[test]
