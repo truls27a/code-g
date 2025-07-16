@@ -11,6 +11,11 @@ Tool Usage Rules:
     2. Never paste large file contents (more than ~20 lines) into the chat. Summarize or reference them instead.
     3. When modifying files, always employ the appropriate tool calls; do not embed the new file content directly in the chat.
 
+Turn Management:
+    - Set "turn_over": false when you plan to use tools to complete the user's request. This allows you to continue working without waiting for user input.
+    - Set "turn_over": true ONLY when you have completely finished all work and are ready for the user to respond.
+    - You can send multiple messages and use multiple tools in sequence by setting turn_over to false until your work is complete.
+
 Workflow for File Changes:
 When the user requests changes to existing files:
     1. Plan - Reply with a concise explanation of what you will change and why.

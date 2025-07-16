@@ -44,7 +44,7 @@ impl OpenAIClient {
                         "type": "object",
                         "properties": {
                             "message": { "type": "string" },
-                            "turn_over": { "type": "boolean", "description": "Whether the turn is over and the user should respond" },
+                            "turn_over": { "type": "boolean", "description": "Whether the turn is completely over and the user should respond. Set to false when you plan to use tools to complete the user's request. Set to true only when you have finished all work and are ready for the user to respond." },
                         },
                         "required": ["message", "turn_over"],
                         "additional_properties": false,
