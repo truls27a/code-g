@@ -60,6 +60,43 @@ impl From<ChatMessage> for ChatMessageRequest {
     }
 }
 
+impl From<ChatMessageRequest> for ChatMessage {
+    fn from(req: ChatMessageRequest) -> Self {
+        match req.role {
+            Role::System => ChatMessage::System {
+                content: req.content.expect("System message must have content"),
+            },
+            Role::User => ChatMessage::User {
+                content: req.content.expect("User message must have content"),
+            },
+            Role::Assistant => ChatMessage::Assistant {
+                message: if let Some(content) = req.content {
+                    AssistantMessage::Content(content)
+                } else if let Some(tool_calls) = req.tool_calls {
+                    AssistantMessage::ToolCalls(
+                        tool_calls.into_iter().map(ToolCall::from).collect(),
+                    )
+                } else {
+                    AssistantMessage::Content("".to_string()) // TODO: handle error
+                },
+            },
+            Role::Tool => {
+                let content = req.content.expect("Tool message must have content");
+                let tool_call_id = req
+                    .tool_calls
+                    .and_then(|mut calls| calls.pop())
+                    .map(|call| call.id)
+                    .expect("Tool message must have a tool_call_id");
+
+                ChatMessage::Tool {
+                    content,
+                    tool_call_id,
+                }
+            }
+        }
+    }
+}
+
 // Role
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -69,7 +106,6 @@ pub enum Role {
     Assistant,
     Tool,
 }
-
 
 // Response
 #[derive(Deserialize, Debug, Serialize)]
@@ -124,6 +160,16 @@ impl From<ToolCall> for ToolCallResponse {
                 name: tool_call.name,
                 arguments: serde_json::to_string(&tool_call.arguments).unwrap(), // TODO: handle error
             },
+        }
+    }
+}
+
+impl From<ToolCallResponse> for ToolCall {
+    fn from(tool_call_response: ToolCallResponse) -> Self {
+        Self {
+            id: tool_call_response.id,
+            name: tool_call_response.function.name,
+            arguments: serde_json::from_str(&tool_call_response.function.arguments).unwrap(), // TODO: handle error
         }
     }
 }
