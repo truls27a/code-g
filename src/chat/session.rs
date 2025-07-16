@@ -1,4 +1,5 @@
 use crate::chat::memory::ChatMemory;
+use crate::chat::system_prompt::SYSTEM_PROMPT;
 use crate::openai::client::OpenAIClient;
 use crate::openai::error::OpenAIError;
 use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
@@ -19,7 +20,9 @@ impl ChatSession {
             Some(system_prompt) => ChatMemory::from(vec![ChatMessage::System {
                 content: system_prompt,
             }]),
-            None => ChatMemory::new(),
+            None => ChatMemory::from(vec![ChatMessage::System {
+                content: SYSTEM_PROMPT.to_string(),
+            }]),
         };
 
         Self {
