@@ -9,22 +9,31 @@ impl Tui {
         Self {}
     }
 
-    pub fn render(&self, messages: &[ChatMessage], writer: &mut impl Write) -> Result<(), io::Error> {
+    pub fn render(
+        &self,
+        messages: &[ChatMessage],
+        writer: &mut impl Write,
+    ) -> Result<(), io::Error> {
         println!("\x1B[2J\x1B[1;1H"); // clear screen
 
         for message in messages {
             match message {
                 ChatMessage::User { content } => writeln!(writer, "User: {}", content)?,
                 ChatMessage::Assistant { message } => match message {
-                    AssistantMessage::Content(content) => writeln!(writer, "Assistant: {}", content)?,
+                    AssistantMessage::Content(content) => {
+                        writeln!(writer, "Assistant: {}", content)?
+                    }
                     AssistantMessage::ToolCalls(tool_calls) => {
                         for tool_call in tool_calls {
                             writeln!(writer, "Assistant is calling tool: {}", tool_call.name)?;
                         }
-                    },
+                    }
                 },
                 ChatMessage::System { content } => writeln!(writer, "System: {}", content)?,
-                ChatMessage::Tool { content: _, tool_call_id: _ } => {},
+                ChatMessage::Tool {
+                    content: _,
+                    tool_call_id: _,
+                } => {}
             }
         }
 
@@ -32,6 +41,8 @@ impl Tui {
     }
 
     pub fn read_user_input(&self, reader: &mut impl BufRead) -> Result<String, io::Error> {
+        // Move cursor to bottom of terminal and print prompt
+        println!("\x1B[999;1H");
         print!("> ");
         io::stdout().flush()?;
 
@@ -49,7 +60,7 @@ mod tests {
     #[test]
     fn new_creates_a_tui() {
         let tui = Tui::new();
- 
+
         assert_eq!(tui, Tui);
     }
 
@@ -57,8 +68,12 @@ mod tests {
     fn render_prints_messages() {
         let tui = Tui::new();
         let messages = vec![
-            ChatMessage::User { content: "Hello".to_string() },
-            ChatMessage::Assistant { message: AssistantMessage::Content("Hello human!".to_string()) },
+            ChatMessage::User {
+                content: "Hello".to_string(),
+            },
+            ChatMessage::Assistant {
+                message: AssistantMessage::Content("Hello human!".to_string()),
+            },
         ];
 
         let mut output = Vec::new();
