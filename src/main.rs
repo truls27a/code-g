@@ -10,9 +10,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let tools = ToolRegistry::all_tools();
 
-    let mut chat_session = ChatSession::new(openai_client, tools);
+    let mut chat_session = ChatSession::new(openai_client, tools, None);
 
     chat_session.run().await?;
-    
+
     Ok(())
 }

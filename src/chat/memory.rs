@@ -10,6 +10,10 @@ impl ChatMemory {
         Self { memory: vec![] }
     }
 
+    pub fn from(memory: Vec<ChatMessage>) -> Self {
+        Self { memory }
+    }
+
     pub fn add_message(&mut self, message: ChatMessage) {
         self.memory.push(message);
     }
