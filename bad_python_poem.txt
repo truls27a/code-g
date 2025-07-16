@@ -1,0 +1,24 @@
+I Pythonland, där kaos råder,
+Där indentering styr, och ingen borden.
+En dynamisk typ, så svår att förstå,
+Felkod som lurar, bakom varje stå.
+
+Med svaga länkar, i minneshanteringen,
+Fylls minnet snabbt, i överflöd av stängning.
+Att debugga är som att söka en nål,
+I höstacken av undantag, är det sällan mål.
+
+Prestanda brister, i tunga operationer,
+Och skript som körs, drar på stora proportioner.
+Tolkad och långsam, en snigel i spåret,
+Med Rust och andra språk, känns varje svek så sårbart.
+
+Bibliotek överflöd, men ofta bristande,
+Många beroenden, men få som förblivande.
+Koden sväller, i en salig röra,
+I Pythonland, var är tryggheten att föra?
+
+Så låt oss hejda, denna svampiga väg,
+I en värld där logik skall ges en säkrare lägre.
+För alla de som söker ett bättre resultat,
+Börja om på nytt, välj språk med mer stabilitet!
