@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
+const MAX_FILES_RETURNED: usize = 50;
+
 pub struct SearchFilesTool;
 
 impl Tool for SearchFilesTool {
@@ -41,14 +43,21 @@ impl Tool for SearchFilesTool {
         let directory = ".";
 
         match search_files(pattern, directory) {
-            Ok(files) => {
+            Ok((files, truncated)) => {
                 if files.is_empty() {
                     Ok(format!("No files found matching pattern '{}'", pattern))
                 } else {
+                    let truncation_note = if truncated {
+                        format!(" (showing first {} results)", MAX_FILES_RETURNED)
+                    } else {
+                        String::new()
+                    };
+
                     Ok(format!(
-                        "Found {} file(s) matching pattern '{}':\n{}",
+                        "Found {} file(s) matching pattern '{}'{}:\n{}",
                         files.len(),
                         pattern,
+                        truncation_note,
                         files.join("\n")
                     ))
                 }
@@ -58,7 +67,7 @@ impl Tool for SearchFilesTool {
     }
 }
 
-fn search_files(pattern: &str, directory: &str) -> Result<Vec<String>, String> {
+fn search_files(pattern: &str, directory: &str) -> Result<(Vec<String>, bool), String> {
     let mut found_files = Vec::new();
     let search_path = Path::new(directory);
 
@@ -72,7 +81,11 @@ fn search_files(pattern: &str, directory: &str) -> Result<Vec<String>, String> {
 
     search_directory_recursive(search_path, pattern, &mut found_files)?;
     found_files.sort();
-    Ok(found_files)
+
+    // Check if we hit the limit (indicating there might be more files)
+    let truncated = found_files.len() >= MAX_FILES_RETURNED;
+
+    Ok((found_files, truncated))
 }
 
 fn search_directory_recursive(
@@ -80,10 +93,20 @@ fn search_directory_recursive(
     pattern: &str,
     found_files: &mut Vec<String>,
 ) -> Result<(), String> {
+    // Stop searching if we've reached the limit
+    if found_files.len() >= MAX_FILES_RETURNED {
+        return Ok(());
+    }
+
     let entries = fs::read_dir(dir)
         .map_err(|e| format!("Failed to read directory '{}': {}", dir.display(), e))?;
 
     for entry in entries {
+        // Check limit again in case we reached it during this iteration
+        if found_files.len() >= MAX_FILES_RETURNED {
+            break;
+        }
+
         let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
         let path = entry.path();
 
@@ -236,5 +259,73 @@ mod tests {
         assert!(result.is_ok());
         let output = result.unwrap();
         assert!(output.contains("Cargo.toml"));
+    }
+
+    #[test]
+    fn search_files_returns_truncated_false_for_small_results() {
+        let result = search_files("Cargo.toml", ".");
+
+        assert!(result.is_ok());
+        let (files, truncated) = result.unwrap();
+        assert!(!truncated); // Should not be truncated for single file
+        assert_eq!(files.len(), 1);
+    }
+
+    #[test]
+    fn call_does_not_show_truncation_message_for_small_results() {
+        let tool = SearchFilesTool;
+
+        let result = tool.call(HashMap::from([(
+            "pattern".to_string(),
+            "Cargo.toml".to_string(),
+        )]));
+
+        assert!(result.is_ok());
+        let output = result.unwrap();
+        assert!(!output.contains("showing first"));
+        assert!(!output.contains("results)"));
+    }
+
+    #[test]
+    fn call_shows_truncation_message_when_limit_reached() {
+        let tool = SearchFilesTool;
+
+        // Search for all files (*) which should exceed the limit in a typical project
+        let result = tool.call(HashMap::from([("pattern".to_string(), "*".to_string())]));
+
+        assert!(result.is_ok());
+        let output = result.unwrap();
+
+        // Check if we got results
+        if output.contains("Found") && !output.contains("No files found") {
+            let lines: Vec<&str> = output.lines().collect();
+            let file_count = lines.len() - 1; // Subtract 1 for the "Found X files" line
+
+            // If we found MAX_FILES_RETURNED files, check for truncation message
+            if file_count >= MAX_FILES_RETURNED {
+                assert!(output.contains("showing first"));
+                assert!(output.contains(&format!("{}", MAX_FILES_RETURNED)));
+            }
+        }
+    }
+
+    #[test]
+    fn max_files_returned_constant_is_reasonable() {
+        // Verify the constant is set to a reasonable value
+        assert_eq!(MAX_FILES_RETURNED, 50);
+        assert!(MAX_FILES_RETURNED > 0);
+        assert!(MAX_FILES_RETURNED < 1000); // Not too large to overwhelm context
+    }
+
+    #[test]
+    fn search_files_respects_max_limit() {
+        // Test with a pattern that would normally return many files
+        let result = search_files("*", ".");
+
+        assert!(result.is_ok());
+        let (files, _truncated) = result.unwrap();
+
+        // Should never return more than MAX_FILES_RETURNED
+        assert!(files.len() <= MAX_FILES_RETURNED);
     }
 }
