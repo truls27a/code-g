@@ -1,6 +1,8 @@
 use crate::openai::error::OpenAIError;
 use crate::openai::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
-use crate::openai::schema::{ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest};
+use crate::openai::schema::{
+    ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest, JsonSchema, ResponseFormat,
+};
 use reqwest::Client;
 use std::collections::HashMap;
 
@@ -34,7 +36,21 @@ impl OpenAIClient {
                 .map(|m| ChatMessageRequest::from(m.clone()))
                 .collect(),
             tools: Some(tools.to_vec()),
-            response_format: None,
+            response_format: Some(ResponseFormat {
+                response_format_type: "json_schema".to_string(),
+                json_schema: JsonSchema {
+                    name: "structured_chat_response".to_string(),
+                    schema: serde_json::json!({
+                        "type": "object",
+                        "properties": {
+                            "message": { "type": "string" },
+                            "turn_over": { "type": "boolean", "description": "Whether the turn is over and the user should respond" },
+                        },
+                        "required": ["message", "turn_over"],
+                        "additional_properties": false,
+                    }),
+                },
+            }),
         };
 
         let response = self
