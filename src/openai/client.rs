@@ -1,10 +1,12 @@
 use crate::openai::error::OpenAIError;
 use crate::openai::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
 use crate::openai::schema::{
-    ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest, JsonSchema, ResponseFormat,
+    ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest, ContentResponse,
+    JsonSchema, ResponseFormat,
 };
 use reqwest::Client;
 use std::collections::HashMap;
+use std::fs;
 
 pub struct OpenAIClient {
     client: Client,
@@ -75,7 +77,11 @@ impl OpenAIClient {
                 let message = &choice.message;
 
                 if let Some(content) = &message.content {
-                    return Ok(ChatResult::Message(content.clone()));
+                    let content_response = ContentResponse::from(content.as_str());
+                    return Ok(ChatResult::Message {
+                        content: content_response.message,
+                        turn_over: content_response.turn_over,
+                    });
                 }
 
                 if let Some(tool_calls_response) = &message.tool_calls {
@@ -135,7 +141,7 @@ mod tests {
             .unwrap();
 
         match response {
-            ChatResult::Message(content) => assert!(content.contains("hej")),
+            ChatResult::Message { content, .. } => assert!(content.contains("hej")),
             _ => panic!("Expected ChatResult::Message"),
         }
     }
@@ -160,7 +166,9 @@ mod tests {
             .unwrap();
 
         match response {
-            ChatResult::Message(content) => assert!(content.contains("Yo bro, I feel great!")),
+            ChatResult::Message { content, .. } => {
+                assert!(content.contains("Yo bro, I feel great!"))
+            }
             _ => panic!("Expected ChatResult::Message"),
         }
     }
@@ -183,7 +191,7 @@ mod tests {
             .unwrap();
 
         match response {
-            ChatResult::Message(content) => assert!(content.contains("bonjour")),
+            ChatResult::Message { content, .. } => assert!(content.contains("bonjour")),
             _ => panic!("Expected ChatResult::Message"),
         }
     }
@@ -296,7 +304,7 @@ mod tests {
             .unwrap();
 
         match response {
-            ChatResult::Message(content) => assert!(content.contains("sunny")),
+            ChatResult::Message { content, .. } => assert!(content.contains("sunny")),
             _ => panic!("Expected ChatResult::Message"),
         }
     }

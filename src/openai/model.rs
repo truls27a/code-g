@@ -5,7 +5,7 @@ use std::collections::HashMap;
 // Chat
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum ChatResult {
-    Message(String),
+    Message { content: String, turn_over: bool },
     ToolCalls(Vec<ToolCall>),
 }
 
@@ -32,7 +32,6 @@ pub enum AssistantMessage {
     ToolCalls(Vec<ToolCall>),
 }
 
-
 impl From<ChatMessageRequest> for ChatMessage {
     fn from(req: ChatMessageRequest) -> Self {
         match req.role {
@@ -46,14 +45,17 @@ impl From<ChatMessageRequest> for ChatMessage {
                 message: if let Some(content) = req.content {
                     AssistantMessage::Content(content)
                 } else if let Some(tool_calls) = req.tool_calls {
-                    AssistantMessage::ToolCalls(tool_calls.into_iter().map(ToolCall::from).collect())
+                    AssistantMessage::ToolCalls(
+                        tool_calls.into_iter().map(ToolCall::from).collect(),
+                    )
                 } else {
                     AssistantMessage::Content("".to_string()) // TODO: handle error
                 },
             },
             Role::Tool => {
                 let content = req.content.expect("Tool message must have content");
-                let tool_call_id = req.tool_calls
+                let tool_call_id = req
+                    .tool_calls
                     .and_then(|mut calls| calls.pop())
                     .map(|call| call.id)
                     .expect("Tool message must have a tool_call_id");
@@ -66,7 +68,6 @@ impl From<ChatMessageRequest> for ChatMessage {
         }
     }
 }
-
 
 // Model
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

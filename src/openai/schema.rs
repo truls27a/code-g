@@ -70,6 +70,7 @@ pub enum Role {
     Tool,
 }
 
+
 // Response
 #[derive(Deserialize, Debug, Serialize)]
 pub struct ChatCompletionResponse {
@@ -92,6 +93,18 @@ pub struct MessageResponse {
     pub role: Role,
     pub content: Option<String>,
     pub tool_calls: Option<Vec<ToolCallResponse>>,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+pub struct ContentResponse {
+    pub message: String,
+    pub turn_over: bool,
+}
+
+impl From<&str> for ContentResponse {
+    fn from(content: &str) -> Self {
+        serde_json::from_str(content).unwrap()
+    }
 }
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -121,6 +134,7 @@ pub struct FunctionResponse {
     pub arguments: String,
 }
 
+// Response Format
 #[derive(Deserialize, Debug, Serialize)]
 pub struct ResponseFormat {
     #[serde(rename = "type")]
