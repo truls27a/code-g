@@ -11,7 +11,7 @@ impl Tool for WriteFileTool {
     }
 
     fn description(&self) -> String {
-        "Write to a file".to_string()
+        "Write to a file. If the file does not exist, it will be created. If the file exists, it will be overwritten.".to_string()
     }
 
     fn parameters(&self) -> Parameters {

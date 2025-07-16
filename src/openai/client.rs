@@ -6,7 +6,6 @@ use crate::openai::schema::{
 };
 use reqwest::Client;
 use std::collections::HashMap;
-use std::fs;
 
 pub struct OpenAIClient {
     client: Client,
