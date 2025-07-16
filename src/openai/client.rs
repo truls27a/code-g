@@ -34,6 +34,7 @@ impl OpenAIClient {
                 .map(|m| ChatMessageRequest::from(m.clone()))
                 .collect(),
             tools: Some(tools.to_vec()),
+            response_format: None,
         };
 
         let response = self

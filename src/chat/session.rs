@@ -133,6 +133,7 @@ impl ChatSession {
                                 .unwrap(); // TODO: Handle errors
                         }
                     }
+                    continue;
                 }
             }
         }

@@ -7,6 +7,7 @@ pub struct ChatCompletionRequest {
     pub model: OpenAiModel,
     pub messages: Vec<ChatMessageRequest>,
     pub tools: Option<Vec<Tool>>,
+    pub response_format: Option<ResponseFormat>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -118,4 +119,17 @@ impl From<ToolCall> for ToolCallResponse {
 pub struct FunctionResponse {
     pub name: String,
     pub arguments: String,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+pub struct ResponseFormat {
+    #[serde(rename = "type")]
+    pub response_format_type: String, // "json_schema"
+    pub json_schema: JsonSchema,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+pub struct JsonSchema {
+    pub name: String,
+    pub schema: serde_json::Value,
 }
