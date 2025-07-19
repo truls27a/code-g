@@ -1,11 +1,14 @@
+use crate::chat::error::ChatSessionError;
 use crate::chat::memory::ChatMemory;
 use crate::chat::system_prompt::SYSTEM_PROMPT;
 use crate::openai::client::OpenAIClient;
-use crate::openai::error::OpenAIError;
 use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
 use crate::tools::registry::ToolRegistry;
 use crate::tui::tui::Tui;
 use std::io;
+
+// Maximum number of iterations per message to prevent infinite loops
+const MAX_ITERATIONS: usize = 10;
 
 #[derive(Debug, Clone)]
 pub enum SystemPromptConfig {
@@ -53,7 +56,7 @@ impl ChatSession {
         }
     }
 
-    pub async fn send_message(&mut self, message: &str) -> Result<String, OpenAIError> {
+    pub async fn send_message(&mut self, message: &str) -> Result<String, ChatSessionError> {
         // Add user message to memory
         self.memory.add_message(ChatMessage::User {
             content: message.to_string(),
@@ -66,9 +69,20 @@ impl ChatSession {
                 .unwrap();
         }
 
-        // TODO: Handle scenario where it does to many tool calls
-        // Loop until the client returns a message
+        // Track iterations to prevent infinite loops
+        let mut iterations = 0;
+
+        // Loop until the client returns a message or max iterations reached
         loop {
+            iterations += 1;
+
+            // Check if we've exceeded the maximum number of iterations
+            if iterations > MAX_ITERATIONS {
+                return Err(ChatSessionError::MaxIterationsExceeded {
+                    max_iterations: MAX_ITERATIONS,
+                });
+            }
+
             // 1. Get a response from the client
             let response = self
                 .client
@@ -142,7 +156,7 @@ impl ChatSession {
         }
     }
 
-    pub async fn run(&mut self) -> Result<(), OpenAIError> {
+    pub async fn run(&mut self) -> Result<(), ChatSessionError> {
         loop {
             let user_input = self.tui.read_user_input(&mut io::stdin().lock()).unwrap(); // TODO: Handle errors
 
