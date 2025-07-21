@@ -124,25 +124,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_gray_italic_formatting() {
+    fn gray_italic_formatting_works() {
         let result = Formatter::gray_italic("test text");
         assert_eq!(result, "\x1B[90m\x1B[3mtest text\x1B[0m");
     }
 
     #[test]
-    fn test_bold_formatting() {
+    fn bold_formatting_works() {
         let result = Formatter::bold_text("bold text");
         assert_eq!(result, "\x1B[1mbold text\x1B[0m");
     }
 
     #[test]
-    fn test_colored_text() {
+    fn colored_text_works() {
         let result = Formatter::colored_text("red text", Formatter::red());
         assert_eq!(result, "\x1B[91mred text\x1B[0m");
     }
 
     #[test]
-    fn test_terminal_clear_screen() {
+    fn terminal_clear_screen_works() {
         assert_eq!(Terminal::clear_screen(), "\x1B[2J\x1B[1;1H");
     }
 }

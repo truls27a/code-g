@@ -124,31 +124,28 @@ impl Tui {
                     "read_file" => {
                         writeln!(
                             writer,
-                            "{}",
-                            Formatter::gray_italic(&format!(
-                                "* Read {} lines",
-                                content.lines().count()
-                            ))
+                            "{}{}{}",
+                            Formatter::gray_italic("* Read "),
+                            content.lines().count(),
+                            Formatter::gray_italic(" lines\n")
                         )?;
                     }
                     "write_file" => {
                         writeln!(
                             writer,
-                            "{}",
-                            Formatter::gray_italic(&format!(
-                                "* Wrote {} lines",
-                                content.lines().count()
-                            ))
+                            "{}{}{}",
+                            Formatter::gray_italic("* Wrote "),
+                            content.lines().count(),
+                            Formatter::gray_italic(" lines")
                         )?;
                     }
                     "search_files" => {
                         writeln!(
                             writer,
-                            "{}",
-                            Formatter::gray_italic(&format!(
-                                "* Found {} files",
-                                content.lines().count()
-                            ))
+                            "{}{}{}",
+                            Formatter::gray_italic("* Found "),
+                            content.lines().count(),
+                            Formatter::gray_italic(" files")
                         )?;
                     }
                     _ => {
