@@ -1,3 +1,4 @@
+use super::formatting::{Formatter, Terminal};
 use crate::openai::model::{AssistantMessage, ChatMessage};
 use std::io::{self, BufRead, Write};
 
@@ -26,9 +27,9 @@ impl Tui {
 
     pub fn read_user_input(&self, reader: &mut impl BufRead) -> Result<String, io::Error> {
         // Save current cursor position and move to bottom to show prompt
-        print!("\x1B[s"); // Save cursor position
-        print!("\x1B[999;1H"); // Move to bottom of terminal
-        print!("> "); // Print prompt
+        print!("{}", Terminal::save_cursor());
+        print!("{}", Terminal::move_to_bottom());
+        print!("> ");
         io::stdout().flush()?;
 
         // Capture the user's input
@@ -36,15 +37,15 @@ impl Tui {
         reader.read_line(&mut input)?;
 
         // Clear the prompt line and restore cursor position
-        print!("\x1B[999;1H\x1B[K"); // Move to bottom and clear line
-        print!("\x1B[u"); // Restore cursor position
+        print!("{}", Terminal::move_to_bottom_and_clear());
+        print!("{}", Terminal::restore_cursor());
         io::stdout().flush()?;
 
         Ok(input.trim().to_string())
     }
 
     pub fn clear_terminal(&self, writer: &mut impl Write) -> Result<(), io::Error> {
-        write!(writer, "\x1B[2J\x1B[1;1H")?; // clear screen
+        write!(writer, "{}", Terminal::clear_screen())?;
         Ok(())
     }
 
@@ -70,32 +71,44 @@ impl Tui {
                             "read_file" => {
                                 writeln!(
                                     writer,
-                                    "\x1B[90m\x1B[3m* Reading {}\x1B[0m",
-                                    tool_call.arguments.get("path").unwrap_or(&"".to_string())
+                                    "{}",
+                                    Formatter::gray_italic(&format!(
+                                        "* Reading {}",
+                                        tool_call.arguments.get("path").unwrap_or(&"".to_string())
+                                    ))
                                 )?;
                             }
                             "write_file" => {
                                 writeln!(
                                     writer,
-                                    "\x1B[90m\x1B[3m* Writing {}\x1B[0m",
-                                    tool_call.arguments.get("path").unwrap_or(&"".to_string())
+                                    "{}",
+                                    Formatter::gray_italic(&format!(
+                                        "* Writing {}",
+                                        tool_call.arguments.get("path").unwrap_or(&"".to_string())
+                                    ))
                                 )?;
                             }
                             "search_files" => {
                                 writeln!(
                                     writer,
-                                    "\x1B[90m\x1B[3m* Searching for '{}'\x1B[0m",
-                                    tool_call
-                                        .arguments
-                                        .get("pattern")
-                                        .unwrap_or(&"".to_string())
+                                    "{}",
+                                    Formatter::gray_italic(&format!(
+                                        "* Searching for '{}'",
+                                        tool_call
+                                            .arguments
+                                            .get("pattern")
+                                            .unwrap_or(&"".to_string())
+                                    ))
                                 )?;
                             }
                             _ => {
                                 writeln!(
                                     writer,
-                                    "\x1B[90m\x1B[3m* Calling tool '{}'\x1B[0m",
-                                    tool_call.name
+                                    "{}",
+                                    Formatter::gray_italic(&format!(
+                                        "* Calling tool '{}'",
+                                        tool_call.name
+                                    ))
                                 )?;
                             }
                         }
@@ -111,29 +124,41 @@ impl Tui {
                     "read_file" => {
                         writeln!(
                             writer,
-                            "\x1B[90m\x1B[3m* Read \x1B[0m{}\x1B[90m\x1B[3m lines\x1B[0m",
-                            content.lines().count()
+                            "{}",
+                            Formatter::gray_italic(&format!(
+                                "* Read {} lines",
+                                content.lines().count()
+                            ))
                         )?;
                     }
                     "write_file" => {
                         writeln!(
                             writer,
-                            "\x1B[90m\x1B[3m* Wrote \x1B[0m{}\x1B[90m\x1B[3m lines\x1B[0m",
-                            content.lines().count()
+                            "{}",
+                            Formatter::gray_italic(&format!(
+                                "* Wrote {} lines",
+                                content.lines().count()
+                            ))
                         )?;
                     }
                     "search_files" => {
                         writeln!(
                             writer,
-                            "\x1B[90m\x1B[3m* Found \x1B[0m{}\x1B[90m\x1B[3m files\x1B[0m",
-                            content.lines().count()
+                            "{}",
+                            Formatter::gray_italic(&format!(
+                                "* Found {} files",
+                                content.lines().count()
+                            ))
                         )?;
                     }
                     _ => {
                         writeln!(
                             writer,
-                            "\x1B[90m\x1B[3m* Tool '{}' returned: \x1B[0m{}",
-                            tool_name, content
+                            "{}",
+                            Formatter::gray_italic(&format!(
+                                "* Tool '{}' returned: {}",
+                                tool_name, content
+                            ))
                         )?;
                     }
                 }
