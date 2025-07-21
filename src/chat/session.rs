@@ -2,6 +2,7 @@ use crate::chat::error::ChatSessionError;
 use crate::chat::memory::ChatMemory;
 use crate::chat::system_prompt::SYSTEM_PROMPT;
 use crate::openai::client::OpenAIClient;
+use crate::openai::error::OpenAIError;
 use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
 use crate::tools::registry::ToolRegistry;
 use crate::tui::tui::Tui;
@@ -84,14 +85,61 @@ impl ChatSession {
             }
 
             // 1. Get a response from the client
-            let response = self
+            let response = match self
                 .client
                 .create_chat_completion(
                     &OpenAiModel::Gpt4oMini, // TODO: Make this configurable
                     &self.memory.get_memory(),
                     &self.tools.to_openai_tools(),
                 )
-                .await?;
+                .await
+            {
+                Ok(response) => response,
+                Err(e) => {
+                    // Add error message to memory to inform the AI about the issue
+                    let error_message = match e {
+                        OpenAIError::InvalidChatMessageRequest => {
+                            "Invalid chat message request provided to the AI".to_string()
+                        } // TODO: Make the user retry, not the AI
+                        OpenAIError::InvalidContentResponse => {
+                            "Invalid response from the AI".to_string()
+                        }
+                        OpenAIError::InvalidToolCallArguments => {
+                            "Invalid tool call arguments provided to the AI".to_string()
+                        } // TODO: Make the user retry, not the AI
+                        OpenAIError::InvalidApiKey => "Invalid API key".to_string(), // TODO: Break and handle this
+                        OpenAIError::InsufficientCredits => "Insufficient credits".to_string(), // TODO: Break and handle this
+                        OpenAIError::NoCompletionFound => {
+                            "Invalid response from the AI. No completion found".to_string()
+                        } // TODO: Break and handle this
+                        OpenAIError::NoChoicesFound => {
+                            "Invalid response from the AI. No choices found".to_string()
+                        } // TODO: Break and handle this
+                        OpenAIError::NoContentFound => {
+                            "Invalid response from the AI. No content found".to_string()
+                        }
+                        OpenAIError::RateLimitExceeded => "Rate limit exceeded".to_string(), // TODO: Break and handle this
+                        OpenAIError::ServiceUnavailable => "Service unavailable".to_string(), // TODO: Break and handle this
+                        OpenAIError::InvalidModel => "Invalid model".to_string(), // TODO: Break and handle this
+                        OpenAIError::EmptyChatHistory => "Empty chat history".to_string(), // TODO: Break and handle this
+                        OpenAIError::MissingApiKey => "Missing API key".to_string(), // TODO: Break and handle this
+                        OpenAIError::HttpError(_) => "HTTP error".to_string(), // TODO: Break and handle this
+                        OpenAIError::Other(e) => e,
+                    };
+
+                    let error_message = format!(
+                        "An error occurred while communicating with the AI service: {}. Please retry your request or try a different approach.",
+                        error_message
+                    );
+
+                    self.memory.add_message(ChatMessage::System {
+                        content: error_message,
+                    });
+
+                    // Continue the loop to retry with the error message in context
+                    continue;
+                }
+            };
 
             // 2. Handle the response from the client
             match response {
