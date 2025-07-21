@@ -1,4 +1,5 @@
 use crate::openai::model::Tool as OpenAiTool;
+use crate::tools::edit_file::EditFileTool;
 use crate::tools::read_file::ReadFileTool;
 use crate::tools::search_files::SearchFilesTool;
 use crate::tools::tool::Tool;
@@ -24,12 +25,13 @@ impl ToolRegistry {
         Self { tools }
     }
 
-    /// Creates a ToolRegistry with all available tools (read-only + write file)
+    /// Creates a ToolRegistry with all available tools (read-only + write file + edit file)
     pub fn all_tools() -> Self {
         let tools: Vec<Box<dyn Tool>> = vec![
             Box::new(ReadFileTool),
             Box::new(SearchFilesTool),
             Box::new(WriteFileTool),
+            Box::new(EditFileTool),
         ];
         Self { tools }
     }
@@ -103,7 +105,7 @@ mod tests {
     #[test]
     fn all_tools_creates_a_tool_registry_with_all_tools() {
         let registry = ToolRegistry::all_tools();
-        assert_eq!(registry.len(), 3);
+        assert_eq!(registry.len(), 4);
 
         let tool_names: Vec<String> = registry.get_tools().iter().map(|t| t.name()).collect();
         assert_eq!(
@@ -111,7 +113,8 @@ mod tests {
             vec![
                 "read_file".to_string(),
                 "search_files".to_string(),
-                "write_file".to_string()
+                "write_file".to_string(),
+                "edit_file".to_string()
             ]
         );
     }
