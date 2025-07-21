@@ -1,5 +1,7 @@
 use crate::openai::model::{AssistantMessage, ChatMessage, OpenAiModel, Tool, ToolCall, ToolType};
+use serde::de::Error;
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
 // Request
 #[derive(Debug, Serialize, Deserialize)]
@@ -18,83 +20,104 @@ pub struct ChatMessageRequest {
     pub tool_call_id: Option<String>,
 }
 
-impl From<ChatMessage> for ChatMessageRequest {
-    fn from(chat_message: ChatMessage) -> Self {
+impl TryFrom<ChatMessage> for ChatMessageRequest {
+    type Error = serde_json::Error;
+
+    fn try_from(chat_message: ChatMessage) -> Result<Self, Self::Error> {
         match chat_message {
-            ChatMessage::System { content } => ChatMessageRequest {
+            ChatMessage::System { content } => Ok(ChatMessageRequest {
                 role: Role::System,
                 content: Some(content),
                 tool_calls: None,
                 tool_call_id: None,
-            },
-            ChatMessage::User { content } => ChatMessageRequest {
+            }),
+            ChatMessage::User { content } => Ok(ChatMessageRequest {
                 role: Role::User,
                 content: Some(content),
                 tool_calls: None,
                 tool_call_id: None,
-            },
+            }),
             ChatMessage::Assistant { message } => match message {
-                AssistantMessage::Content(content) => ChatMessageRequest {
+                AssistantMessage::Content(content) => Ok(ChatMessageRequest {
                     role: Role::Assistant,
                     content: Some(content),
                     tool_calls: None,
                     tool_call_id: None,
-                },
-                AssistantMessage::ToolCalls(tool_calls) => ChatMessageRequest {
+                }),
+                AssistantMessage::ToolCalls(tool_calls) => {
+                    let tool_calls = tool_calls
+                        .into_iter()
+                        .map(ToolCallResponse::try_from)
+                        .collect::<Result<Vec<ToolCallResponse>, serde_json::Error>>()?;
+                    Ok(ChatMessageRequest {
                     role: Role::Assistant,
                     content: None,
-                    tool_calls: Some(tool_calls.into_iter().map(ToolCallResponse::from).collect()),
+                    tool_calls: Some(tool_calls),
                     tool_call_id: None,
-                },
+                    })
+                }
             },
             ChatMessage::Tool {
                 content,
                 tool_call_id,
                 tool_name: _,
-            } => ChatMessageRequest {
+            } => Ok(ChatMessageRequest {
                 role: Role::Tool,
                 content: Some(content),
                 tool_calls: None,
                 tool_call_id: Some(tool_call_id),
-            },
+            }),
         }
     }
 }
 
-impl From<ChatMessageRequest> for ChatMessage {
-    fn from(req: ChatMessageRequest) -> Self {
-        match req.role {
-            Role::System => ChatMessage::System {
-                content: req.content.expect("System message must have content"),
-            },
-            Role::User => ChatMessage::User {
-                content: req.content.expect("User message must have content"),
-            },
-            Role::Assistant => ChatMessage::Assistant {
-                message: if let Some(content) = req.content {
+impl TryFrom<ChatMessageRequest> for ChatMessage {
+    type Error = serde_json::Error;
+
+    fn try_from(chat_message_request: ChatMessageRequest) -> Result<Self, Self::Error> {
+        match chat_message_request.role {
+            Role::System => {
+                let content = chat_message_request.content.ok_or(serde_json::Error::custom(
+                    "System message must have content",
+                ))?;
+                Ok(ChatMessage::System { content })
+            }
+            Role::User => Ok(ChatMessage::User {
+                content: chat_message_request
+                    .content
+                    .ok_or(serde_json::Error::custom("User message must have content"))?,
+            }),
+            Role::Assistant => Ok(ChatMessage::Assistant {
+                message: if let Some(content) = chat_message_request.content {
                     AssistantMessage::Content(content)
-                } else if let Some(tool_calls) = req.tool_calls {
+                } else if let Some(tool_calls) = chat_message_request.tool_calls {
                     AssistantMessage::ToolCalls(
-                        tool_calls.into_iter().map(ToolCall::from).collect(),
+                        tool_calls
+                            .into_iter()
+                            .map(ToolCall::try_from)
+                            .collect::<Result<Vec<ToolCall>, serde_json::Error>>()?,
                     )
                 } else {
-                    AssistantMessage::Content("".to_string()) // TODO: handle error
+                    return Err(serde_json::Error::custom(
+                        "Assistant message must have content or tool_calls",
+                    ));
                 },
-            },
+            }),
             Role::Tool => {
-                let content = req.content.expect("Tool message must have content");
-                let tool_call = req
-                    .tool_calls
-                    .and_then(|mut calls| calls.pop())
-                    .expect("Tool message must have a tool_call");
+                let content = chat_message_request
+                    .content
+                    .ok_or(serde_json::Error::custom("Tool message must have content"))?;
+                let tool_call = chat_message_request.tool_calls.and_then(|mut calls| calls.pop()).ok_or(
+                    serde_json::Error::custom("Tool message must have a tool_call"),
+                )?;
                 let tool_call_id = tool_call.id.clone();
                 let tool_name = tool_call.function.name;
 
-                ChatMessage::Tool {
+                Ok(ChatMessage::Tool {
                     content,
                     tool_call_id,
                     tool_name,
-                }
+                })
             }
         }
     }
@@ -140,9 +163,11 @@ pub struct ContentResponse {
     pub turn_over: bool,
 }
 
-impl From<&str> for ContentResponse {
-    fn from(content: &str) -> Self {
-        serde_json::from_str(content).unwrap()
+impl TryFrom<&str> for ContentResponse {
+    type Error = serde_json::Error;
+
+    fn try_from(content: &str) -> Result<Self, Self::Error> {
+        serde_json::from_str(content)
     }
 }
 
@@ -154,26 +179,32 @@ pub struct ToolCallResponse {
     pub function: FunctionResponse,
 }
 
-impl From<ToolCall> for ToolCallResponse {
-    fn from(tool_call: ToolCall) -> Self {
-        Self {
+impl TryFrom<ToolCall> for ToolCallResponse {
+    type Error = serde_json::Error;
+
+    fn try_from(tool_call: ToolCall) -> Result<Self, Self::Error> {
+        let arguments = serde_json::to_string(&tool_call.arguments)?;
+        Ok(Self {
             id: tool_call.id,
             tool_type: ToolType::Function,
             function: FunctionResponse {
                 name: tool_call.name,
-                arguments: serde_json::to_string(&tool_call.arguments).unwrap(), // TODO: handle error
+                arguments,
             },
-        }
+        })
     }
 }
 
-impl From<ToolCallResponse> for ToolCall {
-    fn from(tool_call_response: ToolCallResponse) -> Self {
-        Self {
+impl TryFrom<ToolCallResponse> for ToolCall {
+    type Error = serde_json::Error;
+
+    fn try_from(tool_call_response: ToolCallResponse) -> Result<Self, Self::Error> {
+        let arguments = serde_json::from_str(&tool_call_response.function.arguments)?;
+        Ok(Self {
             id: tool_call_response.id,
             name: tool_call_response.function.name,
-            arguments: serde_json::from_str(&tool_call_response.function.arguments).unwrap(), // TODO: handle error
-        }
+            arguments,
+        })
     }
 }
 
