@@ -1,6 +1,6 @@
 use crate::chat::error::{ChatSessionError, ChatSessionErrorHandling};
 use crate::chat::memory::ChatMemory;
-use crate::chat::system_prompt::{SystemPromptConfig, SYSTEM_PROMPT};
+use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use crate::openai::client::OpenAIClient;
 use crate::openai::error::OpenAIError;
 use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
@@ -10,10 +10,6 @@ use std::io;
 
 // Maximum number of iterations per message to prevent infinite loops
 const MAX_ITERATIONS: usize = 10;
-
-
-
-
 
 pub struct ChatSession {
     memory: ChatMemory,
@@ -142,7 +138,7 @@ impl ChatSession {
                         let tool_response = self
                             .tools
                             .call_tool(tool_call.name.as_str(), tool_call.arguments.clone())
-                            .unwrap_or_else(|e| format!("Error calling tool: {}", e));
+                            .unwrap_or_else(|e| e);
 
                         // 3.2.2 Add tool response to memory
                         self.memory.add_message(ChatMessage::Tool {
@@ -186,7 +182,11 @@ impl ChatSession {
     }
 
     /// Categorizes and handles OpenAI errors appropriately
-    fn handle_openai_error(&self, error: OpenAIError, iteration: usize) -> ChatSessionErrorHandling {
+    fn handle_openai_error(
+        &self,
+        error: OpenAIError,
+        iteration: usize,
+    ) -> ChatSessionErrorHandling {
         use OpenAIError::*;
 
         match error {
