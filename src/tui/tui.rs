@@ -136,7 +136,6 @@ impl Tui {
                 } else {
                     match tool_name.as_str() {
                         "read_file" => {
-                            println!("{}", content);
                             writeln!(
                                 writer,
                                 "{}{}{}",
@@ -274,5 +273,257 @@ mod tests {
         let result = tui.read_user_input(&mut reader).unwrap();
 
         assert_eq!(result, "");
+    }
+
+    #[test]
+    fn is_tool_error_detects_read_file_errors() {
+        let tui = Tui::new();
+
+        // Error cases
+        assert!(tui.is_tool_error("Error: Permission denied", "read_file"));
+        assert!(tui.is_tool_error("File not found", "read_file"));
+        assert!(tui.is_tool_error("File does not exist or not found", "read_file"));
+
+        // Non-error cases
+        assert!(!tui.is_tool_error("File content here", "read_file"));
+        assert!(!tui.is_tool_error("This file contains not found text", "read_file"));
+        assert!(!tui.is_tool_error("", "read_file"));
+    }
+
+    #[test]
+    fn is_tool_error_detects_write_file_errors() {
+        let tui = Tui::new();
+
+        // Error cases
+        assert!(tui.is_tool_error("Error: Permission denied", "write_file"));
+        assert!(tui.is_tool_error("Error writing file", "write_file"));
+
+        // Non-error cases
+        assert!(!tui.is_tool_error("File written successfully", "write_file"));
+        assert!(!tui.is_tool_error("Successfully wrote 5 lines", "write_file"));
+        assert!(!tui.is_tool_error("", "write_file"));
+    }
+
+    #[test]
+    fn is_tool_error_detects_edit_file_errors() {
+        let tui = Tui::new();
+
+        // Error cases
+        assert!(tui.is_tool_error("Error: Invalid edit", "edit_file"));
+        assert!(tui.is_tool_error("Pattern not found in file", "edit_file"));
+        assert!(tui.is_tool_error("Pattern appears 3 times in file", "edit_file"));
+
+        // Non-error cases
+        assert!(!tui.is_tool_error("File edited successfully", "edit_file"));
+        assert!(!tui.is_tool_error("Replaced 1 occurrence", "edit_file"));
+        assert!(!tui.is_tool_error("", "edit_file"));
+        assert!(!tui.is_tool_error("File contains the word appears", "edit_file"));
+    }
+
+    #[test]
+    fn is_tool_error_detects_search_files_errors() {
+        let tui = Tui::new();
+
+        // Error cases
+        assert!(tui.is_tool_error("Error: Invalid pattern", "search_files"));
+        assert!(tui.is_tool_error("No files found matching pattern", "search_files"));
+
+        // Non-error cases
+        assert!(!tui.is_tool_error("Found 5 files", "search_files"));
+        assert!(!tui.is_tool_error("file1.txt\nfile2.txt", "search_files"));
+        assert!(!tui.is_tool_error("", "search_files"));
+    }
+
+    #[test]
+    fn is_tool_error_detects_unknown_tool_errors() {
+        let tui = Tui::new();
+
+        // Error cases
+        assert!(tui.is_tool_error("Error: Something went wrong", "unknown_tool"));
+        assert!(tui.is_tool_error("Error in processing", "custom_tool"));
+
+        // Non-error cases
+        assert!(!tui.is_tool_error("Success", "unknown_tool"));
+        assert!(!tui.is_tool_error("Tool completed", "custom_tool"));
+        assert!(!tui.is_tool_error("", "unknown_tool"));
+    }
+
+    #[test]
+    fn is_tool_error_handles_edge_cases() {
+        let tui = Tui::new();
+
+        // Empty tool name
+        assert!(tui.is_tool_error("Error: test", ""));
+        assert!(!tui.is_tool_error("Success", ""));
+
+        // Case sensitivity
+        assert!(!tui.is_tool_error("error: lowercase", "read_file"));
+        assert!(!tui.is_tool_error("ERROR: uppercase", "read_file"));
+
+        // Whitespace
+        assert!(!tui.is_tool_error(" Error: leading space", "read_file"));
+        assert!(tui.is_tool_error("Error: trailing space ", "read_file"));
+    }
+
+    #[test]
+    fn render_message_displays_tool_errors_with_red_formatting() {
+        let tui = Tui::new();
+        let mut output = Vec::new();
+
+        // Test read_file error
+        let error_message = ChatMessage::Tool {
+            content: "Error: Permission denied".to_string(),
+            tool_call_id: "call_123".to_string(),
+            tool_name: "read_file".to_string(),
+        };
+
+        tui.render_message(&error_message, &mut output).unwrap();
+        let result = String::from_utf8(output).unwrap();
+
+        // Should contain red italic formatting
+        assert!(result.contains("\x1B[91m\x1B[3m")); // Red italic ANSI code
+        assert!(result.contains("Error: Permission denied"));
+        assert!(result.contains("\x1B[0m")); // Reset ANSI code
+    }
+
+    #[test]
+    fn render_message_displays_successful_tool_responses_normally() {
+        let tui = Tui::new();
+        let mut output = Vec::new();
+
+        // Test successful read_file response
+        let success_message = ChatMessage::Tool {
+            content: "File content here\nLine 2\nLine 3".to_string(),
+            tool_call_id: "call_123".to_string(),
+            tool_name: "read_file".to_string(),
+        };
+
+        tui.render_message(&success_message, &mut output).unwrap();
+        let result = String::from_utf8(output).unwrap();
+
+        // Should contain gray italic formatting for "* Read " and " lines" separately
+        assert!(result.contains("\x1B[90m\x1B[3m* Read \x1B[0m")); // Gray italic "* Read "
+        assert!(result.contains("\x1B[90m\x1B[3m lines\x1B[0m")); // Gray italic " lines"
+        assert!(result.contains("3")); // Plain number
+        assert!(!result.contains("\x1B[91m\x1B[3m")); // Should not contain red formatting
+    }
+
+    #[test]
+    fn render_message_handles_write_file_errors() {
+        let tui = Tui::new();
+        let mut output = Vec::new();
+
+        let error_message = ChatMessage::Tool {
+            content: "Error: Cannot write to read-only file".to_string(),
+            tool_call_id: "call_456".to_string(),
+            tool_name: "write_file".to_string(),
+        };
+
+        tui.render_message(&error_message, &mut output).unwrap();
+        let result = String::from_utf8(output).unwrap();
+
+        assert!(result.contains("\x1B[91m\x1B[3m")); // Red italic
+        assert!(result.contains("Error: Cannot write to read-only file"));
+    }
+
+    #[test]
+    fn render_message_handles_edit_file_errors() {
+        let tui = Tui::new();
+        let mut output = Vec::new();
+
+        let error_message = ChatMessage::Tool {
+            content: "Pattern not found in file".to_string(),
+            tool_call_id: "call_789".to_string(),
+            tool_name: "edit_file".to_string(),
+        };
+
+        tui.render_message(&error_message, &mut output).unwrap();
+        let result = String::from_utf8(output).unwrap();
+
+        assert!(result.contains("\x1B[91m\x1B[3m")); // Red italic
+        assert!(result.contains("Pattern not found in file"));
+    }
+
+    #[test]
+    fn render_message_handles_search_files_errors() {
+        let tui = Tui::new();
+        let mut output = Vec::new();
+
+        let error_message = ChatMessage::Tool {
+            content: "No files found matching pattern".to_string(),
+            tool_call_id: "call_101".to_string(),
+            tool_name: "search_files".to_string(),
+        };
+
+        tui.render_message(&error_message, &mut output).unwrap();
+        let result = String::from_utf8(output).unwrap();
+
+        assert!(result.contains("\x1B[91m\x1B[3m")); // Red italic
+        assert!(result.contains("No files found matching pattern"));
+    }
+
+    #[test]
+    fn render_message_handles_successful_tool_responses_for_all_tools() {
+        let tui = Tui::new();
+
+        // Test write_file success
+        let mut output1 = Vec::new();
+        let write_success = ChatMessage::Tool {
+            content: "Line 1\nLine 2".to_string(),
+            tool_call_id: "call_1".to_string(),
+            tool_name: "write_file".to_string(),
+        };
+        tui.render_message(&write_success, &mut output1).unwrap();
+        let result1 = String::from_utf8(output1).unwrap();
+        assert!(result1.contains("\x1B[90m\x1B[3m* Wrote \x1B[0m"));
+        assert!(result1.contains("\x1B[90m\x1B[3m lines\x1B[0m"));
+        assert!(result1.contains("2"));
+        assert!(!result1.contains("\x1B[91m\x1B[3m"));
+
+        // Test search_files success
+        let mut output2 = Vec::new();
+        let search_success = ChatMessage::Tool {
+            content: "file1.txt\nfile2.txt\nfile3.txt".to_string(),
+            tool_call_id: "call_2".to_string(),
+            tool_name: "search_files".to_string(),
+        };
+        tui.render_message(&search_success, &mut output2).unwrap();
+        let result2 = String::from_utf8(output2).unwrap();
+        assert!(result2.contains("\x1B[90m\x1B[3m* Found \x1B[0m"));
+        assert!(result2.contains("\x1B[90m\x1B[3m files\x1B[0m"));
+        assert!(result2.contains("3"));
+        assert!(!result2.contains("\x1B[91m\x1B[3m"));
+
+        // Test edit_file success
+        let mut output3 = Vec::new();
+        let edit_success = ChatMessage::Tool {
+            content: "Successfully edited".to_string(),
+            tool_call_id: "call_3".to_string(),
+            tool_name: "edit_file".to_string(),
+        };
+        tui.render_message(&edit_success, &mut output3).unwrap();
+        let result3 = String::from_utf8(output3).unwrap();
+        assert!(result3.contains("\x1B[90m\x1B[3m* Edited \x1B[0m"));
+        assert!(result3.contains("\x1B[90m\x1B[3m lines\x1B[0m"));
+        assert!(result3.contains("1"));
+        assert!(!result3.contains("\x1B[91m\x1B[3m"));
+    }
+
+    #[test]
+    fn render_message_handles_unknown_tool_errors() {
+        let tui = Tui::new();
+        let mut output = Vec::new();
+
+        let error_message = ChatMessage::Tool {
+            content: "Error: Unknown tool failure".to_string(),
+            tool_call_id: "call_999".to_string(),
+            tool_name: "custom_tool".to_string(),
+        };
+
+        tui.render_message(&error_message, &mut output).unwrap();
+        let result = String::from_utf8(output).unwrap();
+
+        assert!(result.contains("\x1B[91m\x1B[3m")); // Red italic
+        assert!(result.contains("Error: Unknown tool failure"));
     }
 }
