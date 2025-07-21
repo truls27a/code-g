@@ -73,7 +73,7 @@ impl Tui {
                                     writer,
                                     "{}",
                                     Formatter::gray_italic(&format!(
-                                        "* Reading {}",
+                                        "* Reading {}...",
                                         tool_call.arguments.get("path").unwrap_or(&"".to_string())
                                     ))
                                 )?;
@@ -83,7 +83,7 @@ impl Tui {
                                     writer,
                                     "{}",
                                     Formatter::gray_italic(&format!(
-                                        "* Writing {}",
+                                        "* Writing {}...",
                                         tool_call.arguments.get("path").unwrap_or(&"".to_string())
                                     ))
                                 )?;
@@ -93,7 +93,7 @@ impl Tui {
                                     writer,
                                     "{}",
                                     Formatter::gray_italic(&format!(
-                                        "* Searching for '{}'",
+                                        "* Searching for '{}'...",
                                         tool_call
                                             .arguments
                                             .get("pattern")
@@ -106,7 +106,7 @@ impl Tui {
                                     writer,
                                     "{}",
                                     Formatter::gray_italic(&format!(
-                                        "* Editing {}",
+                                        "* Editing {}...",
                                         tool_call.arguments.get("path").unwrap_or(&"".to_string())
                                     ))
                                 )?;
@@ -137,7 +137,7 @@ impl Tui {
                             "{}{}{}",
                             Formatter::gray_italic("* Read "),
                             content.lines().count(),
-                            Formatter::gray_italic(" lines\n")
+                            Formatter::gray_italic(" lines")
                         )?;
                     }
                     "write_file" => {
