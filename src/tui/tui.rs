@@ -239,7 +239,8 @@ mod tests {
         tui.render(&messages, &mut output).unwrap();
 
         let result = String::from_utf8(output).unwrap();
-        assert_eq!(result, "\x1B[2J\x1B[1;1H> Hello\n\n* Hello human!\n\n");
+        let expected = format!("{}> Hello\n\n* Hello human!\n\n", Terminal::clear_screen());
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -381,9 +382,9 @@ mod tests {
         let result = String::from_utf8(output).unwrap();
 
         // Should contain red italic formatting
-        assert!(result.contains("\x1B[91m\x1B[3m")); // Red italic ANSI code
+        assert!(result.contains(&format!("{}{}", Formatter::red(), Formatter::italic())));
         assert!(result.contains("Error: Permission denied"));
-        assert!(result.contains("\x1B[0m")); // Reset ANSI code
+        assert!(result.contains(Formatter::reset()));
     }
 
     #[test]
@@ -402,10 +403,10 @@ mod tests {
         let result = String::from_utf8(output).unwrap();
 
         // Should contain gray italic formatting for "* Read " and " lines" separately
-        assert!(result.contains("\x1B[90m\x1B[3m* Read \x1B[0m")); // Gray italic "* Read "
-        assert!(result.contains("\x1B[90m\x1B[3m lines\x1B[0m")); // Gray italic " lines"
+        assert!(result.contains(&Formatter::gray_italic("* Read ")));
+        assert!(result.contains(&Formatter::gray_italic(" lines")));
         assert!(result.contains("3")); // Plain number
-        assert!(!result.contains("\x1B[91m\x1B[3m")); // Should not contain red formatting
+        assert!(!result.contains(&format!("{}{}", Formatter::red(), Formatter::italic()))); // Should not contain red formatting
     }
 
     #[test]
@@ -422,7 +423,7 @@ mod tests {
         tui.render_message(&error_message, &mut output).unwrap();
         let result = String::from_utf8(output).unwrap();
 
-        assert!(result.contains("\x1B[91m\x1B[3m")); // Red italic
+        assert!(result.contains(&format!("{}{}", Formatter::red(), Formatter::italic()))); // Red italic
         assert!(result.contains("Error: Cannot write to read-only file"));
     }
 
@@ -440,7 +441,7 @@ mod tests {
         tui.render_message(&error_message, &mut output).unwrap();
         let result = String::from_utf8(output).unwrap();
 
-        assert!(result.contains("\x1B[91m\x1B[3m")); // Red italic
+        assert!(result.contains(&format!("{}{}", Formatter::red(), Formatter::italic()))); // Red italic
         assert!(result.contains("Pattern not found in file"));
     }
 
@@ -458,7 +459,7 @@ mod tests {
         tui.render_message(&error_message, &mut output).unwrap();
         let result = String::from_utf8(output).unwrap();
 
-        assert!(result.contains("\x1B[91m\x1B[3m")); // Red italic
+        assert!(result.contains(&format!("{}{}", Formatter::red(), Formatter::italic()))); // Red italic
         assert!(result.contains("No files found matching pattern"));
     }
 
@@ -475,10 +476,10 @@ mod tests {
         };
         tui.render_message(&write_success, &mut output1).unwrap();
         let result1 = String::from_utf8(output1).unwrap();
-        assert!(result1.contains("\x1B[90m\x1B[3m* Wrote \x1B[0m"));
-        assert!(result1.contains("\x1B[90m\x1B[3m lines\x1B[0m"));
+        assert!(result1.contains(&Formatter::gray_italic("* Wrote ")));
+        assert!(result1.contains(&Formatter::gray_italic(" lines")));
         assert!(result1.contains("2"));
-        assert!(!result1.contains("\x1B[91m\x1B[3m"));
+        assert!(!result1.contains(&format!("{}{}", Formatter::red(), Formatter::italic())));
 
         // Test search_files success
         let mut output2 = Vec::new();
@@ -489,10 +490,10 @@ mod tests {
         };
         tui.render_message(&search_success, &mut output2).unwrap();
         let result2 = String::from_utf8(output2).unwrap();
-        assert!(result2.contains("\x1B[90m\x1B[3m* Found \x1B[0m"));
-        assert!(result2.contains("\x1B[90m\x1B[3m files\x1B[0m"));
+        assert!(result2.contains(&Formatter::gray_italic("* Found ")));
+        assert!(result2.contains(&Formatter::gray_italic(" files")));
         assert!(result2.contains("3"));
-        assert!(!result2.contains("\x1B[91m\x1B[3m"));
+        assert!(!result2.contains(&format!("{}{}", Formatter::red(), Formatter::italic())));
 
         // Test edit_file success
         let mut output3 = Vec::new();
@@ -503,10 +504,10 @@ mod tests {
         };
         tui.render_message(&edit_success, &mut output3).unwrap();
         let result3 = String::from_utf8(output3).unwrap();
-        assert!(result3.contains("\x1B[90m\x1B[3m* Edited \x1B[0m"));
-        assert!(result3.contains("\x1B[90m\x1B[3m lines\x1B[0m"));
+        assert!(result3.contains(&Formatter::gray_italic("* Edited ")));
+        assert!(result3.contains(&Formatter::gray_italic(" lines")));
         assert!(result3.contains("1"));
-        assert!(!result3.contains("\x1B[91m\x1B[3m"));
+        assert!(!result3.contains(&format!("{}{}", Formatter::red(), Formatter::italic())));
     }
 
     #[test]
@@ -523,7 +524,7 @@ mod tests {
         tui.render_message(&error_message, &mut output).unwrap();
         let result = String::from_utf8(output).unwrap();
 
-        assert!(result.contains("\x1B[91m\x1B[3m")); // Red italic
+        assert!(result.contains(&format!("{}{}", Formatter::red(), Formatter::italic()))); // Red italic
         assert!(result.contains("Error: Unknown tool failure"));
     }
 }
