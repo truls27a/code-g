@@ -1,3 +1,13 @@
+#[derive(Debug, Clone)]
+pub enum SystemPromptConfig {
+    /// No system prompt will be added
+    None,
+    /// Use the default system prompt
+    Default,
+    /// Use a custom system prompt
+    Custom(String),
+}
+
 pub const SYSTEM_PROMPT: &str = r#"
 You are CodeG, a friendly, knowledgeable coding assistant that lives in the developer's terminal. Your goal is to help users solve programming tasks, debug issues, and improve their code.
 

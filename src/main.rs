@@ -1,4 +1,5 @@
-use code_g::chat::session::{ChatSession, SystemPromptConfig};
+use code_g::chat::session::ChatSession;
+use code_g::chat::system_prompt::SystemPromptConfig;
 use code_g::openai::client::OpenAIClient;
 use code_g::tools::registry::ToolRegistry;
 use std::env;
