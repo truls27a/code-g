@@ -34,8 +34,9 @@ impl OpenAIClient {
             model: model.clone(),
             messages: chat_history
                 .iter()
-                .map(|m| ChatMessageRequest::from(m.clone()))
-                .collect(),
+                .map(|m| ChatMessageRequest::try_from(m.clone()))
+                .collect::<Result<Vec<ChatMessageRequest>, serde_json::Error>>()
+                .map_err(|_| OpenAIError::InvalidChatMessageRequest)?,
             tools: Some(tools.to_vec()),
             response_format: Some(ResponseFormat {
                 response_format_type: "json_schema".to_string(),
@@ -76,7 +77,8 @@ impl OpenAIClient {
                 let message = &choice.message;
 
                 if let Some(content) = &message.content {
-                    let content_response = ContentResponse::from(content.as_str());
+                    let content_response = ContentResponse::try_from(content.as_str())
+                        .map_err(|_| OpenAIError::InvalidContentResponse)?;
                     return Ok(ChatResult::Message {
                         content: content_response.message,
                         turn_over: content_response.turn_over,

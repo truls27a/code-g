@@ -8,6 +8,9 @@ pub enum OpenAIError {
     #[error("Chat history cannot be empty")]
     EmptyChatHistory,
 
+    #[error("Invalid chat message request")]
+    InvalidChatMessageRequest,
+
     #[error("Invalid API key")]
     InvalidApiKey,
 
@@ -28,6 +31,9 @@ pub enum OpenAIError {
 
     #[error("Invalid tool call arguments")]
     InvalidToolCallArguments,
+
+    #[error("Invalid content response")]
+    InvalidContentResponse,
 
     #[error("Rate limit exceeded")]
     RateLimitExceeded,
