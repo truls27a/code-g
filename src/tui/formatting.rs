@@ -135,6 +135,12 @@ mod tests {
     }
 
     #[test]
+    fn red_italic_formatting_works() {
+        let result = Formatter::red_italic("test text");
+        assert_eq!(result, "\x1B[91m\x1B[3mtest text\x1B[0m");
+    }
+
+    #[test]
     fn bold_formatting_works() {
         let result = Formatter::bold_text("bold text");
         assert_eq!(result, "\x1B[1mbold text\x1B[0m");
