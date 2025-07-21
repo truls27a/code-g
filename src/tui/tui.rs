@@ -194,7 +194,10 @@ impl Tui {
     /// Check if tool response content indicates an error
     fn is_tool_error(&self, content: &str, tool_name: &str) -> bool {
         match tool_name {
-            "read_file" => content.starts_with("Error"),
+            "read_file" => {
+                content.starts_with("Error")
+                    || content.contains("not found") && content.starts_with("File")
+            }
             "write_file" => content.starts_with("Error"),
             "edit_file" => {
                 content.starts_with("Error")
@@ -202,8 +205,7 @@ impl Tui {
                     || content.contains("appears") && content.contains("times in file")
             }
             "search_files" => {
-                content.starts_with("Error")
-                    || content.contains("No files found matching pattern")
+                content.starts_with("Error") || content.contains("No files found matching pattern")
             }
             _ => content.starts_with("Error"),
         }

@@ -38,7 +38,10 @@ impl Tool for ReadFileTool {
 
         match fs::read_to_string(path) {
             Ok(content) => Ok(content),
-            Err(e) => Err(format!("Error reading file: '{}': {}", path, e)),
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => Ok(format!("File '{}' not found", path)),
+                _ => Err(format!("Error reading file: '{}': {}", path, e)),
+            },
         }
     }
 }
