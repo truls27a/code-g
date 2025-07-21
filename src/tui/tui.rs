@@ -49,18 +49,74 @@ impl Tui {
         writer: &mut impl Write,
     ) -> Result<(), io::Error> {
         match message {
+            ChatMessage::System { content } => {
+                writeln!(writer, "! {}", content)?;
+                writeln!(writer, "")?;
+            }
             ChatMessage::User { content } => {
-                writeln!(writer, "User: {}", content)?;
+                writeln!(writer, "> {}", content)?;
+                writeln!(writer, "")?;
             }
             ChatMessage::Assistant { message } => match message {
-                AssistantMessage::Content(content) => writeln!(writer, "Assistant: {}", content)?,
+                AssistantMessage::Content(content) => {
+                    writeln!(writer, "* {}", content)?;
+                    writeln!(writer, "")?;
+                }
                 AssistantMessage::ToolCalls(tool_calls) => {
                     for tool_call in tool_calls {
-                        writeln!(writer, "Assistant is calling tool: {}", tool_call.name)?;
+                        match tool_call.name.as_str() {
+                            "read_file" => {
+                                writeln!(
+                                    writer,
+                                    "* Reading {}",
+                                    tool_call.arguments.get("path").unwrap_or(&"".to_string())
+                                )?;
+                            }
+                            "write_file" => {
+                                writeln!(
+                                    writer,
+                                    "* Writing {}",
+                                    tool_call.arguments.get("path").unwrap_or(&"".to_string())
+                                )?;
+                            }
+                            "search_files" => {
+                                writeln!(
+                                    writer,
+                                    "* Searching for '{}'",
+                                    tool_call
+                                        .arguments
+                                        .get("pattern")
+                                        .unwrap_or(&"".to_string())
+                                )?;
+                            }
+                            _ => {
+                                writeln!(writer, "* Calling tool '{}'", tool_call.name)?;
+                            }
+                        }
+                        writeln!(writer, "")?;
                     }
                 }
             },
-            _ => {}
+            ChatMessage::Tool {
+                content,
+                tool_call_id: _,
+                tool_name,
+            } => {
+                match tool_name.as_str() {
+                    "read_file" => {
+                        writeln!(writer, "* Read {} lines", content.lines().count())?;
+                    }
+                    "write_file" => {
+                        writeln!(writer, "* Wrote {} lines", content.lines().count())?;
+                    }
+                    "search_files" => {
+                        writeln!(writer, "* Found {} files", content.lines().count())?;
+                    }
+                    _ => {
+                        writeln!(writer, "* Tool '{}' returned: {}", tool_name, content)?;
+                    }
+                }
+            }
         }
 
         Ok(())
@@ -95,24 +151,7 @@ mod tests {
         tui.render(&messages, &mut output).unwrap();
 
         let result = String::from_utf8(output).unwrap();
-        assert_eq!(
-            result,
-            "\x1B[2J\x1B[1;1HUser: Hello\nAssistant: Hello human!\n"
-        );
-    }
-
-    #[test]
-    fn render_does_not_print_system_messages() {
-        let tui = Tui::new();
-        let messages = vec![ChatMessage::System {
-            content: "Hello".to_string(),
-        }];
-
-        let mut output = Vec::new();
-        tui.render(&messages, &mut output).unwrap();
-
-        let result = String::from_utf8(output).unwrap();
-        assert_eq!(result, "\x1B[2J\x1B[1;1H");
+        assert_eq!(result, "\x1B[2J\x1B[1;1H> Hello\n\n* Hello human!\n\n");
     }
 
     #[test]

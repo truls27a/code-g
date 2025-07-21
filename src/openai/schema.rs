@@ -50,6 +50,7 @@ impl From<ChatMessage> for ChatMessageRequest {
             ChatMessage::Tool {
                 content,
                 tool_call_id,
+                tool_name: _,
             } => ChatMessageRequest {
                 role: Role::Tool,
                 content: Some(content),
@@ -82,15 +83,17 @@ impl From<ChatMessageRequest> for ChatMessage {
             },
             Role::Tool => {
                 let content = req.content.expect("Tool message must have content");
-                let tool_call_id = req
+                let tool_call = req
                     .tool_calls
                     .and_then(|mut calls| calls.pop())
-                    .map(|call| call.id)
-                    .expect("Tool message must have a tool_call_id");
+                    .expect("Tool message must have a tool_call");
+                let tool_call_id = tool_call.id.clone();
+                let tool_name = tool_call.function.name;
 
                 ChatMessage::Tool {
                     content,
                     tool_call_id,
+                    tool_name,
                 }
             }
         }

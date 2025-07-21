@@ -141,6 +141,7 @@ impl ChatSession {
                         self.memory.add_message(ChatMessage::Tool {
                             content: tool_response,
                             tool_call_id: tool_call.id.clone(),
+                            tool_name: tool_call.name.clone(),
                         });
 
                         // 3.2.3 Render the memory to the TUI (only if not silent)

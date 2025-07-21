@@ -22,6 +22,7 @@ pub enum ChatMessage {
     Tool {
         content: String,
         tool_call_id: String,
+        tool_name: String,
     },
 }
 

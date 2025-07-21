@@ -136,7 +136,7 @@ mod tests {
         memory.add_message(ChatMessage::User {
             content: "Hello, how are you?".to_string(),
         });
-        
+
         memory.add_message(ChatMessage::Assistant {
             message: AssistantMessage::Content("I'm fine, thank you!".to_string()),
         });
@@ -153,6 +153,7 @@ mod tests {
         memory.add_message(ChatMessage::Tool {
             content: "My name is John Doe".to_string(),
             tool_call_id: "1".to_string(),
+            tool_name: "test_tool".to_string(),
         });
         memory.add_message(ChatMessage::Assistant {
             message: AssistantMessage::Content("My name is John Doe".to_string()),
@@ -166,6 +167,7 @@ mod tests {
             ChatMessage::Tool {
                 content: "My name is John Doe".to_string(),
                 tool_call_id: "1".to_string(),
+                tool_name: "test_tool".to_string(),
             }
         );
     }

@@ -1,8 +1,8 @@
 use crate::openai::error::OpenAIError;
 use crate::openai::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
 use crate::openai::schema::{
-    ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest, ContentResponse,
-    JsonSchema, ResponseFormat,
+    ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest, ContentResponse, JsonSchema,
+    ResponseFormat,
 };
 use reqwest::Client;
 use std::collections::HashMap;
@@ -274,6 +274,7 @@ mod tests {
             ChatMessage::Tool {
                 content: "The weather in Tokyo is sunny".to_string(),
                 tool_call_id: "tool_call_id".to_string(),
+                tool_name: "get_weather".to_string(),
             },
         ];
 
