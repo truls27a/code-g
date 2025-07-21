@@ -73,6 +73,11 @@ impl Formatter {
         )
     }
 
+    /// Format text with red italic style (commonly used for error messages)
+    pub fn red_italic(text: &str) -> String {
+        format!("{}{}{}{}", Self::red(), Self::italic(), text, Self::reset())
+    }
+
     /// Format text with bold style
     pub fn bold_text(text: &str) -> String {
         format!("{}{}{}", Self::bold(), text, Self::reset())

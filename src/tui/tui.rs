@@ -130,52 +130,58 @@ impl Tui {
                 tool_call_id: _,
                 tool_name,
             } => {
-                match tool_name.as_str() {
-                    "read_file" => {
-                        writeln!(
-                            writer,
-                            "{}{}{}",
-                            Formatter::gray_italic("* Read "),
-                            content.lines().count(),
-                            Formatter::gray_italic(" lines")
-                        )?;
-                    }
-                    "write_file" => {
-                        writeln!(
-                            writer,
-                            "{}{}{}",
-                            Formatter::gray_italic("* Wrote "),
-                            content.lines().count(),
-                            Formatter::gray_italic(" lines")
-                        )?;
-                    }
-                    "search_files" => {
-                        writeln!(
-                            writer,
-                            "{}{}{}",
-                            Formatter::gray_italic("* Found "),
-                            content.lines().count(),
-                            Formatter::gray_italic(" files")
-                        )?;
-                    }
-                    "edit_file" => {
-                        writeln!(
-                            writer,
-                            "{}{}{}",
-                            Formatter::gray_italic("* Edited "),
-                            content.lines().count(),
-                            Formatter::gray_italic(" lines")
-                        )?;
-                    }
-                    _ => {
-                        writeln!(
-                            writer,
-                            "{}",
-                            Formatter::gray_italic(&format!(
-                                "* Tool '{}' returned: {}",
-                                tool_name, content
-                            ))
-                        )?;
+                // Check if this is an error response
+                if self.is_tool_error(content, tool_name) {
+                    writeln!(writer, "{}", Formatter::red_italic(content))?;
+                } else {
+                    match tool_name.as_str() {
+                        "read_file" => {
+                            println!("{}", content);
+                            writeln!(
+                                writer,
+                                "{}{}{}",
+                                Formatter::gray_italic("* Read "),
+                                content.lines().count(),
+                                Formatter::gray_italic(" lines")
+                            )?;
+                        }
+                        "write_file" => {
+                            writeln!(
+                                writer,
+                                "{}{}{}",
+                                Formatter::gray_italic("* Wrote "),
+                                content.lines().count(),
+                                Formatter::gray_italic(" lines")
+                            )?;
+                        }
+                        "search_files" => {
+                            writeln!(
+                                writer,
+                                "{}{}{}",
+                                Formatter::gray_italic("* Found "),
+                                content.lines().count(),
+                                Formatter::gray_italic(" files")
+                            )?;
+                        }
+                        "edit_file" => {
+                            writeln!(
+                                writer,
+                                "{}{}{}",
+                                Formatter::gray_italic("* Edited "),
+                                content.lines().count(),
+                                Formatter::gray_italic(" lines")
+                            )?;
+                        }
+                        _ => {
+                            writeln!(
+                                writer,
+                                "{}",
+                                Formatter::gray_italic(&format!(
+                                    "* Tool '{}' returned: {}",
+                                    tool_name, content
+                                ))
+                            )?;
+                        }
                     }
                 }
                 writeln!(writer, "")?;
@@ -183,6 +189,24 @@ impl Tui {
         }
 
         Ok(())
+    }
+
+    /// Check if tool response content indicates an error
+    fn is_tool_error(&self, content: &str, tool_name: &str) -> bool {
+        match tool_name {
+            "read_file" => content.starts_with("Error"),
+            "write_file" => content.starts_with("Error"),
+            "edit_file" => {
+                content.starts_with("Error")
+                    || content.contains("not found in file")
+                    || content.contains("appears") && content.contains("times in file")
+            }
+            "search_files" => {
+                content.starts_with("Error")
+                    || content.contains("No files found matching pattern")
+            }
+            _ => content.starts_with("Error"),
+        }
     }
 }
 
