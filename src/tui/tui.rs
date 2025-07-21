@@ -54,7 +54,7 @@ impl Tui {
         writer: &mut impl Write,
     ) -> Result<(), io::Error> {
         match message {
-            ChatMessage::System { content: _ } => {}, // Do not render system messages
+            ChatMessage::System { content: _ } => {} // Do not render system messages
             ChatMessage::User { content } => {
                 writeln!(writer, "> {}", content)?;
                 writeln!(writer, "")?;
@@ -70,21 +70,21 @@ impl Tui {
                             "read_file" => {
                                 writeln!(
                                     writer,
-                                    "* Reading {}",
+                                    "\x1B[90m\x1B[3m* Reading {}\x1B[0m",
                                     tool_call.arguments.get("path").unwrap_or(&"".to_string())
                                 )?;
                             }
                             "write_file" => {
                                 writeln!(
                                     writer,
-                                    "* Writing {}",
+                                    "\x1B[90m\x1B[3m* Writing {}\x1B[0m",
                                     tool_call.arguments.get("path").unwrap_or(&"".to_string())
                                 )?;
                             }
                             "search_files" => {
                                 writeln!(
                                     writer,
-                                    "* Searching for '{}'",
+                                    "\x1B[90m\x1B[3m* Searching for '{}'\x1B[0m",
                                     tool_call
                                         .arguments
                                         .get("pattern")
@@ -92,10 +92,13 @@ impl Tui {
                                 )?;
                             }
                             _ => {
-                                writeln!(writer, "* Calling tool '{}'", tool_call.name)?;
+                                writeln!(
+                                    writer,
+                                    "\x1B[90m\x1B[3m* Calling tool '{}'\x1B[0m",
+                                    tool_call.name
+                                )?;
                             }
                         }
-                        writeln!(writer, "")?;
                     }
                 }
             },
@@ -106,18 +109,35 @@ impl Tui {
             } => {
                 match tool_name.as_str() {
                     "read_file" => {
-                        writeln!(writer, "* Read {} lines", content.lines().count())?;
+                        writeln!(
+                            writer,
+                            "\x1B[90m\x1B[3m* Read \x1B[0m{}\x1B[90m\x1B[3m lines\x1B[0m",
+                            content.lines().count()
+                        )?;
                     }
                     "write_file" => {
-                        writeln!(writer, "* Wrote {} lines", content.lines().count())?;
+                        writeln!(
+                            writer,
+                            "\x1B[90m\x1B[3m* Wrote \x1B[0m{}\x1B[90m\x1B[3m lines\x1B[0m",
+                            content.lines().count()
+                        )?;
                     }
                     "search_files" => {
-                        writeln!(writer, "* Found {} files", content.lines().count())?;
+                        writeln!(
+                            writer,
+                            "\x1B[90m\x1B[3m* Found \x1B[0m{}\x1B[90m\x1B[3m files\x1B[0m",
+                            content.lines().count()
+                        )?;
                     }
                     _ => {
-                        writeln!(writer, "* Tool '{}' returned: {}", tool_name, content)?;
+                        writeln!(
+                            writer,
+                            "\x1B[90m\x1B[3m* Tool '{}' returned: \x1B[0m{}",
+                            tool_name, content
+                        )?;
                     }
                 }
+                writeln!(writer, "")?;
             }
         }
 
