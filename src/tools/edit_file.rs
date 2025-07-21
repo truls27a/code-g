@@ -60,7 +60,10 @@ impl Tool for EditFileTool {
 
         // Read the current file content
         let content = fs::read_to_string(path)
-            .map_err(|e| format!("Error reading file '{}': {}", path, e))?;
+            .map_err(|e| match e.kind() {
+                std::io::ErrorKind::NotFound => format!("File '{}' not found", path),
+                _ => format!("Error reading file '{}': {}", path, e),
+            })?;
 
         // Check if the old string exists in the file
         if !content.contains(old_string) {
@@ -84,7 +87,10 @@ impl Tool for EditFileTool {
 
         // Write the modified content back to the file
         fs::write(path, &new_content)
-            .map_err(|e| format!("Error writing to file '{}': {}", path, e))?;
+            .map_err(|e| match e.kind() {
+                std::io::ErrorKind::NotFound => format!("File '{}' not found", path),
+                _ => format!("Error writing to file '{}': {}", path, e),
+            })?;
 
         Ok(format!(
             "Successfully edited file '{}': replaced '{}' with '{}'",

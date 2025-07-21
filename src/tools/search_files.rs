@@ -45,7 +45,7 @@ impl Tool for SearchFilesTool {
         match search_files(pattern, directory) {
             Ok((files, truncated)) => {
                 if files.is_empty() {
-                    Ok(format!("No files found matching pattern '{}'", pattern))
+                    Err(format!("No files found matching pattern '{}'", pattern))
                 } else {
                     let truncation_note = if truncated {
                         format!(" (showing first {} results)", MAX_FILES_RETURNED)

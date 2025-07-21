@@ -47,7 +47,10 @@ impl Tool for WriteFileTool {
         let content = args.get("content").ok_or("Content is required")?;
         match fs::write(path, content) {
             Ok(_) => Ok(format!("File '{}' written successfully", path)),
-            Err(e) => Err(format!("Error writing file: '{}': {}", path, e)),
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => Err(format!("File '{}' not found", path)),
+                _ => Err(format!("Error writing file: '{}': {}", path, e)),
+            },
         }
     }
 }
