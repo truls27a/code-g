@@ -101,6 +101,16 @@ impl Tui {
                                     ))
                                 )?;
                             }
+                            "edit_file" => {
+                                writeln!(
+                                    writer,
+                                    "{}",
+                                    Formatter::gray_italic(&format!(
+                                        "* Editing {}",
+                                        tool_call.arguments.get("path").unwrap_or(&"".to_string())
+                                    ))
+                                )?;
+                            }
                             _ => {
                                 writeln!(
                                     writer,
@@ -146,6 +156,15 @@ impl Tui {
                             Formatter::gray_italic("* Found "),
                             content.lines().count(),
                             Formatter::gray_italic(" files")
+                        )?;
+                    }
+                    "edit_file" => {
+                        writeln!(
+                            writer,
+                            "{}{}{}",
+                            Formatter::gray_italic("* Edited "),
+                            content.lines().count(),
+                            Formatter::gray_italic(" lines")
                         )?;
                     }
                     _ => {
