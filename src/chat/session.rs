@@ -158,15 +158,23 @@ impl ChatSession {
     }
 
     pub async fn run(&mut self) -> Result<(), ChatSessionError> {
+        // Clear the terminal
+        self.tui.clear_terminal(&mut io::stdout()).unwrap();
+
         loop {
             let user_input = self.tui.read_user_input(&mut io::stdin().lock()).unwrap(); // TODO: Handle errors
 
             if user_input == "exit" {
+                // Exit the loop
                 break;
             }
 
             self.send_message(&user_input).await?;
         }
+
+        // Clear the terminal
+        self.tui.clear_terminal(&mut io::stdout()).unwrap();
+
         Ok(())
     }
 }

@@ -14,7 +14,7 @@ impl Tui {
         messages: &[ChatMessage],
         writer: &mut impl Write,
     ) -> Result<(), io::Error> {
-        write!(writer, "\x1B[2J\x1B[1;1H")?; // clear screen
+        self.clear_terminal(writer)?;
 
         for message in messages {
             self.render_message(message, writer)?;
@@ -43,16 +43,18 @@ impl Tui {
         Ok(input.trim().to_string())
     }
 
+    pub fn clear_terminal(&self, writer: &mut impl Write) -> Result<(), io::Error> {
+        write!(writer, "\x1B[2J\x1B[1;1H")?; // clear screen
+        Ok(())
+    }
+
     fn render_message(
         &self,
         message: &ChatMessage,
         writer: &mut impl Write,
     ) -> Result<(), io::Error> {
         match message {
-            ChatMessage::System { content } => {
-                writeln!(writer, "! {}", content)?;
-                writeln!(writer, "")?;
-            }
+            ChatMessage::System { content: _ } => {}, // Do not render system messages
             ChatMessage::User { content } => {
                 writeln!(writer, "> {}", content)?;
                 writeln!(writer, "")?;
