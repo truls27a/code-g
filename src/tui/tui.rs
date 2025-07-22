@@ -13,12 +13,19 @@ impl Tui {
     pub fn render(
         &self,
         messages: &[ChatMessage],
+        status_message: Option<&[&str]>,
         writer: &mut impl Write,
     ) -> Result<(), io::Error> {
         self.clear_terminal(writer)?;
 
         for message in messages {
             self.render_message(message, writer)?;
+        }
+
+        if let Some(status_message) = status_message {
+            for message in status_message {
+                writeln!(writer, "{}", Formatter::gray_italic(message))?;
+            }
         }
 
         writer.flush()?;
@@ -84,71 +91,7 @@ impl Tui {
                 writeln!(writer, "* {}", content)?;
                 writeln!(writer, "")?;
             }
-            AssistantMessage::ToolCalls(tool_calls) => {
-                self.render_tool_calls(tool_calls, writer)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn render_tool_calls(
-        &self,
-        tool_calls: &[crate::openai::model::ToolCall],
-        writer: &mut impl Write,
-    ) -> Result<(), io::Error> {
-        for tool_call in tool_calls {
-            match tool_call.name.as_str() {
-                "read_file" => {
-                    writeln!(
-                        writer,
-                        "{}",
-                        Formatter::gray_italic(&format!(
-                            "* Reading {}...",
-                            tool_call.arguments.get("path").unwrap_or(&"".to_string())
-                        ))
-                    )?;
-                }
-                "write_file" => {
-                    writeln!(
-                        writer,
-                        "{}",
-                        Formatter::gray_italic(&format!(
-                            "* Writing {}...",
-                            tool_call.arguments.get("path").unwrap_or(&"".to_string())
-                        ))
-                    )?;
-                }
-                "search_files" => {
-                    writeln!(
-                        writer,
-                        "{}",
-                        Formatter::gray_italic(&format!(
-                            "* Searching for '{}'...",
-                            tool_call
-                                .arguments
-                                .get("pattern")
-                                .unwrap_or(&"".to_string())
-                        ))
-                    )?;
-                }
-                "edit_file" => {
-                    writeln!(
-                        writer,
-                        "{}",
-                        Formatter::gray_italic(&format!(
-                            "* Editing {}...",
-                            tool_call.arguments.get("path").unwrap_or(&"".to_string())
-                        ))
-                    )?;
-                }
-                _ => {
-                    writeln!(
-                        writer,
-                        "{}",
-                        Formatter::gray_italic(&format!("* Calling tool '{}'", tool_call.name))
-                    )?;
-                }
-            }
+            AssistantMessage::ToolCalls(_) => {}
         }
         Ok(())
     }
@@ -272,7 +215,7 @@ mod tests {
         ];
 
         let mut output = Vec::new();
-        tui.render(&messages, &mut output).unwrap();
+        tui.render(&messages, None, &mut output).unwrap();
 
         let result = String::from_utf8(output).unwrap();
         let expected = format!("{}> Hello\n\n* Hello human!\n\n", Terminal::clear_screen());

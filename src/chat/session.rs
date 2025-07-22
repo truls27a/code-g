@@ -56,7 +56,11 @@ impl ChatSession {
         // Render the memory to the TUI (only if not silent)
         if !self.silent {
             self.tui
-                .render(&self.memory.get_memory(), &mut io::stdout())
+                .render(
+                    &self.memory.get_memory(),
+                    Some(&["Thinking..."]),
+                    &mut io::stdout(),
+                )
                 .unwrap();
         }
 
@@ -108,7 +112,7 @@ impl ChatSession {
                     // 3.2 Render the memory to the TUI (only if not silent)
                     if !self.silent {
                         self.tui
-                            .render(&self.memory.get_memory(), &mut io::stdout())
+                            .render(&self.memory.get_memory(), None, &mut io::stdout())
                             .unwrap(); // TODO: Handle errors
                     }
 
@@ -127,8 +131,21 @@ impl ChatSession {
 
                     // 3.2 Render the memory to the TUI (only if not silent)
                     if !self.silent {
+                        let status_messages = tool_calls.iter().map(|tool_call| {
+                            match tool_call.name.as_str() {
+                                "read_file" => "Reading file...",
+                                "write_file" => "Writing file...",
+                                "edit_file" => "Editing file...",
+                                "search_files" => "Searching files...",
+                                _ => "Using tool...",
+                            }
+                        }).collect::<Vec<&str>>();
                         self.tui
-                            .render(&self.memory.get_memory(), &mut io::stdout())
+                            .render(
+                                &self.memory.get_memory(),
+                                Some(&status_messages),
+                                &mut io::stdout(),
+                            )
                             .unwrap(); // TODO: Handle errors
                     }
 
@@ -150,7 +167,11 @@ impl ChatSession {
                         // 3.2.3 Render the memory to the TUI (only if not silent)
                         if !self.silent {
                             self.tui
-                                .render(&self.memory.get_memory(), &mut io::stdout())
+                                .render(
+                                    &self.memory.get_memory(),
+                                    Some(&["Thinking..."]),
+                                    &mut io::stdout(),
+                                )
                                 .unwrap(); // TODO: Handle errors
                         }
                     }
