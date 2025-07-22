@@ -56,137 +56,173 @@ impl Tui {
     ) -> Result<(), io::Error> {
         match message {
             ChatMessage::System { content: _ } => {} // Do not render system messages
-            ChatMessage::User { content } => {
-                writeln!(writer, "> {}", content)?;
-                writeln!(writer, "")?;
-            }
-            ChatMessage::Assistant { message } => match message {
-                AssistantMessage::Content(content) => {
-                    writeln!(writer, "* {}", content)?;
-                    writeln!(writer, "")?;
-                }
-                AssistantMessage::ToolCalls(tool_calls) => {
-                    for tool_call in tool_calls {
-                        match tool_call.name.as_str() {
-                            "read_file" => {
-                                writeln!(
-                                    writer,
-                                    "{}",
-                                    Formatter::gray_italic(&format!(
-                                        "* Reading {}...",
-                                        tool_call.arguments.get("path").unwrap_or(&"".to_string())
-                                    ))
-                                )?;
-                            }
-                            "write_file" => {
-                                writeln!(
-                                    writer,
-                                    "{}",
-                                    Formatter::gray_italic(&format!(
-                                        "* Writing {}...",
-                                        tool_call.arguments.get("path").unwrap_or(&"".to_string())
-                                    ))
-                                )?;
-                            }
-                            "search_files" => {
-                                writeln!(
-                                    writer,
-                                    "{}",
-                                    Formatter::gray_italic(&format!(
-                                        "* Searching for '{}'...",
-                                        tool_call
-                                            .arguments
-                                            .get("pattern")
-                                            .unwrap_or(&"".to_string())
-                                    ))
-                                )?;
-                            }
-                            "edit_file" => {
-                                writeln!(
-                                    writer,
-                                    "{}",
-                                    Formatter::gray_italic(&format!(
-                                        "* Editing {}...",
-                                        tool_call.arguments.get("path").unwrap_or(&"".to_string())
-                                    ))
-                                )?;
-                            }
-                            _ => {
-                                writeln!(
-                                    writer,
-                                    "{}",
-                                    Formatter::gray_italic(&format!(
-                                        "* Calling tool '{}'",
-                                        tool_call.name
-                                    ))
-                                )?;
-                            }
-                        }
-                    }
-                }
-            },
+            ChatMessage::User { content } => self.render_user_message(content, writer)?,
+            ChatMessage::Assistant { message } => self.render_assistant_message(message, writer)?,
             ChatMessage::Tool {
                 content,
                 tool_call_id: _,
                 tool_name,
-            } => {
-                // Check if this is an error response
-                if self.is_tool_error(content, tool_name) {
-                    writeln!(writer, "{}", Formatter::red_italic(content))?;
-                } else {
-                    match tool_name.as_str() {
-                        "read_file" => {
-                            writeln!(
-                                writer,
-                                "{}{}{}",
-                                Formatter::gray_italic("* Read "),
-                                content.lines().count(),
-                                Formatter::gray_italic(" lines")
-                            )?;
-                        }
-                        "write_file" => {
-                            writeln!(
-                                writer,
-                                "{}{}{}",
-                                Formatter::gray_italic("* Wrote "),
-                                content.lines().count(),
-                                Formatter::gray_italic(" lines")
-                            )?;
-                        }
-                        "search_files" => {
-                            writeln!(
-                                writer,
-                                "{}{}{}",
-                                Formatter::gray_italic("* Found "),
-                                content.lines().count(),
-                                Formatter::gray_italic(" files")
-                            )?;
-                        }
-                        "edit_file" => {
-                            writeln!(
-                                writer,
-                                "{}{}{}",
-                                Formatter::gray_italic("* Edited "),
-                                content.lines().count(),
-                                Formatter::gray_italic(" lines")
-                            )?;
-                        }
-                        _ => {
-                            writeln!(
-                                writer,
-                                "{}",
-                                Formatter::gray_italic(&format!(
-                                    "* Tool '{}' returned: {}",
-                                    tool_name, content
-                                ))
-                            )?;
-                        }
-                    }
-                }
-                writeln!(writer, "")?;
-            }
+            } => self.render_tool_message(content, tool_name, writer)?,
         }
 
+        Ok(())
+    }
+
+    fn render_user_message(&self, content: &str, writer: &mut impl Write) -> Result<(), io::Error> {
+        writeln!(writer, "> {}", content)?;
+        writeln!(writer, "")?;
+        Ok(())
+    }
+
+    fn render_assistant_message(
+        &self,
+        message: &AssistantMessage,
+        writer: &mut impl Write,
+    ) -> Result<(), io::Error> {
+        match message {
+            AssistantMessage::Content(content) => {
+                writeln!(writer, "* {}", content)?;
+                writeln!(writer, "")?;
+            }
+            AssistantMessage::ToolCalls(tool_calls) => {
+                self.render_tool_calls(tool_calls, writer)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn render_tool_calls(
+        &self,
+        tool_calls: &[crate::openai::model::ToolCall],
+        writer: &mut impl Write,
+    ) -> Result<(), io::Error> {
+        for tool_call in tool_calls {
+            match tool_call.name.as_str() {
+                "read_file" => {
+                    writeln!(
+                        writer,
+                        "{}",
+                        Formatter::gray_italic(&format!(
+                            "* Reading {}...",
+                            tool_call.arguments.get("path").unwrap_or(&"".to_string())
+                        ))
+                    )?;
+                }
+                "write_file" => {
+                    writeln!(
+                        writer,
+                        "{}",
+                        Formatter::gray_italic(&format!(
+                            "* Writing {}...",
+                            tool_call.arguments.get("path").unwrap_or(&"".to_string())
+                        ))
+                    )?;
+                }
+                "search_files" => {
+                    writeln!(
+                        writer,
+                        "{}",
+                        Formatter::gray_italic(&format!(
+                            "* Searching for '{}'...",
+                            tool_call
+                                .arguments
+                                .get("pattern")
+                                .unwrap_or(&"".to_string())
+                        ))
+                    )?;
+                }
+                "edit_file" => {
+                    writeln!(
+                        writer,
+                        "{}",
+                        Formatter::gray_italic(&format!(
+                            "* Editing {}...",
+                            tool_call.arguments.get("path").unwrap_or(&"".to_string())
+                        ))
+                    )?;
+                }
+                _ => {
+                    writeln!(
+                        writer,
+                        "{}",
+                        Formatter::gray_italic(&format!("* Calling tool '{}'", tool_call.name))
+                    )?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn render_tool_message(
+        &self,
+        content: &str,
+        tool_name: &str,
+        writer: &mut impl Write,
+    ) -> Result<(), io::Error> {
+        // Check if this is an error response
+        if self.is_tool_error(content, tool_name) {
+            writeln!(writer, "{}", Formatter::red_italic(content))?;
+        } else {
+            self.render_successful_tool_response(content, tool_name, writer)?;
+        }
+        writeln!(writer, "")?;
+        Ok(())
+    }
+
+    fn render_successful_tool_response(
+        &self,
+        content: &str,
+        tool_name: &str,
+        writer: &mut impl Write,
+    ) -> Result<(), io::Error> {
+        match tool_name {
+            "read_file" => {
+                writeln!(
+                    writer,
+                    "{}{}{}",
+                    Formatter::gray_italic("* Read "),
+                    content.lines().count(),
+                    Formatter::gray_italic(" lines")
+                )?;
+            }
+            "write_file" => {
+                writeln!(
+                    writer,
+                    "{}{}{}",
+                    Formatter::gray_italic("* Wrote "),
+                    content.lines().count(),
+                    Formatter::gray_italic(" lines")
+                )?;
+            }
+            "search_files" => {
+                writeln!(
+                    writer,
+                    "{}{}{}",
+                    Formatter::gray_italic("* Found "),
+                    content.lines().count(),
+                    Formatter::gray_italic(" files")
+                )?;
+            }
+            "edit_file" => {
+                writeln!(
+                    writer,
+                    "{}{}{}",
+                    Formatter::gray_italic("* Edited "),
+                    content.lines().count(),
+                    Formatter::gray_italic(" lines")
+                )?;
+            }
+            _ => {
+                writeln!(
+                    writer,
+                    "{}",
+                    Formatter::gray_italic(&format!(
+                        "* Tool '{}' returned: {}",
+                        tool_name, content
+                    ))
+                )?;
+            }
+        }
         Ok(())
     }
 
