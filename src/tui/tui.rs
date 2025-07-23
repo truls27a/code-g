@@ -24,7 +24,16 @@ impl Tui {
             ChatSessionEvent::SessionEnded => {
                 self.clear_terminal(&mut io::stdout()).unwrap();
             }
-            _ => {}
+            ChatSessionEvent::ReceivedUserMessage(message) => {
+                self.messages.push(ChatMessage::User {
+                    content: message,
+                });
+            }
+            ChatSessionEvent::ReceivedAssistantMessage(message) => {
+                self.messages.push(ChatMessage::Assistant {
+                    message: AssistantMessage::Content(message),
+                });
+            }
         }
     }
 

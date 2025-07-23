@@ -8,17 +8,11 @@ pub enum ChatSessionEvent {
     ReceivedUserMessage(String),
     ReceivedAssistantMessage(String),
     ReceivedToolCall(String),
-    ReceivedToolResponse(String),
-    SetStatusMessages(Vec<StatusMessage>),
+    ReceivedToolResponse(String, String),
+    AwaitingAssistantResponse,
 }
 
 
 pub enum ChatSessionAction {
     RequestUserInput,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum StatusMessage {
-    Thinking,
-    ToolCallName(String),
 }

@@ -1,5 +1,5 @@
 use crate::chat::error::{ChatSessionError, ChatSessionErrorHandling};
-use crate::chat::event::{ChatSessionAction, ChatSessionEvent, StatusMessage};
+use crate::chat::event::{ChatSessionAction, ChatSessionEvent};
 use crate::chat::memory::ChatMemory;
 use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use crate::openai::client::OpenAIClient;
@@ -51,9 +51,6 @@ impl ChatSession {
             content: message.to_string(),
         });
 
-        // Render the memory to the TUI (only if not silent)
-        self.tui.handle_event(ChatSessionEvent::SetStatusMessages(vec![StatusMessage::Thinking]));
-
         // Track iterations to prevent infinite loops
         let mut iterations = 0;
 
@@ -61,14 +58,17 @@ impl ChatSession {
         loop {
             iterations += 1;
 
-            // Check if we've exceeded the maximum number of iterations
+            // 1. Check if we've exceeded the maximum number of iterations
             if iterations > MAX_ITERATIONS {
                 return Err(ChatSessionError::MaxIterationsExceeded {
                     max_iterations: MAX_ITERATIONS,
                 });
             }
 
-            // 1. Get a response from the client
+            // 2. Set the status message to thinking
+            self.tui.handle_event(ChatSessionEvent::AwaitingAssistantResponse);
+
+            // 3. Get a response from the client
             let response = match self
                 .client
                 .create_chat_completion(
@@ -90,54 +90,56 @@ impl ChatSession {
                 },
             };
 
-            // 2. Handle the response from the client
+            // 4. Handle the response from the client
             match response {
-                // 3. If the response is a message, add it to the memory and return it
+                // 5. If the response is a message, add it to the memory and return it
                 ChatResult::Message { content, turn_over } => {
-                    // 3.1 Add assistant message with content
+                    // 5.1 Add assistant message with content
                     self.memory.add_message(ChatMessage::Assistant {
                         message: AssistantMessage::Content(content.clone()),
                     });
 
-                    // 3.2 Render the memory to the TUI (only if not silent)
+                    // 5.2 Render the memory to the TUI (only if not silent)
                     self.tui.handle_event(ChatSessionEvent::ReceivedAssistantMessage(content.clone()));
 
-                    // 3.3 Return the content only if turn is over, otherwise continue
+                    // 5.3 Return the content only if turn is over, otherwise continue
                     if turn_over {
                         return Ok(content);
                     }
                     // If turn is not over, continue the loop to get more responses
                 }
-                // 3. If the response is tool calls, add them to the memory and process them, add the tool responses to the memory, and then finally start over to get the assistants response
+                // 6. If the response is tool calls, add them to the memory and process them, add the tool responses to the memory, and then finally start over to get the assistants response
                 ChatResult::ToolCalls(tool_calls) => {
-                    // 3.1 Add assistant message with tool_calls
+                    // 6.1 Add assistant message with tool_calls
                     self.memory.add_message(ChatMessage::Assistant {
                         message: AssistantMessage::ToolCalls(tool_calls.clone()),
                     });
 
-                    // 3.2 Render the memory to the TUI (only if not silent)
-                    let tool_names = tool_calls.iter().map(|tool_call| tool_call.name.clone()).collect::<Vec<String>>();
-                    let status_messages = tool_names.iter().map(|name| StatusMessage::ToolCallName(name.clone())).collect::<Vec<StatusMessage>>();
-                    self.tui.handle_event(ChatSessionEvent::SetStatusMessages(status_messages));
 
-                    // 3.2 Call each tool and collect responses
+                    // 6.2 Call each tool and collect responses
                     for tool_call in &tool_calls {
-                        // 3.2.1 Call the tool
+                        // 6.2.1 Set the status message to the tool call name
+                        self.tui.handle_event(ChatSessionEvent::ReceivedToolCall(tool_call.name.clone()));
+                        
+                        // 6.2.2 Call the tool
                         let tool_response = self
                             .tools
                             .call_tool(tool_call.name.as_str(), tool_call.arguments.clone())
                             .unwrap_or_else(|e| e);
 
-                        // 3.2.2 Add tool response to memory
+                        // 6.2.3 Add tool response to memory
                         self.memory.add_message(ChatMessage::Tool {
-                            content: tool_response,
+                            content: tool_response.clone(),
                             tool_call_id: tool_call.id.clone(),
                             tool_name: tool_call.name.clone(),
                         });
 
-                        // 3.2.3 Render the memory to the TUI (only if not silent)
-                        self.tui.handle_event(ChatSessionEvent::SetStatusMessages(vec![StatusMessage::Thinking]));
+                        // 6.2.4 Send tool response event to the TUI
+                        self.tui.handle_event(ChatSessionEvent::ReceivedToolResponse(tool_call.name.clone(), tool_response.clone()));
+
                     }
+
+                    // 6.3 Continue the loop to get the assistants response
                     continue;
                 }
             }
