@@ -51,6 +51,10 @@ impl ChatSession {
             content: message.to_string(),
         });
 
+        // Notify TUI about the user message
+        self.tui
+            .handle_event(ChatSessionEvent::ReceivedUserMessage(message.to_string()));
+
         // Track iterations to prevent infinite loops
         let mut iterations = 0;
 
@@ -66,7 +70,8 @@ impl ChatSession {
             }
 
             // 2. Set the status message to thinking
-            self.tui.handle_event(ChatSessionEvent::AwaitingAssistantResponse);
+            self.tui
+                .handle_event(ChatSessionEvent::AwaitingAssistantResponse);
 
             // 3. Get a response from the client
             let response = match self
@@ -100,7 +105,8 @@ impl ChatSession {
                     });
 
                     // 5.2 Render the memory to the TUI (only if not silent)
-                    self.tui.handle_event(ChatSessionEvent::ReceivedAssistantMessage(content.clone()));
+                    self.tui
+                        .handle_event(ChatSessionEvent::ReceivedAssistantMessage(content.clone()));
 
                     // 5.3 Return the content only if turn is over, otherwise continue
                     if turn_over {
@@ -115,12 +121,14 @@ impl ChatSession {
                         message: AssistantMessage::ToolCalls(tool_calls.clone()),
                     });
 
-
                     // 6.2 Call each tool and collect responses
                     for tool_call in &tool_calls {
                         // 6.2.1 Set the status message to the tool call name
-                        self.tui.handle_event(ChatSessionEvent::ReceivedToolCall(tool_call.name.clone(), tool_call.arguments.clone()));
-                        
+                        self.tui.handle_event(ChatSessionEvent::ReceivedToolCall(
+                            tool_call.name.clone(),
+                            tool_call.arguments.clone(),
+                        ));
+
                         // 6.2.2 Call the tool
                         let tool_response = self
                             .tools
@@ -135,8 +143,12 @@ impl ChatSession {
                         });
 
                         // 6.2.4 Send tool response event to the TUI
-                        self.tui.handle_event(ChatSessionEvent::ReceivedToolResponse(tool_response.clone(), tool_call.name.clone(), tool_call.id.clone()));
-
+                        self.tui
+                            .handle_event(ChatSessionEvent::ReceivedToolResponse(
+                                tool_response.clone(),
+                                tool_call.name.clone(),
+                                tool_call.id.clone(),
+                            ));
                     }
 
                     // 6.3 Continue the loop to get the assistants response
@@ -151,7 +163,10 @@ impl ChatSession {
         self.tui.handle_event(ChatSessionEvent::SessionStarted);
 
         loop {
-            let user_input = self.tui.handle_action(ChatSessionAction::RequestUserInput).unwrap(); // TODO: Handle errors
+            let user_input = self
+                .tui
+                .handle_action(ChatSessionAction::RequestUserInput)
+                .unwrap(); // TODO: Handle errors
 
             if user_input == "exit" {
                 // Exit the loop
