@@ -147,7 +147,7 @@ impl ChatSession {
                             .handle_event(ChatSessionEvent::ReceivedToolResponse(
                                 tool_response.clone(),
                                 tool_call.name.clone(),
-                                tool_call.id.clone(),
+                                tool_call.arguments.clone(),
                             ));
                     }
 

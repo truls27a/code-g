@@ -10,7 +10,7 @@ pub enum ChatSessionEvent {
     ReceivedUserMessage(String),
     ReceivedAssistantMessage(String),
     ReceivedToolCall(String, HashMap<String, String>),
-    ReceivedToolResponse(String, String, String),
+    ReceivedToolResponse(String, String, HashMap<String, String>),
     AwaitingAssistantResponse,
 }
 
