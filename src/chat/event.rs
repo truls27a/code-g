@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(Debug, PartialEq)]
 pub enum ChatSessionEvent {
     // System events
@@ -7,8 +9,8 @@ pub enum ChatSessionEvent {
     // User events
     ReceivedUserMessage(String),
     ReceivedAssistantMessage(String),
-    ReceivedToolCall(String),
-    ReceivedToolResponse(String, String),
+    ReceivedToolCall(String, HashMap<String, String>),
+    ReceivedToolResponse(String, String, String),
     AwaitingAssistantResponse,
 }
 
