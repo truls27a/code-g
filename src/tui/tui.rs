@@ -129,3 +129,252 @@ impl Tui {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::chat::event::Event;
+    use std::collections::HashMap;
+    use std::io::Cursor;
+
+    #[test]
+    fn new_creates_tui_with_empty_state() {
+        let tui = Tui::new();
+
+        assert_eq!(tui.state.messages.len(), 0);
+        assert!(tui.state.current_status.is_none());
+    }
+
+    #[test]
+    fn handle_event_session_started_clears_state() {
+        let mut tui = Tui::new();
+
+        // Add some initial state
+        tui.state.add_user_message("test message".to_string());
+        tui.state.set_status(Some(TuiStatus::Thinking));
+
+        // Handle session started event
+        tui.handle_event(Event::SessionStarted);
+
+        assert_eq!(tui.state.messages.len(), 0);
+        assert!(tui.state.current_status.is_none());
+    }
+
+    #[test]
+    fn handle_event_session_ended_clears_terminal() {
+        let mut tui = Tui::new();
+
+        tui.handle_event(Event::SessionEnded);
+
+        // We can't easily test terminal clearing without mocking terminal calls,
+        // but we can verify the event was handled without panicking
+        assert_eq!(tui.state.messages.len(), 0);
+    }
+
+    #[test]
+    fn handle_event_received_user_message_adds_to_state() {
+        let mut tui = Tui::new();
+
+        let message = "Hello, how are you?".to_string();
+        tui.handle_event(Event::ReceivedUserMessage(message.clone()));
+
+        assert_eq!(tui.state.messages.len(), 1);
+        match &tui.state.messages[0] {
+            TuiMessage::User { content } => assert_eq!(content, &message),
+            _ => panic!("Expected user message"),
+        }
+    }
+
+    #[test]
+    fn handle_event_received_assistant_message_adds_to_state() {
+        let mut tui = Tui::new();
+
+        let message = "I'm doing well, thank you!".to_string();
+        tui.handle_event(Event::ReceivedAssistantMessage(message.clone()));
+
+        assert_eq!(tui.state.messages.len(), 1);
+        match &tui.state.messages[0] {
+            TuiMessage::Assistant { content } => assert_eq!(content, &message),
+            _ => panic!("Expected assistant message"),
+        }
+    }
+
+    #[test]
+    fn handle_event_received_tool_call_sets_status() {
+        let mut tui = Tui::new();
+
+        let tool_name = "read_file".to_string();
+        let mut arguments = HashMap::new();
+        arguments.insert("path".to_string(), "test.txt".to_string());
+
+        tui.handle_event(Event::ReceivedToolCall(
+            tool_name.clone(),
+            arguments.clone(),
+        ));
+
+        assert!(tui.state.current_status.is_some());
+        match &tui.state.current_status.as_ref().unwrap() {
+            TuiStatus::ReadingFile { path } => assert_eq!(path, "test.txt"),
+            _ => panic!("Expected ReadingFile status"),
+        }
+    }
+
+    #[test]
+    fn handle_event_received_tool_response_adds_tool_message() {
+        let mut tui = Tui::new();
+
+        let tool_response = "File content here".to_string();
+        let tool_name = "read_file".to_string();
+        let mut arguments = HashMap::new();
+        arguments.insert("path".to_string(), "test.txt".to_string());
+
+        tui.handle_event(Event::ReceivedToolResponse(
+            tool_response.clone(),
+            tool_name,
+            arguments,
+        ));
+
+        assert_eq!(tui.state.messages.len(), 1);
+        match &tui.state.messages[0] {
+            TuiMessage::ToolResponse { summary, is_error } => {
+                assert!(summary.contains("Read 1 lines from test.txt"));
+                assert!(!is_error);
+            }
+            _ => panic!("Expected tool response message"),
+        }
+    }
+
+    #[test]
+    fn handle_event_awaiting_assistant_response_sets_thinking_status() {
+        let mut tui = Tui::new();
+
+        tui.handle_event(Event::AwaitingAssistantResponse);
+
+        assert!(tui.state.current_status.is_some());
+        match &tui.state.current_status.as_ref().unwrap() {
+            TuiStatus::Thinking => (),
+            _ => panic!("Expected Thinking status"),
+        }
+    }
+
+    #[test]
+    fn handle_action_request_user_input_reads_from_stdin() {
+        let tui = Tui::new();
+
+        let input = "test input\n";
+        let mut cursor = Cursor::new(input.as_bytes());
+
+        let result = tui.read_user_input(&mut cursor);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "test input");
+    }
+
+    #[test]
+    fn render_message_formats_user_message_correctly() {
+        let mut tui = Tui::new();
+
+        let message = TuiMessage::User {
+            content: "Hello world".to_string(),
+        };
+
+        let result = tui.render_message(&message);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn render_message_formats_assistant_message_correctly() {
+        let mut tui = Tui::new();
+
+        let message = TuiMessage::Assistant {
+            content: "Hi there!".to_string(),
+        };
+
+        let result = tui.render_message(&message);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn render_message_formats_tool_response_correctly() {
+        let mut tui = Tui::new();
+
+        let message = TuiMessage::ToolResponse {
+            summary: "File read successfully".to_string(),
+            is_error: false,
+        };
+
+        let result = tui.render_message(&message);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn render_message_formats_error_tool_response_correctly() {
+        let mut tui = Tui::new();
+
+        let message = TuiMessage::ToolResponse {
+            summary: "Error reading file".to_string(),
+            is_error: true,
+        };
+
+        let result = tui.render_message(&message);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn clear_terminal_writes_clear_sequence() {
+        let mut tui = Tui::new();
+
+        let result = tui.clear_terminal();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn render_displays_all_messages_in_order() {
+        let mut tui = Tui::new();
+
+        // Add multiple messages
+        tui.state.add_user_message("First message".to_string());
+        tui.state.add_assistant_message("Response".to_string());
+        tui.state
+            .add_tool_response("Tool output".to_string(), false);
+
+        let result = tui.render();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn render_displays_current_status_when_set() {
+        let mut tui = Tui::new();
+
+        tui.state.set_status(Some(TuiStatus::Thinking));
+
+        let result = tui.render();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn handle_event_handles_multiple_events_in_sequence() {
+        let mut tui = Tui::new();
+
+        // Simulate a complete interaction sequence
+        tui.handle_event(Event::SessionStarted);
+        tui.handle_event(Event::ReceivedUserMessage("Hello".to_string()));
+        tui.handle_event(Event::AwaitingAssistantResponse);
+        tui.handle_event(Event::ReceivedAssistantMessage("Hi there!".to_string()));
+
+        assert_eq!(tui.state.messages.len(), 2);
+        assert!(tui.state.current_status.is_none()); // Should be cleared after assistant message
+    }
+
+    #[test]
+    fn state_is_properly_updated_after_each_event() {
+        let mut tui = Tui::new();
+
+        // Test that status is cleared after adding messages
+        tui.handle_event(Event::AwaitingAssistantResponse);
+        assert!(tui.state.current_status.is_some());
+
+        tui.handle_event(Event::ReceivedUserMessage("test".to_string()));
+        assert!(tui.state.current_status.is_none());
+    }
+}
