@@ -1,11 +1,11 @@
-use super::model::{TuiMessage, TuiStatus};
+use super::model::{Message, Status};
 
 /// The state of the TUI.
 /// Stores the messages and the current status.
 #[derive(Debug, Clone)]
 pub struct TuiState {
-    pub messages: Vec<TuiMessage>,
-    pub current_status: Option<TuiStatus>,
+    pub messages: Vec<Message>,
+    pub current_status: Option<Status>,
 }
 
 impl TuiState {
@@ -19,25 +19,25 @@ impl TuiState {
 
     /// Add a user message to the state.
     pub fn add_user_message(&mut self, content: String) {
-        self.messages.push(TuiMessage::User { content });
+        self.messages.push(Message::User { content });
         self.current_status = None;
     }
 
     /// Add an assistant message to the state.
     pub fn add_assistant_message(&mut self, content: String) {
-        self.messages.push(TuiMessage::Assistant { content });
+        self.messages.push(Message::Assistant { content });
         self.current_status = None;
     }
 
     /// Add a tool response to the state.
     pub fn add_tool_response(&mut self, summary: String, is_error: bool) {
         self.messages
-            .push(TuiMessage::ToolResponse { summary, is_error });
+            .push(Message::ToolResponse { summary, is_error });
         self.current_status = None;
     }
 
     /// Set the current status of the TUI.
-    pub fn set_status(&mut self, status: Option<TuiStatus>) {
+    pub fn set_status(&mut self, status: Option<Status>) {
         self.current_status = status;
     }
 
@@ -63,14 +63,14 @@ mod tests {
     #[test]
     fn add_user_message_adds_message_and_clears_status() {
         let mut state = TuiState::new();
-        state.current_status = Some(TuiStatus::Thinking);
+        state.current_status = Some(Status::Thinking);
 
         state.add_user_message("Hello world".to_string());
 
         assert_eq!(state.messages.len(), 1);
         assert_eq!(
             state.messages[0],
-            TuiMessage::User {
+            Message::User {
                 content: "Hello world".to_string()
             }
         );
@@ -80,14 +80,14 @@ mod tests {
     #[test]
     fn add_assistant_message_adds_message_and_clears_status() {
         let mut state = TuiState::new();
-        state.current_status = Some(TuiStatus::Thinking);
+        state.current_status = Some(Status::Thinking);
 
         state.add_assistant_message("Hello there!".to_string());
 
         assert_eq!(state.messages.len(), 1);
         assert_eq!(
             state.messages[0],
-            TuiMessage::Assistant {
+            Message::Assistant {
                 content: "Hello there!".to_string()
             }
         );
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn add_tool_response_adds_message_and_clears_status() {
         let mut state = TuiState::new();
-        state.current_status = Some(TuiStatus::ExecutingTool {
+        state.current_status = Some(Status::ExecutingTool {
             tool_name: "test_tool".to_string(),
         });
 
@@ -106,7 +106,7 @@ mod tests {
         assert_eq!(state.messages.len(), 1);
         assert_eq!(
             state.messages[0],
-            TuiMessage::ToolResponse {
+            Message::ToolResponse {
                 summary: "Tool executed successfully".to_string(),
                 is_error: false
             }
@@ -123,7 +123,7 @@ mod tests {
         assert_eq!(state.messages.len(), 1);
         assert_eq!(
             state.messages[0],
-            TuiMessage::ToolResponse {
+            Message::ToolResponse {
                 summary: "Tool failed".to_string(),
                 is_error: true
             }
@@ -134,7 +134,7 @@ mod tests {
     fn set_status_updates_current_status() {
         let mut state = TuiState::new();
 
-        let status = TuiStatus::ReadingFile {
+        let status = Status::ReadingFile {
             path: "/test/file.txt".to_string(),
         };
         state.set_status(Some(status.clone()));
@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn set_status_can_clear_status() {
         let mut state = TuiState::new();
-        state.current_status = Some(TuiStatus::Thinking);
+        state.current_status = Some(Status::Thinking);
 
         state.set_status(None);
 
@@ -158,7 +158,7 @@ mod tests {
         state.add_user_message("Message 1".to_string());
         state.add_assistant_message("Message 2".to_string());
         state.add_tool_response("Tool response".to_string(), false);
-        state.set_status(Some(TuiStatus::Thinking));
+        state.set_status(Some(Status::Thinking));
 
         state.clear();
 
@@ -177,19 +177,19 @@ mod tests {
         assert_eq!(state.messages.len(), 3);
         assert_eq!(
             state.messages[0],
-            TuiMessage::User {
+            Message::User {
                 content: "First message".to_string()
             }
         );
         assert_eq!(
             state.messages[1],
-            TuiMessage::Assistant {
+            Message::Assistant {
                 content: "Second message".to_string()
             }
         );
         assert_eq!(
             state.messages[2],
-            TuiMessage::ToolResponse {
+            Message::ToolResponse {
                 summary: "Third message".to_string(),
                 is_error: false
             }
@@ -201,19 +201,19 @@ mod tests {
         let mut state = TuiState::new();
 
         // Set various statuses and verify they get cleared
-        state.set_status(Some(TuiStatus::WritingFile {
+        state.set_status(Some(Status::WritingFile {
             path: "test.txt".to_string(),
         }));
         state.add_user_message("User message".to_string());
         assert!(state.current_status.is_none());
 
-        state.set_status(Some(TuiStatus::SearchingFiles {
+        state.set_status(Some(Status::SearchingFiles {
             pattern: "*.rs".to_string(),
         }));
         state.add_assistant_message("Assistant message".to_string());
         assert!(state.current_status.is_none());
 
-        state.set_status(Some(TuiStatus::EditingFile {
+        state.set_status(Some(Status::EditingFile {
             path: "main.rs".to_string(),
         }));
         state.add_tool_response("Tool response".to_string(), true);
@@ -231,19 +231,19 @@ mod tests {
         assert_eq!(state.messages.len(), 3);
         assert_eq!(
             state.messages[0],
-            TuiMessage::User {
+            Message::User {
                 content: "".to_string()
             }
         );
         assert_eq!(
             state.messages[1],
-            TuiMessage::Assistant {
+            Message::Assistant {
                 content: "".to_string()
             }
         );
         assert_eq!(
             state.messages[2],
-            TuiMessage::ToolResponse {
+            Message::ToolResponse {
                 summary: "".to_string(),
                 is_error: false
             }

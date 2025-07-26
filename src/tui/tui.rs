@@ -1,5 +1,5 @@
 use super::formatter::{terminal::TerminalFormatter, text::TextFormatter, tool::ToolFormatter};
-use super::model::{TuiMessage, TuiStatus};
+use super::model::{Message, Status};
 use super::state::TuiState;
 use crate::chat::event::{Action, Event, EventHandler};
 use std::io::{self, BufRead, Write};
@@ -35,7 +35,7 @@ impl EventHandler for Tui {
                 self.state.add_tool_response(summary, is_error);
             }
             Event::AwaitingAssistantResponse => {
-                self.state.set_status(Some(TuiStatus::Thinking));
+                self.state.set_status(Some(Status::Thinking));
             }
         }
         self.render().unwrap();
@@ -98,17 +98,17 @@ impl Tui {
         Ok(input.trim().to_string())
     }
 
-    fn render_message(&mut self, message: &TuiMessage) -> Result<(), io::Error> {
+    fn render_message(&mut self, message: &Message) -> Result<(), io::Error> {
         match message {
-            TuiMessage::User { content } => {
+            Message::User { content } => {
                 writeln!(self.writer, "> {}", content)?;
                 writeln!(self.writer)?;
             }
-            TuiMessage::Assistant { content } => {
+            Message::Assistant { content } => {
                 writeln!(self.writer, "* {}", content)?;
                 writeln!(self.writer)?;
             }
-            TuiMessage::ToolResponse { summary, is_error } => {
+            Message::ToolResponse { summary, is_error } => {
                 if *is_error {
                     writeln!(self.writer, "{}", TextFormatter::red_italic(summary))?;
                 } else {
@@ -151,7 +151,7 @@ mod tests {
 
         // Add some initial state
         tui.state.add_user_message("test message".to_string());
-        tui.state.set_status(Some(TuiStatus::Thinking));
+        tui.state.set_status(Some(Status::Thinking));
 
         // Handle session started event
         tui.handle_event(Event::SessionStarted);
@@ -180,7 +180,7 @@ mod tests {
 
         assert_eq!(tui.state.messages.len(), 1);
         match &tui.state.messages[0] {
-            TuiMessage::User { content } => assert_eq!(content, &message),
+            Message::User { content } => assert_eq!(content, &message),
             _ => panic!("Expected user message"),
         }
     }
@@ -194,7 +194,7 @@ mod tests {
 
         assert_eq!(tui.state.messages.len(), 1);
         match &tui.state.messages[0] {
-            TuiMessage::Assistant { content } => assert_eq!(content, &message),
+            Message::Assistant { content } => assert_eq!(content, &message),
             _ => panic!("Expected assistant message"),
         }
     }
@@ -214,7 +214,7 @@ mod tests {
 
         assert!(tui.state.current_status.is_some());
         match &tui.state.current_status.as_ref().unwrap() {
-            TuiStatus::ReadingFile { path } => assert_eq!(path, "test.txt"),
+            Status::ReadingFile { path } => assert_eq!(path, "test.txt"),
             _ => panic!("Expected ReadingFile status"),
         }
     }
@@ -236,7 +236,7 @@ mod tests {
 
         assert_eq!(tui.state.messages.len(), 1);
         match &tui.state.messages[0] {
-            TuiMessage::ToolResponse { summary, is_error } => {
+            Message::ToolResponse { summary, is_error } => {
                 assert!(summary.contains("Read 1 lines from test.txt"));
                 assert!(!is_error);
             }
@@ -252,7 +252,7 @@ mod tests {
 
         assert!(tui.state.current_status.is_some());
         match &tui.state.current_status.as_ref().unwrap() {
-            TuiStatus::Thinking => (),
+            Status::Thinking => (),
             _ => panic!("Expected Thinking status"),
         }
     }
@@ -274,7 +274,7 @@ mod tests {
     fn render_message_formats_user_message_correctly() {
         let mut tui = Tui::new();
 
-        let message = TuiMessage::User {
+        let message = Message::User {
             content: "Hello world".to_string(),
         };
 
@@ -286,7 +286,7 @@ mod tests {
     fn render_message_formats_assistant_message_correctly() {
         let mut tui = Tui::new();
 
-        let message = TuiMessage::Assistant {
+        let message = Message::Assistant {
             content: "Hi there!".to_string(),
         };
 
@@ -298,7 +298,7 @@ mod tests {
     fn render_message_formats_tool_response_correctly() {
         let mut tui = Tui::new();
 
-        let message = TuiMessage::ToolResponse {
+        let message = Message::ToolResponse {
             summary: "File read successfully".to_string(),
             is_error: false,
         };
@@ -311,7 +311,7 @@ mod tests {
     fn render_message_formats_error_tool_response_correctly() {
         let mut tui = Tui::new();
 
-        let message = TuiMessage::ToolResponse {
+        let message = Message::ToolResponse {
             summary: "Error reading file".to_string(),
             is_error: true,
         };
@@ -346,7 +346,7 @@ mod tests {
     fn render_displays_current_status_when_set() {
         let mut tui = Tui::new();
 
-        tui.state.set_status(Some(TuiStatus::Thinking));
+        tui.state.set_status(Some(Status::Thinking));
 
         let result = tui.render();
         assert!(result.is_ok());

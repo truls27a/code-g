@@ -1,12 +1,12 @@
 #[derive(Debug, Clone, PartialEq)]
-pub enum TuiMessage {
+pub enum Message {
     User { content: String },
     Assistant { content: String },
     ToolResponse { summary: String, is_error: bool },
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum TuiStatus {
+pub enum Status {
     Thinking,
     ReadingFile { path: String },
     WritingFile { path: String },
@@ -15,15 +15,15 @@ pub enum TuiStatus {
     ExecutingTool { tool_name: String },
 }
 
-impl TuiStatus {
+impl Status {
     pub fn to_string(&self) -> String {
         match self {
-            TuiStatus::Thinking => "Thinking...".to_string(),
-            TuiStatus::ReadingFile { path } => format!("Reading {}...", path),
-            TuiStatus::WritingFile { path } => format!("Writing {}...", path),
-            TuiStatus::SearchingFiles { pattern } => format!("Searching for '{}'...", pattern),
-            TuiStatus::EditingFile { path } => format!("Editing {}...", path),
-            TuiStatus::ExecutingTool { tool_name } => format!("Calling tool '{}'", tool_name),
+            Status::Thinking => "Thinking...".to_string(),
+            Status::ReadingFile { path } => format!("Reading {}...", path),
+            Status::WritingFile { path } => format!("Writing {}...", path),
+            Status::SearchingFiles { pattern } => format!("Searching for '{}'...", pattern),
+            Status::EditingFile { path } => format!("Editing {}...", path),
+            Status::ExecutingTool { tool_name } => format!("Calling tool '{}'", tool_name),
         }
     }
 }

@@ -1,28 +1,28 @@
-use crate::tui::model::TuiStatus;
+use crate::tui::model::Status;
 use std::collections::HashMap;
 
 pub struct ToolFormatter;
 
 impl ToolFormatter {
-    pub fn create_status(tool_name: &str, arguments: &HashMap<String, String>) -> TuiStatus {
+    pub fn create_status(tool_name: &str, arguments: &HashMap<String, String>) -> Status {
         match tool_name {
             "read_file" => {
                 let path = arguments.get("path").unwrap_or(&"".to_string()).clone();
-                TuiStatus::ReadingFile { path }
+                Status::ReadingFile { path }
             }
             "write_file" => {
                 let path = arguments.get("path").unwrap_or(&"".to_string()).clone();
-                TuiStatus::WritingFile { path }
+                Status::WritingFile { path }
             }
             "search_files" => {
                 let pattern = arguments.get("pattern").unwrap_or(&"".to_string()).clone();
-                TuiStatus::SearchingFiles { pattern }
+                Status::SearchingFiles { pattern }
             }
             "edit_file" => {
                 let path = arguments.get("path").unwrap_or(&"".to_string()).clone();
-                TuiStatus::EditingFile { path }
+                Status::EditingFile { path }
             }
-            _ => TuiStatus::ExecutingTool {
+            _ => Status::ExecutingTool {
                 tool_name: tool_name.to_string(),
             },
         }
