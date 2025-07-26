@@ -11,7 +11,7 @@ use std::fs;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust, no_run
 /// use code_g::tools::write_file::WriteFile;
 /// use code_g::tools::tool::Tool;
 /// use std::collections::HashMap;
