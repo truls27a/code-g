@@ -9,6 +9,7 @@ use std::io::{self, BufRead, Write};
 pub struct Tui {
     state: TuiState,
     writer: Box<dyn Write>,
+    reader: Box<dyn BufRead>,
 }
 
 impl EventHandler for Tui {
@@ -50,7 +51,7 @@ impl EventHandler for Tui {
     /// This method is called by the ChatSession to handle actions.
     fn handle_action(&mut self, action: Action) -> Result<String, io::Error> {
         match action {
-            Action::RequestUserInput => self.read_user_input(&mut io::stdin().lock()),
+            Action::RequestUserInput => self.read_user_input(),
         }
     }
 }
@@ -61,6 +62,7 @@ impl Tui {
         Self {
             state: TuiState::new(),
             writer: Box::new(io::stdout()),
+            reader: Box::new(io::stdin().lock()),
         }
     }
 
@@ -87,7 +89,7 @@ impl Tui {
         Ok(())
     }
 
-    fn read_user_input(&self, reader: &mut impl BufRead) -> Result<String, io::Error> {
+    fn read_user_input(&mut self) -> Result<String, io::Error> {
         // Save current cursor position and move to bottom to show prompt
         print!("{}", TerminalFormatter::save_cursor());
         print!("{}", TerminalFormatter::move_to_bottom());
@@ -96,7 +98,7 @@ impl Tui {
 
         // Capture the user's input
         let mut input = String::new();
-        reader.read_line(&mut input)?;
+        self.reader.read_line(&mut input)?;
 
         // Clear the prompt line and restore cursor position
         print!("{}", TerminalFormatter::move_to_bottom_and_clear());
@@ -144,6 +146,14 @@ mod tests {
     use crate::chat::event::Event;
     use std::collections::HashMap;
     use std::io::Cursor;
+
+    fn tui_with_writer_and_reader(writer: Box<dyn Write>, reader: Box<dyn BufRead>) -> Tui {
+        Tui {
+            state: TuiState::new(),
+            writer,
+            reader,
+        }
+    }
 
     #[test]
     fn new_creates_tui_with_empty_state() {
@@ -267,12 +277,10 @@ mod tests {
 
     #[test]
     fn handle_action_request_user_input_reads_from_stdin() {
-        let tui = Tui::new();
-
         let input = "test input\n";
-        let mut cursor = Cursor::new(input.as_bytes());
+        let mut tui = tui_with_writer_and_reader(Box::new(Cursor::new(Vec::new())), Box::new(Cursor::new(input.as_bytes())));
 
-        let result = tui.read_user_input(&mut cursor);
+        let result = tui.read_user_input();
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "test input");
