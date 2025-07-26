@@ -56,8 +56,8 @@ impl Tui {
             writer: Box::new(io::stdout()),
         }
     }
-   
-   fn create_tool_status(
+
+    fn create_tool_status(
         &self,
         tool_name: &str,
         arguments: &std::collections::HashMap<String, String>,
