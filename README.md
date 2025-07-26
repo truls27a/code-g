@@ -4,6 +4,8 @@ Your G when it comes to coding
 
 CodeG is a terminal-based AI chat application that helps you code. Like Cursor, but in your terminal.
 
+![Demo of CodeG in terminal](./assets/demo.gif)
+
 ### TODO:
 - Write real documentation for the project here :)
 - Add accept/decline file changes with diff view
