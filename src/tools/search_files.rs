@@ -6,17 +6,61 @@ use std::path::Path;
 
 const MAX_FILES_RETURNED: usize = 50;
 
+/// A tool for searching files using glob-style patterns.
+///
+/// SearchFiles provides functionality to find files matching wildcard patterns
+/// within the filesystem. It implements the [`Tool`] trait to be used within
+/// the tool system for file discovery operations. The search is performed
+/// recursively starting from the current directory.
+///
+/// # Examples
+///
+/// ```rust
+/// use code_g::tools::search_files::SearchFiles;
+/// use code_g::tools::tool::Tool;
+/// use std::collections::HashMap;
+///
+/// let tool = SearchFiles;
+/// let args = HashMap::from([
+///     ("pattern".to_string(), "*.rs".to_string()),
+/// ]);
+/// let result = tool.call(args);
+/// ```
+///
+/// # Notes
+/// - Results are limited to 50 files to prevent overwhelming output.
+/// - Supports wildcard patterns: `*` (any characters) and `?` (single character).
+/// - Search is performed recursively from the current directory.
+/// - Files are returned in sorted order.
 pub struct SearchFiles;
 
 impl Tool for SearchFiles {
+    /// Returns the name identifier for this tool.
+    ///
+    /// # Returns
+    ///
+    /// A string containing "search_files" as the tool identifier.
     fn name(&self) -> String {
         "search_files".to_string()
     }
 
+    /// Returns a human-readable description of what this tool does.
+    ///
+    /// # Returns
+    ///
+    /// A string describing the tool's functionality for searching files with patterns.
     fn description(&self) -> String {
         "Search for files matching a pattern. The pattern can be a specific filename or use wildcards (e.g., '*.rs' for all Rust files, 'config.*' for files starting with 'config').".to_string()
     }
 
+    /// Returns the parameter schema for this tool.
+    ///
+    /// Defines the required parameter for the search_files tool: pattern.
+    /// The pattern parameter is a required string value that supports wildcards.
+    ///
+    /// # Returns
+    ///
+    /// A Parameters object containing the schema for the pattern argument.
     fn parameters(&self) -> Parameters {
         Parameters {
             param_type: "object".to_string(),
@@ -34,10 +78,35 @@ impl Tool for SearchFiles {
         }
     }
 
+    /// Returns whether this tool uses strict parameter validation.
+    ///
+    /// # Returns
+    ///
+    /// Always returns true, indicating strict parameter validation is enabled.
     fn strict(&self) -> bool {
         true
     }
 
+    /// Executes the file search operation with the provided arguments.
+    ///
+    /// Searches recursively from the current directory for files matching the
+    /// specified pattern. Results are limited to 50 files and returned in
+    /// sorted order. Supports wildcards `*` (any characters) and `?` (single character).
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing the "pattern" string value.
+    ///
+    /// # Returns
+    ///
+    /// A formatted string listing all matching files with their paths.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The "pattern" argument is missing
+    /// - No files match the specified pattern
+    /// - The directory cannot be read due to permissions or other I/O errors
     fn call(&self, args: HashMap<String, String>) -> Result<String, String> {
         let pattern = args.get("pattern").ok_or("Pattern is required")?;
         let directory = ".";
@@ -67,6 +136,25 @@ impl Tool for SearchFiles {
     }
 }
 
+/// Searches for files matching a pattern in the specified directory.
+///
+/// Performs a recursive search starting from the given directory for files
+/// that match the specified glob-style pattern. Results are limited and sorted.
+///
+/// # Arguments
+///
+/// * `pattern` - The glob pattern to match against filenames
+/// * `directory` - The directory to start searching from
+///
+/// # Returns
+///
+/// A tuple containing a vector of matching file paths and a boolean indicating
+/// if results were truncated due to the limit.
+///
+/// # Errors
+///
+/// Returns an error if the directory doesn't exist, isn't a directory, or
+/// cannot be read.
 fn search_files(pattern: &str, directory: &str) -> Result<(Vec<String>, bool), String> {
     let mut found_files = Vec::new();
     let search_path = Path::new(directory);
@@ -88,6 +176,21 @@ fn search_files(pattern: &str, directory: &str) -> Result<(Vec<String>, bool), S
     Ok((found_files, truncated))
 }
 
+/// Recursively searches a directory for files matching a pattern.
+///
+/// This function traverses the directory tree depth-first, collecting files
+/// that match the given pattern. Search stops when the maximum file limit
+/// is reached to prevent excessive results.
+///
+/// # Arguments
+///
+/// * `dir` - The directory path to search in
+/// * `pattern` - The glob pattern to match against filenames
+/// * `found_files` - Mutable vector to collect matching file paths
+///
+/// # Errors
+///
+/// Returns an error if directory entries cannot be read or accessed.
 fn search_directory_recursive(
     dir: &Path,
     pattern: &str,
@@ -125,6 +228,20 @@ fn search_directory_recursive(
     Ok(())
 }
 
+/// Determines if a filename matches a glob-style pattern.
+///
+/// Supports wildcard matching with `*` (any number of characters) and
+/// `?` (exactly one character). Also handles exact string matching when
+/// no wildcards are present.
+///
+/// # Arguments
+///
+/// * `filename` - The filename to test against the pattern
+/// * `pattern` - The glob pattern with optional wildcards
+///
+/// # Returns
+///
+/// True if the filename matches the pattern, false otherwise.
 fn matches_pattern(filename: &str, pattern: &str) -> bool {
     if pattern == "*" {
         return true;
@@ -143,6 +260,21 @@ fn matches_pattern(filename: &str, pattern: &str) -> bool {
     matches_with_wildcards(&filename_chars, &pattern_chars, 0, 0)
 }
 
+/// Performs wildcard matching using recursive backtracking.
+///
+/// This function implements glob-style pattern matching by recursively
+/// comparing filename and pattern characters, handling wildcards appropriately.
+///
+/// # Arguments
+///
+/// * `filename` - Character array of the filename being matched
+/// * `pattern` - Character array of the pattern with wildcards
+/// * `f_idx` - Current index in the filename
+/// * `p_idx` - Current index in the pattern
+///
+/// # Returns
+///
+/// True if the remaining filename matches the remaining pattern, false otherwise.
 fn matches_with_wildcards(filename: &[char], pattern: &[char], f_idx: usize, p_idx: usize) -> bool {
     // If we've consumed the entire pattern
     if p_idx >= pattern.len() {

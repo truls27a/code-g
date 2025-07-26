@@ -3,17 +3,59 @@ use crate::tools::tool::Tool;
 use std::collections::HashMap;
 use std::fs;
 
+/// A tool for reading content from files in the filesystem.
+///
+/// ReadFile provides functionality to read the entire content of a file as a string.
+/// It implements the [`Tool`] trait to be used within the tool system for file
+/// reading operations.
+///
+/// # Examples
+///
+/// ```rust
+/// use code_g::tools::read_file::ReadFile;
+/// use code_g::tools::tool::Tool;
+/// use std::collections::HashMap;
+///
+/// let tool = ReadFile;
+/// let args = HashMap::from([
+///     ("path".to_string(), "example.txt".to_string()),
+/// ]);
+/// let result = tool.call(args);
+/// ```
+///
+/// # Notes
+/// - The tool reads the entire file content into memory as a string.
+///   This is not efficient for large files and can cause issues when passed to the AI.
+/// - The file must exist and be readable by the current process.
 pub struct ReadFile;
 
 impl Tool for ReadFile {
+    /// Returns the name identifier for this tool.
+    ///
+    /// # Returns
+    ///
+    /// A string containing "read_file" as the tool identifier.
     fn name(&self) -> String {
         "read_file".to_string()
     }
 
+    /// Returns a human-readable description of what this tool does.
+    ///
+    /// # Returns
+    ///
+    /// A string describing the tool's functionality for reading files.
     fn description(&self) -> String {
         "Read the content of a file".to_string()
     }
 
+    /// Returns the parameter schema for this tool.
+    ///
+    /// Defines the required parameter for the read_file tool: path.
+    /// The path parameter is a required string value.
+    ///
+    /// # Returns
+    ///
+    /// A Parameters object containing the schema for the path argument.
     fn parameters(&self) -> Parameters {
         Parameters {
             param_type: "object".to_string(),
@@ -29,10 +71,35 @@ impl Tool for ReadFile {
         }
     }
 
+    /// Returns whether this tool uses strict parameter validation.
+    ///
+    /// # Returns
+    ///
+    /// Always returns true, indicating strict parameter validation is enabled.
     fn strict(&self) -> bool {
         true
     }
 
+    /// Executes the read file operation with the provided arguments.
+    ///
+    /// Reads the entire content of the file at the specified path and returns
+    /// it as a string. The file must exist and be readable by the current process.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing the "path" string value.
+    ///
+    /// # Returns
+    ///
+    /// The entire content of the file as a string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The "path" argument is missing
+    /// - The file does not exist
+    /// - The file cannot be read due to permissions or other I/O errors
+    /// - The file contains invalid UTF-8 content
     fn call(&self, args: HashMap<String, String>) -> Result<String, String> {
         let path = args.get("path").ok_or("Path is required")?;
 

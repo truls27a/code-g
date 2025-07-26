@@ -3,17 +3,63 @@ use crate::tools::tool::Tool;
 use std::collections::HashMap;
 use std::fs;
 
+/// A tool for editing files by replacing specific strings with new content.
+///
+/// This tool provides a safe way to edit files by finding and replacing
+/// exact string matches. It ensures that the target string appears exactly
+/// once in the file to prevent unintended modifications. The tool can handle
+/// both single-line and multi-line string replacements.
+///
+/// # Examples
+///
+/// ```rust
+/// use code_g::tools::edit_file::EditFile;
+/// use code_g::tools::tool::Tool;
+/// use std::collections::HashMap;
+///
+/// let tool = EditFile;
+/// let mut args = HashMap::new();
+/// args.insert("path".to_string(), "example.txt".to_string());
+/// args.insert("old_string".to_string(), "old text".to_string());
+/// args.insert("new_string".to_string(), "new text".to_string());
+///
+/// let result = tool.call(args)?;
+/// ```
+///
+/// # Notes
+///
+/// - The tool will fail if the target string appears multiple times in the file
+/// - Empty replacement strings can be used to delete content
+/// - The tool preserves file permissions and encoding
 pub struct EditFile;
 
 impl Tool for EditFile {
+    /// Returns the name identifier for this tool.
+    ///
+    /// # Returns
+    ///
+    /// The string "edit_file" which identifies this tool in the tool registry.
     fn name(&self) -> String {
         "edit_file".to_string()
     }
 
+    /// Returns a human-readable description of what this tool does.
+    ///
+    /// # Returns
+    ///
+    /// A description explaining that this tool edits files by replacing strings.
     fn description(&self) -> String {
         "Edit a file by replacing a specific string with new content".to_string()
     }
 
+    /// Returns the parameter schema for this tool.
+    ///
+    /// Defines the required parameters for the edit_file tool: path, old_string,
+    /// and new_string. All parameters are required and must be strings.
+    ///
+    /// # Returns
+    ///
+    /// A Parameters struct containing the schema definition for tool arguments.
     fn parameters(&self) -> Parameters {
         Parameters {
             param_type: "object".to_string(),
@@ -49,10 +95,41 @@ impl Tool for EditFile {
         }
     }
 
+    /// Returns whether this tool uses strict parameter validation.
+    ///
+    /// # Returns
+    ///
+    /// Always returns true, indicating that this tool requires strict adherence
+    /// to the parameter schema.
     fn strict(&self) -> bool {
         true
     }
 
+    /// Executes the file editing operation.
+    ///
+    /// Reads the specified file, finds the exact occurrence of the old string,
+    /// and replaces it with the new string. The operation will fail if the
+    /// old string is not found or appears multiple times to prevent unintended
+    /// modifications.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing the required parameters:
+    ///   - "path": The file path to edit
+    ///   - "old_string": The exact string to find and replace
+    ///   - "new_string": The replacement string (can be empty to delete)
+    ///
+    /// # Returns
+    ///
+    /// A success message indicating the file was edited successfully.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Required parameters are missing
+    /// - The file cannot be read or written
+    /// - The old string is not found in the file
+    /// - The old string appears multiple times in the file
     fn call(&self, args: HashMap<String, String>) -> Result<String, String> {
         let path = args.get("path").ok_or("Path is required")?;
         let old_string = args.get("old_string").ok_or("Old string is required")?;

@@ -3,17 +3,59 @@ use crate::tools::tool::Tool;
 use std::collections::HashMap;
 use std::fs;
 
+/// A tool for writing content to files in the filesystem.
+///
+/// WriteFile provides functionality to create new files or overwrite existing files
+/// with specified content. It implements the [`Tool`] trait to be used within the
+/// tool system for file manipulation operations.
+///
+/// # Examples
+///
+/// ```rust
+/// use code_g::tools::write_file::WriteFile;
+/// use code_g::tools::tool::Tool;
+/// use std::collections::HashMap;
+///
+/// let tool = WriteFile;
+/// let args = HashMap::from([
+///     ("path".to_string(), "example.txt".to_string()),
+///     ("content".to_string(), "Hello, world!".to_string()),
+/// ]);
+/// let result = tool.call(args);
+/// ```
+/// 
+/// # Notes
+/// - The tool overwrites the file if it already exists.
+/// - The tool creates the file if it does not exist.
 pub struct WriteFile;
 
 impl Tool for WriteFile {
+    /// Returns the name identifier for this tool.
+    ///
+    /// # Returns
+    ///
+    /// A string containing "write_file" as the tool identifier.
     fn name(&self) -> String {
         "write_file".to_string()
     }
 
+    /// Returns a human-readable description of what this tool does.
+    ///
+    /// # Returns
+    ///
+    /// A string describing the tool's functionality for writing files.
     fn description(&self) -> String {
         "Write to a file. If the file does not exist, it will be created. If the file exists, it will be overwritten.".to_string()
     }
 
+    /// Returns the parameter schema for this tool.
+    ///
+    /// Defines the required parameters for the write_file tool: path and content.
+    /// Both parameters are required string values.
+    ///
+    /// # Returns
+    ///
+    /// A Parameters object containing the schema for path and content arguments.
     fn parameters(&self) -> Parameters {
         Parameters {
             param_type: "object".to_string(),
@@ -38,10 +80,35 @@ impl Tool for WriteFile {
         }
     }
 
+    /// Returns whether this tool uses strict parameter validation.
+    ///
+    /// # Returns
+    ///
+    /// Always returns true, indicating strict parameter validation is enabled.
     fn strict(&self) -> bool {
         true
     }
 
+    /// Executes the write file operation with the provided arguments.
+    ///
+    /// Creates a new file or overwrites an existing file at the specified path
+    /// with the given content. The operation will create any necessary parent
+    /// directories if they don't exist.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing "path" and "content" string values.
+    ///
+    /// # Returns
+    ///
+    /// A success message indicating the file was written successfully.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The "path" argument is missing
+    /// - The "content" argument is missing  
+    /// - The file cannot be written due to permissions or other I/O errors
     fn call(&self, args: HashMap<String, String>) -> Result<String, String> {
         let path = args.get("path").ok_or("Path is required")?;
         let content = args.get("content").ok_or("Content is required")?;
