@@ -1,7 +1,22 @@
 use super::model::{Message, Status};
 
 /// The state of the TUI.
-/// Stores the messages and the current status.
+/// 
+/// Stores the TUI messages and current status. The status is used to display the current loading state.
+/// 
+/// # Fields
+/// 
+/// - `messages`: [`Vec<Message>`] The messages to display
+/// - `current_status`: [`Option<Status>`] The current status of the TUI
+/// 
+/// # Examples
+/// 
+/// ```rust
+/// let state = TuiState::new();
+/// state.add_user_message("Hello, how are you?".to_string());
+/// state.add_assistant_message("I'm doing well, thank you!".to_string());
+/// state.add_tool_response("Tool executed successfully".to_string(), false);
+/// ```
 #[derive(Debug, Clone)]
 pub struct TuiState {
     pub messages: Vec<Message>,
@@ -10,6 +25,16 @@ pub struct TuiState {
 
 impl TuiState {
     /// Create a new TUI state.
+    /// 
+    /// # Returns
+    /// 
+    /// - `TuiState` The new TUI state
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// let state = TuiState::new();
+    /// ```
     pub fn new() -> Self {
         Self {
             messages: Vec::new(),
@@ -18,18 +43,52 @@ impl TuiState {
     }
 
     /// Add a user message to the state.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `content`: [`String`] The content of the user message
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// let mut state = TuiState::new();
+    /// state.add_user_message("Hello, how are you?".to_string());
+    /// ```
     pub fn add_user_message(&mut self, content: String) {
         self.messages.push(Message::User { content });
         self.current_status = None;
     }
 
     /// Add an assistant message to the state.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `content`: [`String`] The content of the assistant message
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// let mut state = TuiState::new();
+    /// state.add_assistant_message("I'm doing well, thank you!".to_string());
+    /// ```
     pub fn add_assistant_message(&mut self, content: String) {
         self.messages.push(Message::Assistant { content });
         self.current_status = None;
     }
 
     /// Add a tool response to the state.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `summary`: [`String`] The summary of the tool response
+    /// - `is_error`: [`bool`] Whether the tool response is an error
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// let mut state = TuiState::new();
+    /// state.add_tool_response("Read 23 lines from test.txt".to_string(), false);
+    /// ```
     pub fn add_tool_response(&mut self, summary: String, is_error: bool) {
         self.messages
             .push(Message::ToolResponse { summary, is_error });
@@ -37,11 +96,29 @@ impl TuiState {
     }
 
     /// Set the current status of the TUI.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `status`: [`Option<Status>`] The status to set
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// let mut state = TuiState::new();
+    /// state.set_status(Some(Status::Thinking));
+    /// ```
     pub fn set_status(&mut self, status: Option<Status>) {
         self.current_status = status;
     }
 
     /// Clear the state.
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// let mut state = TuiState::new();
+    /// state.clear();
+    /// ```
     pub fn clear(&mut self) {
         self.messages.clear();
         self.current_status = None;

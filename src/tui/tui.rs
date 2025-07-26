@@ -18,7 +18,7 @@ use std::io::{self, BufRead, Write};
 ///
 /// # Examples
 /// 
-/// ```rust,no_run
+/// ```rust
 /// let mut tui = Tui::new();
 /// tui.handle_event(Event::SessionStarted);
 /// tui.handle_event(Event::ReceivedUserMessage("Hello, how are you?".to_string()));
@@ -54,13 +54,9 @@ impl EventHandler for Tui {
     /// 
     /// - `event`: [`Event`] The event to handle
     /// 
-    /// # Returns
-    /// 
-    /// - `()`
-    /// 
     /// # Examples
     /// 
-    /// ```rust,no_run
+    /// ```rust
     /// let mut tui = Tui::new();
     /// tui.handle_event(Event::SessionStarted);
     /// ```
@@ -128,7 +124,7 @@ impl Tui {
     /// 
     /// # Examples
     /// 
-    /// ```rust,no_run
+    /// ```rust
     /// let tui = Tui::new();
     /// ```
     pub fn new() -> Self {
