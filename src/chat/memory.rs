@@ -1,39 +1,49 @@
 use crate::openai::model::ChatMessage;
 
+/// The memory of the chat session.
+/// Stores the messages of the chat session.
 #[derive(Debug, PartialEq, Clone)]
 pub struct ChatMemory {
     memory: Vec<ChatMessage>,
 }
 
 impl ChatMemory {
+    /// Create a new chat memory.
     pub fn new() -> Self {
         Self { memory: vec![] }
     }
 
+    /// Create a chat memory from a vector of chat messages.
     pub fn from(memory: Vec<ChatMessage>) -> Self {
         Self { memory }
     }
 
+    /// Add a message to the chat memory.
     pub fn add_message(&mut self, message: ChatMessage) {
         self.memory.push(message);
     }
 
+    /// Get the memory of the chat session.
     pub fn get_memory(&self) -> &Vec<ChatMessage> {
         &self.memory
     }
 
+    /// Get the last message of the chat session.
     pub fn get_last_message(&self) -> Option<&ChatMessage> {
         self.memory.last()
     }
 
+    /// Remove a message from the chat memory.
     pub fn remove_message(&mut self, message: &ChatMessage) {
         self.memory.retain(|m| m != message);
     }
 
+    /// Remove the last message from the chat memory.
     pub fn remove_last_message(&mut self) {
         self.memory.pop();
     }
 
+    /// Clear the chat memory.
     pub fn clear(&mut self) {
         self.memory.clear();
     }
