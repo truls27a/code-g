@@ -23,7 +23,7 @@ use std::fs;
 /// args.insert("old_string".to_string(), "old text".to_string());
 /// args.insert("new_string".to_string(), "new text".to_string());
 ///
-/// let result = tool.call(args)?;
+/// let result = tool.call(args);
 /// ```
 ///
 /// # Notes
