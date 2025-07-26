@@ -1,7 +1,9 @@
-use super::text_formatter::{TextFormatter, Terminal};
 use super::model::{TuiMessage, TuiStatus};
 use super::state::TuiState;
-use super::tool_formatter::ToolFormatter;
+use super::formatter::{
+    text_formatter::TextFormatter, terminal_formatter::TerminalFormatter,
+    tool_formatter::ToolFormatter,
+};
 use crate::chat::event::{ChatSessionAction, ChatSessionEvent, ChatSessionEventHandler};
 use std::io::{self, BufRead, Write};
 
@@ -82,8 +84,8 @@ impl Tui {
 
     fn read_user_input(&self, reader: &mut impl BufRead) -> Result<String, io::Error> {
         // Save current cursor position and move to bottom to show prompt
-        print!("{}", Terminal::save_cursor());
-        print!("{}", Terminal::move_to_bottom());
+        print!("{}", TerminalFormatter::save_cursor());
+        print!("{}", TerminalFormatter::move_to_bottom());
         print!("> ");
         io::stdout().flush()?;
 
@@ -92,8 +94,8 @@ impl Tui {
         reader.read_line(&mut input)?;
 
         // Clear the prompt line and restore cursor position
-        print!("{}", Terminal::move_to_bottom_and_clear());
-        print!("{}", Terminal::restore_cursor());
+        print!("{}", TerminalFormatter::move_to_bottom_and_clear());
+        print!("{}", TerminalFormatter::restore_cursor());
         io::stdout().flush()?;
 
         Ok(input.trim().to_string())
@@ -126,7 +128,7 @@ impl Tui {
     }
 
     fn clear_terminal(&mut self) -> Result<(), io::Error> {
-        write!(self.writer, "{}", Terminal::clear_screen())?;
+        write!(self.writer, "{}", TerminalFormatter::clear_screen())?;
         Ok(())
     }
 }

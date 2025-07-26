@@ -1,4 +1,4 @@
-use super::model::TuiStatus;
+use crate::tui::model::TuiStatus;
 use std::collections::HashMap;
 
 pub struct ToolFormatter;
