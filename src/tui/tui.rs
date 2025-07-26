@@ -10,12 +10,6 @@ use std::io::{self, BufRead, Write};
 /// layer of the [`ChatSession`]. It acts as a bridge between the chat logic and the terminal,
 /// handling both input from the user and output rendering to the screen.
 /// 
-/// # Fields
-/// 
-/// - `state`: [`TuiState`] Internal state tracking messages and current status
-/// - `writer`: Output stream for rendering content (typically stdout)
-/// - `reader`: Input stream for reading user input (typically stdin)
-///
 /// # Examples
 /// 
 /// ```rust
