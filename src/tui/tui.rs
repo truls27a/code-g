@@ -63,10 +63,10 @@ impl EventHandler for Tui {
             Event::SessionEnded => {
                 self.clear_terminal().unwrap();
             }
-            Event::ReceivedUserMessage(message) => {
+            Event::ReceivedUserMessage { message } => {
                 self.state.add_user_message(message);
             }
-            Event::ReceivedAssistantMessage(message) => {
+            Event::ReceivedAssistantMessage { message } => {
                 self.state.add_assistant_message(message);
             }
             Event::ReceivedToolCall { tool_name, parameters } => {
@@ -257,7 +257,7 @@ mod tests {
         let mut tui = Tui::new();
 
         let message = "Hello, how are you?".to_string();
-        tui.handle_event(Event::ReceivedUserMessage(message.clone()));
+        tui.handle_event(Event::ReceivedUserMessage { message: message.clone() });
 
         assert_eq!(tui.state.messages.len(), 1);
         match &tui.state.messages[0] {
@@ -271,7 +271,7 @@ mod tests {
         let mut tui = Tui::new();
 
         let message = "I'm doing well, thank you!".to_string();
-        tui.handle_event(Event::ReceivedAssistantMessage(message.clone()));
+        tui.handle_event(Event::ReceivedAssistantMessage { message: message.clone() });
 
         assert_eq!(tui.state.messages.len(), 1);
         match &tui.state.messages[0] {
@@ -440,9 +440,9 @@ mod tests {
 
         // Simulate a complete interaction sequence
         tui.handle_event(Event::SessionStarted);
-        tui.handle_event(Event::ReceivedUserMessage("Hello".to_string()));
+        tui.handle_event(Event::ReceivedUserMessage { message: "Hello".to_string() });
         tui.handle_event(Event::AwaitingAssistantResponse);
-        tui.handle_event(Event::ReceivedAssistantMessage("Hi there!".to_string()));
+        tui.handle_event(Event::ReceivedAssistantMessage { message: "Hi there!".to_string() });
 
         assert_eq!(tui.state.messages.len(), 2);
         assert!(tui.state.current_status.is_none()); // Should be cleared after assistant message
@@ -456,7 +456,7 @@ mod tests {
         tui.handle_event(Event::AwaitingAssistantResponse);
         assert!(tui.state.current_status.is_some());
 
-        tui.handle_event(Event::ReceivedUserMessage("test".to_string()));
+        tui.handle_event(Event::ReceivedUserMessage { message: "test".to_string() });
         assert!(tui.state.current_status.is_none());
     }
 }

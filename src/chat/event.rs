@@ -12,7 +12,7 @@ use std::io;
 /// ```rust
 /// use code_g::chat::Event;
 ///
-/// let event = Event::ReceivedUserMessage("Hello".to_string());
+/// let event = Event::ReceivedUserMessage { message: "Hello".to_string() };
 /// ```
 #[derive(Debug, PartialEq)]
 pub enum Event {
@@ -22,10 +22,10 @@ pub enum Event {
     SessionEnded,
 
     /// A message was received from the user
-    ReceivedUserMessage(String),
+    ReceivedUserMessage { message: String },
 
     /// A message was received from the assistant
-    ReceivedAssistantMessage(String),
+    ReceivedAssistantMessage { message: String },
     /// A tool call was received from the assistant with tool name and parameters
     ReceivedToolCall {
         tool_name: String,

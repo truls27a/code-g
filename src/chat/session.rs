@@ -106,7 +106,7 @@ impl ChatSession {
 
         // Notify event handler about the user message
         self.event_handler
-            .handle_event(Event::ReceivedUserMessage(message.to_string()));
+            .handle_event(Event::ReceivedUserMessage { message: message.to_string() });
 
         // Track iterations to prevent infinite loops
         let mut iterations = 0;
@@ -159,7 +159,7 @@ impl ChatSession {
 
                     // 5.2 Render the memory to the event handler (only if not silent)
                     self.event_handler
-                        .handle_event(Event::ReceivedAssistantMessage(content.clone()));
+                        .handle_event(Event::ReceivedAssistantMessage { message: content.clone() });
 
                     // 5.3 Return the content only if turn is over, otherwise continue
                     if turn_over {
@@ -763,12 +763,12 @@ mod tests {
 
         // Test that we can add events to the mock handler
         mock_handler.handle_event(Event::SessionStarted);
-        mock_handler.handle_event(Event::ReceivedUserMessage("Hello".to_string()));
+        mock_handler.handle_event(Event::ReceivedUserMessage { message: "Hello".to_string() });
 
         let events = mock_handler.get_events();
         assert_eq!(events.len(), 2);
         assert_eq!(events[0], Event::SessionStarted);
-        assert_eq!(events[1], Event::ReceivedUserMessage("Hello".to_string()));
+        assert_eq!(events[1], Event::ReceivedUserMessage { message: "Hello".to_string() });
     }
 
     #[test]
