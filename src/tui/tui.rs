@@ -1,7 +1,7 @@
 use super::formatting::{Formatter, Terminal};
 use super::model::{TuiMessage, TuiStatus};
 use super::state::TuiState;
-use crate::chat::event::{ChatSessionAction, ChatSessionEvent};
+use crate::chat::event::{ChatSessionAction, ChatSessionEvent, ChatSessionEventHandler};
 use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
 
@@ -10,15 +10,8 @@ pub struct Tui {
     writer: Box<dyn Write>,
 }
 
-impl Tui {
-    pub fn new() -> Self {
-        Self {
-            state: TuiState::new(),
-            writer: Box::new(io::stdout()),
-        }
-    }
-
-    pub fn handle_event(&mut self, event: ChatSessionEvent) {
+impl ChatSessionEventHandler for Tui {
+    fn handle_event(&mut self, event: ChatSessionEvent) {
         match event {
             ChatSessionEvent::SessionStarted => {
                 self.state.clear();
@@ -38,11 +31,8 @@ impl Tui {
                 self.state.set_status(Some(status));
             }
             ChatSessionEvent::ReceivedToolResponse(tool_response, tool_name, arguments) => {
-                let (summary, is_error) = self.create_tool_summary(
-                    &tool_response,
-                    &tool_name,
-                    arguments,
-                );
+                let (summary, is_error) =
+                    self.create_tool_summary(&tool_response, &tool_name, arguments);
                 self.state.add_tool_response(summary, is_error);
             }
             ChatSessionEvent::AwaitingAssistantResponse => {
@@ -52,13 +42,22 @@ impl Tui {
         self.render().unwrap();
     }
 
-    pub fn handle_action(&mut self, action: ChatSessionAction) -> Result<String, io::Error> {
+    fn handle_action(&mut self, action: ChatSessionAction) -> Result<String, io::Error> {
         match action {
             ChatSessionAction::RequestUserInput => self.read_user_input(&mut io::stdin().lock()),
         }
     }
+}
 
-    fn create_tool_status(
+impl Tui {
+    pub fn new() -> Self {
+        Self {
+            state: TuiState::new(),
+            writer: Box::new(io::stdout()),
+        }
+    }
+   
+   fn create_tool_status(
         &self,
         tool_name: &str,
         arguments: &std::collections::HashMap<String, String>,
@@ -108,7 +107,11 @@ impl Tui {
                 }
                 "search_files" => {
                     let pattern = arguments.get("pattern").unwrap_or(&"".to_string()).clone();
-                    format!("Found {} files matching {}", content.lines().count(), pattern)
+                    format!(
+                        "Found {} files matching {}",
+                        content.lines().count(),
+                        pattern
+                    )
                 }
                 "edit_file" => {
                     let path = arguments.get("path").unwrap_or(&"".to_string()).clone();

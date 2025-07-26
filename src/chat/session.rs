@@ -1,12 +1,11 @@
 use crate::chat::error::{ChatSessionError, ChatSessionErrorHandling};
-use crate::chat::event::{ChatSessionAction, ChatSessionEvent};
+use crate::chat::event::{ChatSessionAction, ChatSessionEvent, ChatSessionEventHandler};
 use crate::chat::memory::ChatMemory;
 use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use crate::openai::client::OpenAIClient;
 use crate::openai::error::OpenAIError;
 use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
 use crate::tools::registry::ToolRegistry;
-use crate::tui::tui::Tui;
 
 // Maximum number of iterations per message to prevent infinite loops
 const MAX_ITERATIONS: usize = 10;
@@ -15,14 +14,14 @@ pub struct ChatSession {
     memory: ChatMemory,
     client: OpenAIClient,
     tools: ToolRegistry,
-    tui: Tui,
+    event_handler: Box<dyn ChatSessionEventHandler>,
 }
 
 impl ChatSession {
     pub fn new(
         client: OpenAIClient,
         tools: ToolRegistry,
-        tui: Tui,
+        event_handler: Box<dyn ChatSessionEventHandler>,
         system_prompt_config: SystemPromptConfig,
     ) -> Self {
         let memory = match system_prompt_config {
@@ -41,7 +40,7 @@ impl ChatSession {
             memory,
             client,
             tools,
-            tui,
+            event_handler,
         }
     }
 
@@ -51,8 +50,8 @@ impl ChatSession {
             content: message.to_string(),
         });
 
-        // Notify TUI about the user message
-        self.tui
+        // Notify event handler about the user message
+        self.event_handler
             .handle_event(ChatSessionEvent::ReceivedUserMessage(message.to_string()));
 
         // Track iterations to prevent infinite loops
@@ -70,7 +69,7 @@ impl ChatSession {
             }
 
             // 2. Set the status message to thinking
-            self.tui
+            self.event_handler
                 .handle_event(ChatSessionEvent::AwaitingAssistantResponse);
 
             // 3. Get a response from the client
@@ -104,8 +103,8 @@ impl ChatSession {
                         message: AssistantMessage::Content(content.clone()),
                     });
 
-                    // 5.2 Render the memory to the TUI (only if not silent)
-                    self.tui
+                    // 5.2 Render the memory to the event handler (only if not silent)
+                    self.event_handler
                         .handle_event(ChatSessionEvent::ReceivedAssistantMessage(content.clone()));
 
                     // 5.3 Return the content only if turn is over, otherwise continue
@@ -124,7 +123,7 @@ impl ChatSession {
                     // 6.2 Call each tool and collect responses
                     for tool_call in &tool_calls {
                         // 6.2.1 Set the status message to the tool call name
-                        self.tui.handle_event(ChatSessionEvent::ReceivedToolCall(
+                        self.event_handler.handle_event(ChatSessionEvent::ReceivedToolCall(
                             tool_call.name.clone(),
                             tool_call.arguments.clone(),
                         ));
@@ -142,8 +141,8 @@ impl ChatSession {
                             tool_name: tool_call.name.clone(),
                         });
 
-                        // 6.2.4 Send tool response event to the TUI
-                        self.tui
+                        // 6.2.4 Send tool response event to the event handler
+                        self.event_handler
                             .handle_event(ChatSessionEvent::ReceivedToolResponse(
                                 tool_response.clone(),
                                 tool_call.name.clone(),
@@ -160,11 +159,11 @@ impl ChatSession {
 
     pub async fn run(&mut self) -> Result<(), ChatSessionError> {
         // Clear the terminal
-        self.tui.handle_event(ChatSessionEvent::SessionStarted);
+        self.event_handler.handle_event(ChatSessionEvent::SessionStarted);
 
         loop {
             let user_input = self
-                .tui
+                .event_handler
                 .handle_action(ChatSessionAction::RequestUserInput)
                 .unwrap(); // TODO: Handle errors
 
@@ -176,7 +175,7 @@ impl ChatSession {
             self.send_message(&user_input).await?;
         }
 
-        self.tui.handle_event(ChatSessionEvent::SessionEnded);
+        self.event_handler.handle_event(ChatSessionEvent::SessionEnded);
 
         Ok(())
     }
