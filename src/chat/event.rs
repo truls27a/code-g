@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::io;
 
+/// The events that can occur in a chat session.
+/// Each event is either a system event, a user event, or an assistant event.
 #[derive(Debug, PartialEq)]
 pub enum Event {
     // System events
@@ -9,12 +11,16 @@ pub enum Event {
 
     // User events
     ReceivedUserMessage(String),
+
+    // Assistant events
     ReceivedAssistantMessage(String),
     ReceivedToolCall(String, HashMap<String, String>),
     ReceivedToolResponse(String, String, HashMap<String, String>),
     AwaitingAssistantResponse,
 }
 
+/// The actions that can occur in a chat session.
+/// Right now, the only action is to request user input.
 pub enum Action {
     RequestUserInput,
 }
