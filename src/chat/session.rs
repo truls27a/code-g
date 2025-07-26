@@ -10,14 +10,49 @@ use crate::tools::registry::ToolRegistry;
 // Maximum number of iterations per message to prevent infinite loops
 const MAX_ITERATIONS: usize = 10;
 
+/// `ChatSession` is the core component that orchestrates conversations between a user and an AI assistant.
+/// It maintains conversation history, handles tool calls, manages errors, and provides event notifications
+/// throughout the conversation lifecycle.
+///
+/// # Features
+///
+/// - **Memory Management**: Maintains conversation history across multiple exchanges
+/// - **Tool Integration**: Supports AI tool calls with automatic response handling
+/// - **Error Handling**: Robust error handling with retry logic for transient failures
+/// - **Event System**: Provides real-time notifications about conversation events
+/// - **Loop Protection**: Prevents infinite loops with configurable iteration limits
+/// 
+/// # Architecture
+///
+/// The session coordinates several components:
+/// - [`ChatMemory`] for storing conversation history
+/// - [`OpenAIClient`] for API communication
+/// - [`ToolRegistry`] for tool execution
+/// - [`EventHandler`] for event notifications
 pub struct ChatSession {
+    /// Manages conversation history and context
     memory: ChatMemory,
+    /// OpenAI client for API communication
     client: OpenAIClient,
+    /// Registry of available tools for the AI to use
     tools: ToolRegistry,
+    /// Handler for events and user interactions
     event_handler: Box<dyn EventHandler>,
 }
 
 impl ChatSession {
+    /// Creates a new chat session with the specified configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `client` - OpenAI client configured with API credentials
+    /// * `tools` - Registry containing tools available to the AI assistant
+    /// * `event_handler` - Handler for processing events and user interactions
+    /// * `system_prompt_config` - Configuration for the initial system prompt
+    ///
+    /// # Returns
+    ///
+    /// A new `ChatSession` instance ready for conversation.
     pub fn new(
         client: OpenAIClient,
         tools: ToolRegistry,
@@ -44,6 +79,62 @@ impl ChatSession {
         }
     }
 
+    /// Sends a message to the AI assistant and returns the response.
+    ///
+    /// This method handles the complete conversation flow:
+    /// 1. Adds the user message to conversation memory
+    /// 2. Requests a response from the AI
+    /// 3. Processes any tool calls the AI makes
+    /// 4. Handles errors with appropriate retry logic
+    /// 5. Returns the final assistant response
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The user's message to send to the assistant
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(String)` - The assistant's response message
+    /// * `Err(ChatSessionError)` - Various error conditions including:
+    ///   - API errors from OpenAI
+    ///   - Maximum iteration limit exceeded
+    ///   - Tool execution failures
+    ///
+    /// # Behavior
+    ///
+    /// The method implements a loop that continues until:
+    /// - The AI returns a final message (when `turn_over` is true)
+    /// - The maximum iteration limit is reached
+    /// - A fatal error occurs
+    ///
+    /// During each iteration, the method:
+    /// - Sends the current conversation state to OpenAI
+    /// - Processes the response (either a message or tool calls)
+    /// - Executes any requested tools and adds their responses to memory
+    /// - Notifies the event handler of all activities
+    ///
+    /// # Tool Calls
+    ///
+    /// When the AI requests tool calls:
+    /// 1. Each tool is executed with the provided arguments
+    /// 2. Tool responses are added to conversation memory
+    /// 3. The loop continues to get the AI's interpretation of the results
+    ///
+    /// # Error Recovery
+    ///
+    /// The method includes sophisticated error handling:
+    /// - **Retryable errors**: Automatically retried up to 3 times
+    /// - **Content errors**: AI is informed of the issue and asked to try again
+    /// - **Fatal errors**: Immediately returned to the caller
+    ///
+    /// # Event Notifications
+    ///
+    /// Throughout the process, the following events are emitted:
+    /// - `ReceivedUserMessage` when the user message is processed
+    /// - `AwaitingAssistantResponse` when waiting for AI response
+    /// - `ReceivedAssistantMessage` when AI responds with text
+    /// - `ReceivedToolCall` when AI requests a tool
+    /// - `ReceivedToolResponse` when a tool completes
     pub async fn send_message(&mut self, message: &str) -> Result<String, ChatSessionError> {
         // Add user message to memory
         self.memory.add_message(ChatMessage::User {
@@ -156,6 +247,39 @@ impl ChatSession {
         }
     }
 
+    /// Runs an interactive chat loop that continues until the user exits.
+    ///
+    /// This method provides a complete interactive chat experience:
+    /// 1. Initializes the session and clears the terminal
+    /// 2. Continuously prompts for user input
+    /// 3. Processes each message through `send_message`
+    /// 4. Displays responses to the user
+    /// 5. Exits when the user types "exit"
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Session completed normally
+    /// * `Err(ChatSessionError)` - Error occurred during conversation
+    ///
+    /// # Behavior
+    ///
+    /// The method emits the following events:
+    /// - `SessionStarted` when the interactive session begins
+    /// - `SessionEnded` when the user exits or session terminates
+    ///
+    /// All other events are handled by the `send_message` method during
+    /// each conversation exchange.
+    ///
+    /// # User Commands
+    ///
+    /// - `exit` - Terminates the session and returns
+    /// - Any other input - Sent as a message to the AI assistant
+    ///
+    /// # Error Handling
+    ///
+    /// If an error occurs during message processing, it will be propagated
+    /// up to the caller. The session does not attempt to continue after
+    /// errors in the interactive loop.
     pub async fn run(&mut self) -> Result<(), ChatSessionError> {
         // Clear the terminal
         self.event_handler.handle_event(Event::SessionStarted);
@@ -179,7 +303,69 @@ impl ChatSession {
         Ok(())
     }
 
-    /// Categorizes and handles OpenAI errors appropriately
+    /// Categorizes and handles OpenAI errors with appropriate recovery strategies.
+    ///
+    /// This internal method implements sophisticated error handling logic that
+    /// categorizes OpenAI API errors and determines the best recovery strategy
+    /// for each type of error.
+    ///
+    /// # Arguments
+    ///
+    /// * `error` - The OpenAI error to handle
+    /// * `iteration` - Current iteration number (used for retry logic)
+    ///
+    /// # Returns
+    ///
+    /// A `ChatSessionErrorHandling` enum indicating the recovery strategy:
+    /// - `Fatal(ChatSessionError)` - Error cannot be recovered, abort
+    /// - `Retry` - Error is temporary, retry the operation
+    /// - `AddToMemoryAndRetry(String)` - Inform AI of the error and retry
+    ///
+    /// # Error Categories
+    ///
+    /// ## Fatal Errors
+    /// Configuration or account issues that won't resolve by retrying:
+    /// - `InvalidApiKey` - API key is invalid
+    /// - `MissingApiKey` - No API key provided
+    /// - `InsufficientCredits` - Account has no remaining credits
+    /// - `InvalidModel` - Requested model doesn't exist
+    /// - `EmptyChatHistory` - No messages in conversation
+    ///
+    /// ## Retryable Errors
+    /// Network or service issues that might be temporary:
+    /// - `RateLimitExceeded` - API rate limit hit (retry up to 3 times)
+    /// - `ServiceUnavailable` - OpenAI service temporarily down
+    /// - `HttpError` - Network connectivity issues
+    ///
+    /// ## Content Errors
+    /// AI response issues that can be resolved by informing the AI:
+    /// - `InvalidContentResponse` - AI returned malformed content
+    /// - `InvalidToolCallArguments` - Tool arguments were invalid
+    /// - `NoCompletionFound` - No completion in API response
+    /// - `NoChoicesFound` - No choices in API response
+    /// - `NoContentFound` - No content in completion
+    ///
+    /// ## Request Errors
+    /// Likely programming bugs, but AI might be able to adapt:
+    /// - `InvalidChatMessageRequest` - Request format was invalid
+    ///
+    /// # Retry Logic
+    ///
+    /// For retryable errors, the method implements exponential backoff:
+    /// - Iterations 1-3: Retry immediately
+    /// - Iteration 4+: Treat as fatal error
+    ///
+    /// # AI Communication
+    ///
+    /// For content and request errors, the AI is informed about the issue
+    /// and asked to try a different approach. This allows the AI to potentially
+    /// work around the problem on subsequent attempts.
+    ///
+    /// # Example Messages to AI
+    ///
+    /// - Content error: "An error occurred with the AI response: {error}. Please try again with a different approach."
+    /// - Request error: "Invalid request format: {error}. Please ensure your response follows the correct format."
+    /// - Other error: "An unexpected error occurred: {error}. Please try a different approach."
     fn handle_openai_error(
         &self,
         error: OpenAIError,
