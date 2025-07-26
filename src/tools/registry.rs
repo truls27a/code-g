@@ -6,26 +6,104 @@ use crate::tools::tool::Tool;
 use crate::tools::write_file::WriteFile;
 use std::collections::HashMap;
 
+/// A registry for managing and executing tools.
+///
+/// The Registry acts as a central container for different tools that can be called
+/// dynamically by name. It provides convenient factory methods for creating registries
+/// with different tool combinations (read-only tools, all tools, or custom sets).
+/// Tools can be executed through the registry and converted to OpenAI-compatible formats.
+///
+/// # Examples
+///
+/// ```rust
+/// use code_g::tools::registry::Registry;
+///
+/// // Create a registry with all available tools
+/// let registry = Registry::all_tools();
+///
+/// // Create a registry with only read-only tools
+/// let read_only = Registry::read_only_tools();
+///
+/// // Execute a tool
+/// let mut args = std::collections::HashMap::new();
+/// args.insert("path".to_string(), "example.txt".to_string());
+/// let result = registry.call_tool("read_file", args);
+/// ```
 pub struct Registry {
     tools: Vec<Box<dyn Tool>>,
 }
 
 impl Registry {
+    /// Creates a new empty registry with no tools.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tools::registry::Registry;
+    /// 
+    /// let registry = Registry::new();
+    /// 
+    /// assert_eq!(registry.len(), 0);
+    /// ```
     pub fn new() -> Self {
         Self { tools: vec![] }
     }
 
+    /// Creates a registry with the provided tools.
+    ///
+    /// # Arguments
+    ///
+    /// * `tools` - A vector of boxed tools to include in the registry.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tools::registry::Registry;
+    /// use code_g::tools::read_file::ReadFile;
+    /// use code_g::tools::tool::Tool;
+    /// 
+    /// let tools: Vec<Box<dyn Tool>> = vec![Box::new(ReadFile)];
+    /// let registry = Registry::from(tools);
+    /// 
+    /// assert_eq!(registry.len(), 1);
+    /// ```
     pub fn from(tools: Vec<Box<dyn Tool>>) -> Self {
         Self { tools }
     }
 
-    /// Creates a Registry with read-only tools (search files and read file)
+    /// Creates a Registry with read-only tools (search files and read file).
+    ///
+    /// This is useful for scenarios where you want to restrict the registry to
+    /// tools that only read data without making any modifications to the filesystem.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tools::registry::Registry;
+    /// 
+    /// let registry = Registry::read_only_tools();
+    /// 
+    /// assert_eq!(registry.len(), 2);
+    /// ```
     pub fn read_only_tools() -> Self {
         let tools: Vec<Box<dyn Tool>> = vec![Box::new(ReadFile), Box::new(SearchFiles)];
         Self { tools }
     }
 
-    /// Creates a Registry with all available tools (read-only + write file + edit file)
+    /// Creates a Registry with all available tools (read-only + write file + edit file).
+    ///
+    /// This includes ReadFile, SearchFiles, WriteFile, and EditFile tools, providing
+    /// full filesystem access capabilities.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tools::registry::Registry;
+    /// 
+    /// let registry = Registry::all_tools();
+    /// 
+    /// assert_eq!(registry.len(), 4);
+    /// ```
     pub fn all_tools() -> Self {
         let tools: Vec<Box<dyn Tool>> = vec![
             Box::new(ReadFile),
@@ -36,6 +114,37 @@ impl Registry {
         Self { tools }
     }
 
+    /// Executes a tool by name with the provided arguments.
+    ///
+    /// Searches for a tool with the given name in the registry and executes it
+    /// with the provided arguments. If the tool is not found, returns an error.
+    ///
+    /// # Arguments
+    ///
+    /// * `tool_name` - The name of the tool to execute.
+    /// * `args` - A HashMap containing the arguments to pass to the tool.
+    ///
+    /// # Returns
+    ///
+    /// The output from the tool execution as a String.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the tool is not found in the registry or if the tool
+    /// execution fails.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tools::registry::Registry;
+    /// use std::collections::HashMap;
+    /// 
+    /// let registry = Registry::all_tools();
+    /// let mut args = HashMap::new();
+    /// args.insert("path".to_string(), "example.txt".to_string());
+    /// 
+    /// let result = registry.call_tool("read_file", args);
+    /// ```
     pub fn call_tool(
         &self,
         tool_name: &str,
@@ -49,10 +158,44 @@ impl Registry {
         }
     }
 
+    /// Returns a reference to all tools in the registry.
+    ///
+    /// # Returns
+    ///
+    /// A slice containing references to all tools in the registry.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tools::registry::Registry;
+    /// 
+    /// let registry = Registry::all_tools();
+    /// let tools = registry.get_tools();
+    /// 
+    /// println!("Registry contains {} tools", tools.len());
+    /// ```
     pub fn get_tools(&self) -> &[Box<dyn Tool>] {
         &self.tools
     }
 
+    /// Converts all tools in the registry to OpenAI-compatible tool format.
+    ///
+    /// This is useful when integrating with OpenAI's function calling capabilities,
+    /// as it provides the tool definitions in the expected format.
+    ///
+    /// # Returns
+    ///
+    /// A vector of OpenAI tool definitions.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tools::registry::Registry;
+    /// 
+    /// let registry = Registry::all_tools();
+    /// let openai_tools = registry.to_openai_tools();
+    /// // Use openai_tools with OpenAI API
+    /// ```
     pub fn to_openai_tools(&self) -> Vec<OpenAiTool> {
         self.tools
             .iter()
@@ -60,6 +203,23 @@ impl Registry {
             .collect()
     }
 
+    /// Returns the number of tools in the registry.
+    ///
+    /// # Returns
+    ///
+    /// The count of tools currently registered.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tools::registry::Registry;
+    /// 
+    /// let registry = Registry::new();
+    /// assert_eq!(registry.len(), 0);
+    ///
+    /// let registry = Registry::all_tools();
+    /// assert_eq!(registry.len(), 4);
+    /// ```
     pub fn len(&self) -> usize {
         self.tools.len()
     }
