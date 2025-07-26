@@ -1,5 +1,5 @@
 use crate::chat::error::{ChatSessionError, ChatSessionErrorHandling};
-use crate::chat::event::{ChatSessionAction, ChatSessionEvent, ChatSessionEventHandler};
+use crate::chat::event::{Action, Event, EventHandler};
 use crate::chat::memory::ChatMemory;
 use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use crate::openai::client::OpenAIClient;
@@ -14,14 +14,14 @@ pub struct ChatSession {
     memory: ChatMemory,
     client: OpenAIClient,
     tools: ToolRegistry,
-    event_handler: Box<dyn ChatSessionEventHandler>,
+    event_handler: Box<dyn EventHandler>,
 }
 
 impl ChatSession {
     pub fn new(
         client: OpenAIClient,
         tools: ToolRegistry,
-        event_handler: Box<dyn ChatSessionEventHandler>,
+        event_handler: Box<dyn EventHandler>,
         system_prompt_config: SystemPromptConfig,
     ) -> Self {
         let memory = match system_prompt_config {
@@ -52,7 +52,7 @@ impl ChatSession {
 
         // Notify event handler about the user message
         self.event_handler
-            .handle_event(ChatSessionEvent::ReceivedUserMessage(message.to_string()));
+            .handle_event(Event::ReceivedUserMessage(message.to_string()));
 
         // Track iterations to prevent infinite loops
         let mut iterations = 0;
@@ -70,7 +70,7 @@ impl ChatSession {
 
             // 2. Set the status message to thinking
             self.event_handler
-                .handle_event(ChatSessionEvent::AwaitingAssistantResponse);
+                .handle_event(Event::AwaitingAssistantResponse);
 
             // 3. Get a response from the client
             let response = match self
@@ -105,7 +105,7 @@ impl ChatSession {
 
                     // 5.2 Render the memory to the event handler (only if not silent)
                     self.event_handler
-                        .handle_event(ChatSessionEvent::ReceivedAssistantMessage(content.clone()));
+                        .handle_event(Event::ReceivedAssistantMessage(content.clone()));
 
                     // 5.3 Return the content only if turn is over, otherwise continue
                     if turn_over {
@@ -123,11 +123,10 @@ impl ChatSession {
                     // 6.2 Call each tool and collect responses
                     for tool_call in &tool_calls {
                         // 6.2.1 Set the status message to the tool call name
-                        self.event_handler
-                            .handle_event(ChatSessionEvent::ReceivedToolCall(
-                                tool_call.name.clone(),
-                                tool_call.arguments.clone(),
-                            ));
+                        self.event_handler.handle_event(Event::ReceivedToolCall(
+                            tool_call.name.clone(),
+                            tool_call.arguments.clone(),
+                        ));
 
                         // 6.2.2 Call the tool
                         let tool_response = self
@@ -143,12 +142,11 @@ impl ChatSession {
                         });
 
                         // 6.2.4 Send tool response event to the event handler
-                        self.event_handler
-                            .handle_event(ChatSessionEvent::ReceivedToolResponse(
-                                tool_response.clone(),
-                                tool_call.name.clone(),
-                                tool_call.arguments.clone(),
-                            ));
+                        self.event_handler.handle_event(Event::ReceivedToolResponse(
+                            tool_response.clone(),
+                            tool_call.name.clone(),
+                            tool_call.arguments.clone(),
+                        ));
                     }
 
                     // 6.3 Continue the loop to get the assistants response
@@ -160,13 +158,12 @@ impl ChatSession {
 
     pub async fn run(&mut self) -> Result<(), ChatSessionError> {
         // Clear the terminal
-        self.event_handler
-            .handle_event(ChatSessionEvent::SessionStarted);
+        self.event_handler.handle_event(Event::SessionStarted);
 
         loop {
             let user_input = self
                 .event_handler
-                .handle_action(ChatSessionAction::RequestUserInput)
+                .handle_action(Action::RequestUserInput)
                 .unwrap(); // TODO: Handle errors
 
             if user_input == "exit" {
@@ -177,8 +174,7 @@ impl ChatSession {
             self.send_message(&user_input).await?;
         }
 
-        self.event_handler
-            .handle_event(ChatSessionEvent::SessionEnded);
+        self.event_handler.handle_event(Event::SessionEnded);
 
         Ok(())
     }
@@ -249,7 +245,7 @@ mod tests {
 
     // Mock event handler for testing
     struct MockEventHandler {
-        events: Vec<ChatSessionEvent>,
+        events: Vec<Event>,
         input_responses: Vec<String>,
         current_input_index: usize,
     }
@@ -271,19 +267,19 @@ mod tests {
             }
         }
 
-        fn get_events(&self) -> &Vec<ChatSessionEvent> {
+        fn get_events(&self) -> &Vec<Event> {
             &self.events
         }
     }
 
-    impl ChatSessionEventHandler for MockEventHandler {
-        fn handle_event(&mut self, event: ChatSessionEvent) {
+    impl EventHandler for MockEventHandler {
+        fn handle_event(&mut self, event: Event) {
             self.events.push(event);
         }
 
-        fn handle_action(&mut self, action: ChatSessionAction) -> Result<String, io::Error> {
+        fn handle_action(&mut self, action: Action) -> Result<String, io::Error> {
             match action {
-                ChatSessionAction::RequestUserInput => {
+                Action::RequestUserInput => {
                     if self.current_input_index < self.input_responses.len() {
                         let response = self.input_responses[self.current_input_index].clone();
                         self.current_input_index += 1;
@@ -685,16 +681,13 @@ mod tests {
         let mut mock_handler = MockEventHandler::new();
 
         // Test that we can add events to the mock handler
-        mock_handler.handle_event(ChatSessionEvent::SessionStarted);
-        mock_handler.handle_event(ChatSessionEvent::ReceivedUserMessage("Hello".to_string()));
+        mock_handler.handle_event(Event::SessionStarted);
+        mock_handler.handle_event(Event::ReceivedUserMessage("Hello".to_string()));
 
         let events = mock_handler.get_events();
         assert_eq!(events.len(), 2);
-        assert_eq!(events[0], ChatSessionEvent::SessionStarted);
-        assert_eq!(
-            events[1],
-            ChatSessionEvent::ReceivedUserMessage("Hello".to_string())
-        );
+        assert_eq!(events[0], Event::SessionStarted);
+        assert_eq!(events[1], Event::ReceivedUserMessage("Hello".to_string()));
     }
 
     #[test]
@@ -704,14 +697,14 @@ mod tests {
             "How are you?".to_string(),
         ]);
 
-        let response1 = mock_handler.handle_action(ChatSessionAction::RequestUserInput);
+        let response1 = mock_handler.handle_action(Action::RequestUserInput);
         assert_eq!(response1.unwrap(), "Hello");
 
-        let response2 = mock_handler.handle_action(ChatSessionAction::RequestUserInput);
+        let response2 = mock_handler.handle_action(Action::RequestUserInput);
         assert_eq!(response2.unwrap(), "How are you?");
 
         // After exhausting responses, should return "exit"
-        let response3 = mock_handler.handle_action(ChatSessionAction::RequestUserInput);
+        let response3 = mock_handler.handle_action(Action::RequestUserInput);
         assert_eq!(response3.unwrap(), "exit");
     }
 }

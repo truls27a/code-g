@@ -1,10 +1,7 @@
+use super::formatter::{terminal::TerminalFormatter, text::TextFormatter, tool::ToolFormatter};
 use super::model::{TuiMessage, TuiStatus};
 use super::state::TuiState;
-use super::formatter::{
-    text::TextFormatter, terminal::TerminalFormatter,
-    tool::ToolFormatter,
-};
-use crate::chat::event::{ChatSessionAction, ChatSessionEvent, ChatSessionEventHandler};
+use crate::chat::event::{Action, Event, EventHandler};
 use std::io::{self, BufRead, Write};
 
 pub struct Tui {
@@ -12,41 +9,41 @@ pub struct Tui {
     writer: Box<dyn Write>,
 }
 
-impl ChatSessionEventHandler for Tui {
-    fn handle_event(&mut self, event: ChatSessionEvent) {
+impl EventHandler for Tui {
+    fn handle_event(&mut self, event: Event) {
         match event {
-            ChatSessionEvent::SessionStarted => {
+            Event::SessionStarted => {
                 self.state.clear();
                 self.clear_terminal().unwrap();
             }
-            ChatSessionEvent::SessionEnded => {
+            Event::SessionEnded => {
                 self.clear_terminal().unwrap();
             }
-            ChatSessionEvent::ReceivedUserMessage(message) => {
+            Event::ReceivedUserMessage(message) => {
                 self.state.add_user_message(message);
             }
-            ChatSessionEvent::ReceivedAssistantMessage(message) => {
+            Event::ReceivedAssistantMessage(message) => {
                 self.state.add_assistant_message(message);
             }
-            ChatSessionEvent::ReceivedToolCall(tool_name, arguments) => {
+            Event::ReceivedToolCall(tool_name, arguments) => {
                 let status = ToolFormatter::create_status(&tool_name, &arguments);
                 self.state.set_status(Some(status));
             }
-            ChatSessionEvent::ReceivedToolResponse(tool_response, tool_name, arguments) => {
+            Event::ReceivedToolResponse(tool_response, tool_name, arguments) => {
                 let (summary, is_error) =
                     ToolFormatter::create_summary(&tool_response, &tool_name, arguments);
                 self.state.add_tool_response(summary, is_error);
             }
-            ChatSessionEvent::AwaitingAssistantResponse => {
+            Event::AwaitingAssistantResponse => {
                 self.state.set_status(Some(TuiStatus::Thinking));
             }
         }
         self.render().unwrap();
     }
 
-    fn handle_action(&mut self, action: ChatSessionAction) -> Result<String, io::Error> {
+    fn handle_action(&mut self, action: Action) -> Result<String, io::Error> {
         match action {
-            ChatSessionAction::RequestUserInput => self.read_user_input(&mut io::stdin().lock()),
+            Action::RequestUserInput => self.read_user_input(&mut io::stdin().lock()),
         }
     }
 }
