@@ -22,13 +22,12 @@ const MAX_ITERATIONS: usize = 10;
 /// - **Event System**: Provides real-time notifications about conversation events
 /// - **Loop Protection**: Prevents infinite loops with configurable iteration limits
 /// 
-/// # Architecture
+/// # Components
 ///
-/// The session coordinates several components:
-/// - [`ChatMemory`] for storing conversation history
-/// - [`OpenAIClient`] for API communication
-/// - [`ToolRegistry`] for tool execution
-/// - [`EventHandler`] for event notifications
+/// - `memory`: [`ChatMemory`] manages conversation history and context
+/// - `client`: [`OpenAIClient`] for API communication
+/// - `tools`: [`ToolRegistry`] for tool execution
+/// - `event_handler`: [`EventHandler`] for event notifications
 pub struct ChatSession {
     /// Manages conversation history and context
     memory: ChatMemory,

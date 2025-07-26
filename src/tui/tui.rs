@@ -4,8 +4,33 @@ use super::state::TuiState;
 use crate::chat::event::{Action, Event, EventHandler};
 use std::io::{self, BufRead, Write};
 
-/// The TUI.
-/// Handles events and actions from the ChatSession by rendering to the terminal and reading user input.
+/// Terminal User Interface for the chat application.
+///
+/// The `Tui` struct is responsible for managing the visual presentation and user interaction
+/// layer of the [`ChatSession`]. It acts as a bridge between the chat logic and the terminal,
+/// handling both input from the user and output rendering to the screen.
+/// 
+/// # Fields
+/// 
+/// - `state`: [`TuiState`] Internal state tracking messages and current status
+/// - `writer`: Output stream for rendering content (typically stdout)
+/// - `reader`: Input stream for reading user input (typically stdin)
+///
+/// # Examples
+/// 
+/// ```rust,no_run
+/// let mut tui = Tui::new();
+/// tui.handle_event(Event::SessionStarted);
+/// tui.handle_event(Event::ReceivedUserMessage("Hello, how are you?".to_string()));
+/// tui.handle_event(Event::AwaitingAssistantResponse);
+/// tui.handle_event(Event::ReceivedAssistantMessage("I'm doing well, thank you!".to_string()));
+/// tui.handle_event(Event::SessionEnded);
+/// ```
+///
+/// # Notes
+/// 
+/// - The TUI is designed to easily replace with a web UI or other UI layer by implementing the [`EventHandler`] trait
+/// - The TUI is designed to be used in conjunction with a [`ChatSession`]
 pub struct Tui {
     state: TuiState,
     writer: Box<dyn Write>,
@@ -24,6 +49,21 @@ impl EventHandler for Tui {
     ///
     /// After processing each event, the entire terminal is cleared and re-rendered to ensure
     /// a consistent display state.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `event`: [`Event`] The event to handle
+    /// 
+    /// # Returns
+    /// 
+    /// - `()`
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust,no_run
+    /// let mut tui = Tui::new();
+    /// tui.handle_event(Event::SessionStarted);
+    /// ```
     fn handle_event(&mut self, event: Event) {
         match event {
             Event::SessionStarted => {
@@ -61,6 +101,14 @@ impl EventHandler for Tui {
     /// - `RequestUserInput`: Displays a prompt ("> "), reads a line from stdin,
     ///   and returns the trimmed input string
     ///
+    /// # Arguments
+    /// 
+    /// - `action`: [`Action`] The action to handle
+    /// 
+    /// # Returns
+    /// 
+    /// - `String` The user input
+    /// 
     /// # Errors
     /// Returns `io::Error` if reading from stdin fails or if terminal cursor
     /// operations cannot be performed.
@@ -73,6 +121,16 @@ impl EventHandler for Tui {
 
 impl Tui {
     /// Create a new TUI.
+    /// 
+    /// # Returns
+    /// 
+    /// - `Tui` The new TUI instance
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust,no_run
+    /// let tui = Tui::new();
+    /// ```
     pub fn new() -> Self {
         Self {
             state: TuiState::new(),
