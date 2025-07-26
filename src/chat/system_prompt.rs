@@ -1,7 +1,23 @@
-/// The system prompt option when creating a chat session.
-/// None: No system prompt will be added.
-/// Default: Use the default system prompt.
-/// Custom: Use a custom system prompt.
+/// Configuration options for system prompts in chat sessions.
+///
+/// This enum allows you to control whether and how a system prompt is applied
+/// when creating a new chat session. It supports no prompt, a default prompt,
+/// or a custom user-defined prompt.
+///
+/// # Examples
+///
+/// ```rust
+/// use code_g::chat::SystemPromptConfig;
+///
+/// // Use no system prompt
+/// let config = SystemPromptConfig::None;
+///
+/// // Use the default system prompt
+/// let config = SystemPromptConfig::Default;
+///
+/// // Use a custom system prompt
+/// let config = SystemPromptConfig::Custom("You are a helpful assistant.".to_string());
+/// ```
 #[derive(Debug, Clone)]
 pub enum SystemPromptConfig {
     /// No system prompt will be added
@@ -12,8 +28,20 @@ pub enum SystemPromptConfig {
     Custom(String),
 }
 
-/// The default system prompt.
-/// This is the system prompt that will be used if no system prompt is provided.
+/// The default system prompt used for chat sessions.
+///
+/// This constant contains the standard system prompt that will be used when
+/// `SystemPromptConfig::Default` is selected. It defines the assistant's role,
+/// capabilities, and behavior guidelines for interacting with users in the
+/// terminal environment.
+///
+/// # Examples
+///
+/// ```rust
+/// use code_g::chat::SYSTEM_PROMPT;
+///
+/// println!("Default prompt: {}", SYSTEM_PROMPT);
+/// ```
 pub const SYSTEM_PROMPT: &str = r#"
 You are CodeG, a friendly, knowledgeable coding assistant that lives in the developer's terminal. Your goal is to help users solve programming tasks, debug issues, and improve their code.
 
