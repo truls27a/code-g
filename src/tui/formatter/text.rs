@@ -83,6 +83,41 @@ impl TextFormatter {
         format!("{}{}{}", Self::bold(), text, Self::reset())
     }
 
+    /// Format text with yellow bold style
+    pub fn yellow_bold(text: &str) -> String {
+        format!("{}{}{}{}", Self::yellow(), Self::bold(), text, Self::reset())
+    }
+
+    /// Format text with green bold style
+    pub fn green_bold(text: &str) -> String {
+        format!("{}{}{}{}", Self::green(), Self::bold(), text, Self::reset())
+    }
+
+    /// Format text with red bold style
+    pub fn red_bold(text: &str) -> String {
+        format!("{}{}{}{}", Self::red(), Self::bold(), text, Self::reset())
+    }
+
+    /// Format text with cyan color
+    pub fn cyan_text(text: &str) -> String {
+        format!("{}{}{}", Self::cyan(), text, Self::reset())
+    }
+
+    /// Format text with green color
+    pub fn green_text(text: &str) -> String {
+        format!("{}{}{}", Self::green(), text, Self::reset())
+    }
+
+    /// Format text with red color
+    pub fn red_text(text: &str) -> String {
+        format!("{}{}{}", Self::red(), text, Self::reset())
+    }
+
+    /// Format text with gray color
+    pub fn gray_text(text: &str) -> String {
+        format!("{}{}{}", Self::gray(), text, Self::reset())
+    }
+
     /// Format text with a specific color
     pub fn colored_text(text: &str, color: &str) -> String {
         format!("{}{}{}", color, text, Self::reset())
@@ -117,5 +152,23 @@ mod tests {
     fn colored_text_works() {
         let result = TextFormatter::colored_text("red text", TextFormatter::red());
         assert_eq!(result, "\x1B[91mred text\x1B[0m");
+    }
+
+    #[test]
+    fn yellow_bold_formatting_works() {
+        let result = TextFormatter::yellow_bold("test text");
+        assert_eq!(result, "\x1B[93m\x1B[1mtest text\x1B[0m");
+    }
+
+    #[test]
+    fn green_bold_formatting_works() {
+        let result = TextFormatter::green_bold("test text");
+        assert_eq!(result, "\x1B[92m\x1B[1mtest text\x1B[0m");
+    }
+
+    #[test]
+    fn red_bold_formatting_works() {
+        let result = TextFormatter::red_bold("test text");
+        assert_eq!(result, "\x1B[91m\x1B[1mtest text\x1B[0m");
     }
 }

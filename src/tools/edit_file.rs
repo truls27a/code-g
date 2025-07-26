@@ -1,5 +1,6 @@
 use crate::openai::model::{Parameters, Property};
 use crate::tools::tool::Tool;
+use crate::tools::change_manager::ChangeManager;
 use std::collections::HashMap;
 use std::fs;
 
@@ -96,6 +97,101 @@ impl Tool for EditFileTool {
             "Successfully edited file '{}': replaced '{}' with '{}'",
             path, old_string, new_string
         ))
+    }
+}
+
+pub struct ManagedEditFileTool;
+
+impl ManagedEditFileTool {
+    pub fn call_with_manager(
+        &self,
+        args: HashMap<String, String>,
+        change_manager: &mut ChangeManager,
+    ) -> Result<(String, u64), String> {
+        let path = args.get("path").ok_or("Path is required")?;
+        let old_string = args.get("old_string").ok_or("Old string is required")?;
+        let new_string = args.get("new_string").ok_or("New string is required")?;
+
+        // Get the current content from the change manager (this includes pending changes)
+        let current_content = change_manager.get_current_file_content(path)?;
+
+        // Check if the old string exists in the current content
+        if !current_content.contains(old_string) {
+            return Err(format!(
+                "String '{}' not found in file '{}'",
+                old_string, path
+            ));
+        }
+
+        // Count occurrences to warn about multiple matches
+        let occurrence_count = current_content.matches(old_string).count();
+        if occurrence_count > 1 {
+            return Err(format!(
+                "String '{}' appears {} times in file '{}'. Please provide a more specific string that appears only once",
+                old_string, occurrence_count, path
+            ));
+        }
+
+        // Replace the string
+        let new_content = current_content.replace(old_string, new_string);
+
+        // Add the change to the change manager
+        let change_id = change_manager.add_change(path.clone(), new_content)?;
+
+        Ok((
+            format!(
+                "File edit queued for '{}': replaced '{}' with '{}' (Change ID: {})",
+                path, old_string, new_string, change_id
+            ),
+            change_id,
+        ))
+    }
+
+    pub fn name(&self) -> String {
+        "edit_file".to_string()
+    }
+
+    pub fn description(&self) -> String {
+        "Edit a file by replacing a specific string with new content".to_string()
+    }
+
+    pub fn parameters(&self) -> Parameters {
+        Parameters {
+            param_type: "object".to_string(),
+            properties: HashMap::from([
+                (
+                    "path".to_string(),
+                    Property {
+                        prop_type: "string".to_string(),
+                        description: "The path to the file to edit".to_string(),
+                    },
+                ),
+                (
+                    "old_string".to_string(),
+                    Property {
+                        prop_type: "string".to_string(),
+                        description: "The string to find and replace in the file".to_string(),
+                    },
+                ),
+                (
+                    "new_string".to_string(),
+                    Property {
+                        prop_type: "string".to_string(),
+                        description: "The replacement string".to_string(),
+                    },
+                ),
+            ]),
+            required: vec![
+                "path".to_string(),
+                "old_string".to_string(),
+                "new_string".to_string(),
+            ],
+            additional_properties: false,
+        }
+    }
+
+    pub fn strict(&self) -> bool {
+        true
     }
 }
 
@@ -222,5 +318,34 @@ mod tests {
         )]));
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn managed_tool_creates_pending_change() {
+        let mut change_manager = ChangeManager::new();
+        let tool = ManagedEditFileTool;
+        
+        let path = "managed_edit_test.txt";
+        fs::write(path, "original content").unwrap();
+
+        let result = tool.call_with_manager(
+            HashMap::from([
+                ("path".to_string(), path.to_string()),
+                ("old_string".to_string(), "original".to_string()),
+                ("new_string".to_string(), "modified".to_string()),
+            ]),
+            &mut change_manager,
+        );
+
+        assert!(result.is_ok());
+        let (message, change_id) = result.unwrap();
+        assert!(message.contains("File edit queued"));
+        assert_eq!(change_id, 1);
+
+        let pending_changes = change_manager.get_pending_changes();
+        assert_eq!(pending_changes.len(), 1);
+        assert_eq!(pending_changes[0].file_path, path);
+
+        fs::remove_file(path).unwrap();
     }
 }
