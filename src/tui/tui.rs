@@ -1,8 +1,8 @@
 use super::model::{TuiMessage, TuiStatus};
 use super::state::TuiState;
 use super::formatter::{
-    text_formatter::TextFormatter, terminal_formatter::TerminalFormatter,
-    tool_formatter::ToolFormatter,
+    text::TextFormatter, terminal::TerminalFormatter,
+    tool::ToolFormatter,
 };
 use crate::chat::event::{ChatSessionAction, ChatSessionEvent, ChatSessionEventHandler};
 use std::io::{self, BufRead, Write};

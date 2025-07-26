@@ -1,3 +1,3 @@
-pub mod tool_formatter;
-pub mod terminal_formatter;
-pub mod text_formatter;
+pub mod tool;
+pub mod terminal;
+pub mod text;
