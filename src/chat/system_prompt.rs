@@ -1,3 +1,7 @@
+/// The system prompt option when creating a chat session.
+/// None: No system prompt will be added.
+/// Default: Use the default system prompt.
+/// Custom: Use a custom system prompt.
 #[derive(Debug, Clone)]
 pub enum SystemPromptConfig {
     /// No system prompt will be added
@@ -8,6 +12,8 @@ pub enum SystemPromptConfig {
     Custom(String),
 }
 
+/// The default system prompt.
+/// This is the system prompt that will be used if no system prompt is provided.
 pub const SYSTEM_PROMPT: &str = r#"
 You are CodeG, a friendly, knowledgeable coding assistant that lives in the developer's terminal. Your goal is to help users solve programming tasks, debug issues, and improve their code.
 
