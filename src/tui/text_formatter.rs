@@ -1,7 +1,7 @@
 /// Text formatting utilities for terminal output
-pub struct Formatter;
+pub struct TextFormatter;
 
-impl Formatter {
+impl TextFormatter {
     /// Reset all formatting
     pub fn reset() -> &'static str {
         "\x1B[0m"
@@ -130,25 +130,25 @@ mod tests {
 
     #[test]
     fn gray_italic_formatting_works() {
-        let result = Formatter::gray_italic("test text");
+        let result = TextFormatter::gray_italic("test text");
         assert_eq!(result, "\x1B[90m\x1B[3mtest text\x1B[0m");
     }
 
     #[test]
     fn red_italic_formatting_works() {
-        let result = Formatter::red_italic("test text");
+        let result = TextFormatter::red_italic("test text");
         assert_eq!(result, "\x1B[91m\x1B[3mtest text\x1B[0m");
     }
 
     #[test]
     fn bold_formatting_works() {
-        let result = Formatter::bold_text("bold text");
+        let result = TextFormatter::bold_text("bold text");
         assert_eq!(result, "\x1B[1mbold text\x1B[0m");
     }
 
     #[test]
     fn colored_text_works() {
-        let result = Formatter::colored_text("red text", Formatter::red());
+        let result = TextFormatter::colored_text("red text", TextFormatter::red());
         assert_eq!(result, "\x1B[91mred text\x1B[0m");
     }
 

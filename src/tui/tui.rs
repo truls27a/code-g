@@ -1,4 +1,4 @@
-use super::formatting::{Formatter, Terminal};
+use super::text_formatter::{TextFormatter, Terminal};
 use super::model::{TuiMessage, TuiStatus};
 use super::state::TuiState;
 use super::tool_formatter::ToolFormatter;
@@ -71,7 +71,7 @@ impl Tui {
             writeln!(
                 self.writer,
                 "{}",
-                Formatter::gray_italic(&status.to_string())
+                TextFormatter::gray_italic(&status.to_string())
             )?;
             writeln!(self.writer)?;
         }
@@ -111,12 +111,12 @@ impl Tui {
             }
             TuiMessage::ToolResponse { summary, is_error } => {
                 if *is_error {
-                    writeln!(self.writer, "{}", Formatter::red_italic(summary))?;
+                    writeln!(self.writer, "{}", TextFormatter::red_italic(summary))?;
                 } else {
                     writeln!(
                         self.writer,
                         "{}",
-                        Formatter::gray_italic(&format!("* {}", summary))
+                        TextFormatter::gray_italic(&format!("* {}", summary))
                     )?;
                 }
                 writeln!(self.writer)?;
