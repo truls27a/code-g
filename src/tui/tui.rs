@@ -4,12 +4,17 @@ use super::state::TuiState;
 use crate::chat::event::{Action, Event, EventHandler};
 use std::io::{self, BufRead, Write};
 
+/// The TUI.
+/// Handles events and actions from the ChatSession by rendering to the terminal and reading user input.
 pub struct Tui {
     state: TuiState,
     writer: Box<dyn Write>,
 }
 
 impl EventHandler for Tui {
+    /// Handle an event from the ChatSession.
+    /// This method is called by the ChatSession to handle events.
+    /// It updates the state of the TUI and renders the TUI.
     fn handle_event(&mut self, event: Event) {
         match event {
             Event::SessionStarted => {
@@ -41,6 +46,8 @@ impl EventHandler for Tui {
         self.render().unwrap();
     }
 
+    /// Handle an action from the ChatSession.
+    /// This method is called by the ChatSession to handle actions.
     fn handle_action(&mut self, action: Action) -> Result<String, io::Error> {
         match action {
             Action::RequestUserInput => self.read_user_input(&mut io::stdin().lock()),
@@ -49,6 +56,7 @@ impl EventHandler for Tui {
 }
 
 impl Tui {
+    /// Create a new TUI.
     pub fn new() -> Self {
         Self {
             state: TuiState::new(),
