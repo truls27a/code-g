@@ -13,9 +13,17 @@ pub struct Tui {
 }
 
 impl EventHandler for Tui {
-    /// Handle an event from the ChatSession.
-    /// This method is called by the ChatSession to handle events.
-    /// It updates the state of the TUI and renders the TUI.
+    /// Handle an event from the ChatSession by updating TUI state and rendering.
+    ///
+    /// This method processes chat session events and updates the terminal display accordingly:
+    /// - `SessionStarted/Ended`: Clears the terminal and resets state
+    /// - `ReceivedUserMessage/AssistantMessage`: Adds messages to chat history and re-renders
+    /// - `ReceivedToolCall`: Updates status display to show tool execution in progress
+    /// - `ReceivedToolResponse`: Adds tool response to chat history and clears status
+    /// - `AwaitingAssistantResponse`: Shows "thinking" status indicator
+    ///
+    /// After processing each event, the entire terminal is cleared and re-rendered to ensure
+    /// a consistent display state.
     fn handle_event(&mut self, event: Event) {
         match event {
             Event::SessionStarted => {
@@ -47,8 +55,15 @@ impl EventHandler for Tui {
         self.render().unwrap();
     }
 
-    /// Handle an action from the ChatSession.
-    /// This method is called by the ChatSession to handle actions.
+    /// Handle an action from the ChatSession, right now it is only user input requests.
+    ///
+    /// This method processes chat session actions and returns the requested data:
+    /// - `RequestUserInput`: Displays a prompt ("> "), reads a line from stdin,
+    ///   and returns the trimmed input string
+    ///
+    /// # Errors
+    /// Returns `io::Error` if reading from stdin fails or if terminal cursor
+    /// operations cannot be performed.
     fn handle_action(&mut self, action: Action) -> Result<String, io::Error> {
         match action {
             Action::RequestUserInput => self.read_user_input(),
@@ -278,7 +293,10 @@ mod tests {
     #[test]
     fn handle_action_request_user_input_reads_from_stdin() {
         let input = "test input\n";
-        let mut tui = tui_with_writer_and_reader(Box::new(Cursor::new(Vec::new())), Box::new(Cursor::new(input.as_bytes())));
+        let mut tui = tui_with_writer_and_reader(
+            Box::new(Cursor::new(Vec::new())),
+            Box::new(Cursor::new(input.as_bytes())),
+        );
 
         let result = tui.read_user_input();
 
