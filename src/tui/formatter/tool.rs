@@ -1,9 +1,11 @@
 use crate::tui::model::Status;
 use std::collections::HashMap;
 
+/// Formats tool responses and calls for the TUI.
 pub struct ToolFormatter;
 
 impl ToolFormatter {
+    /// Create status for the TUI based on a tool call.
     pub fn create_status(tool_name: &str, arguments: &HashMap<String, String>) -> Status {
         match tool_name {
             "read_file" => {
@@ -28,6 +30,9 @@ impl ToolFormatter {
         }
     }
 
+    /// Create a summary of a tool response.
+    /// The summary is used to display the result of a tool call.
+    /// It also checks if the tool response is an error, if it is, the summary is the error message.
     pub fn create_summary(
         content: &str,
         tool_name: &str,
@@ -65,6 +70,7 @@ impl ToolFormatter {
         }
     }
 
+    /// Check if a tool response is an error.
     pub fn is_error(content: &str, tool_name: &str) -> bool {
         match tool_name {
             "read_file" => {
