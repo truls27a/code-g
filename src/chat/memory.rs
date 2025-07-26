@@ -34,6 +34,8 @@ impl ChatMemory {
     /// # Examples
     ///
     /// ```rust
+    /// use code_g::chat::memory::ChatMemory;
+    ///
     /// let memory = ChatMemory::new();
     /// assert_eq!(memory.get_memory().len(), 0);
     /// ```
@@ -54,6 +56,9 @@ impl ChatMemory {
     /// # Examples
     ///
     /// ```rust
+    /// use code_g::chat::memory::ChatMemory;
+    /// use code_g::openai::model::ChatMessage;
+    ///
     /// let messages = vec![
     ///     ChatMessage::User { content: "Hello".to_string() }
     /// ];
@@ -77,6 +82,9 @@ impl ChatMemory {
     /// # Examples
     ///
     /// ```rust
+    /// use code_g::chat::memory::ChatMemory;
+    /// use code_g::openai::model::ChatMessage;
+    ///
     /// let mut memory = ChatMemory::new();
     /// memory.add_message(ChatMessage::User {
     ///     content: "Hello, world!".to_string(),
@@ -98,6 +106,8 @@ impl ChatMemory {
     /// # Examples
     ///
     /// ```rust
+    /// use code_g::chat::memory::ChatMemory;
+    ///
     /// let memory = ChatMemory::new();
     /// let messages = memory.get_memory();
     /// assert_eq!(messages.len(), 0);
@@ -115,6 +125,9 @@ impl ChatMemory {
     /// # Examples
     ///
     /// ```rust
+    /// use code_g::chat::memory::ChatMemory;
+    /// use code_g::openai::model::ChatMessage;
+    ///
     /// let mut memory = ChatMemory::new();
     /// memory.add_message(ChatMessage::User {
     ///     content: "Hello".to_string(),

@@ -7,6 +7,8 @@
 /// # Examples
 /// 
 /// ```rust
+/// use code_g::tui::model::Message;
+/// 
 /// let message = Message::User { content: "Hello, how are you?".to_string() };
 /// ```
 #[derive(Debug, Clone, PartialEq)]
@@ -27,6 +29,8 @@ pub enum Message {
 /// # Examples
 /// 
 /// ```rust
+/// use code_g::tui::model::Status;
+/// 
 /// let status = Status::Thinking;
 /// ```
 #[derive(Debug, Clone, PartialEq)]
@@ -58,6 +62,8 @@ impl Status {
     /// # Examples
     /// 
     /// ```rust
+    /// use code_g::tui::model::Status;
+    /// 
     /// let status = Status::Thinking;
     /// assert_eq!(status.to_string(), "Thinking...");
     /// ```

@@ -12,7 +12,10 @@ use super::model::{Message, Status};
 /// # Examples
 /// 
 /// ```rust
-/// let state = TuiState::new();
+/// use code_g::tui::state::TuiState;
+/// 
+/// let mut state = TuiState::new();
+/// 
 /// state.add_user_message("Hello, how are you?".to_string());
 /// state.add_assistant_message("I'm doing well, thank you!".to_string());
 /// state.add_tool_response("Tool executed successfully".to_string(), false);
@@ -33,6 +36,8 @@ impl TuiState {
     /// # Examples
     /// 
     /// ```rust
+    /// use code_g::tui::state::TuiState;
+    /// 
     /// let state = TuiState::new();
     /// ```
     pub fn new() -> Self {
@@ -51,6 +56,8 @@ impl TuiState {
     /// # Examples
     /// 
     /// ```rust
+    /// use code_g::tui::state::TuiState;
+    /// 
     /// let mut state = TuiState::new();
     /// state.add_user_message("Hello, how are you?".to_string());
     /// ```
@@ -68,6 +75,8 @@ impl TuiState {
     /// # Examples
     /// 
     /// ```rust
+    /// use code_g::tui::state::TuiState;
+    /// 
     /// let mut state = TuiState::new();
     /// state.add_assistant_message("I'm doing well, thank you!".to_string());
     /// ```
@@ -86,6 +95,8 @@ impl TuiState {
     /// # Examples
     /// 
     /// ```rust
+    /// use code_g::tui::state::TuiState;
+    /// 
     /// let mut state = TuiState::new();
     /// state.add_tool_response("Read 23 lines from test.txt".to_string(), false);
     /// ```
@@ -104,6 +115,9 @@ impl TuiState {
     /// # Examples
     /// 
     /// ```rust
+    /// use code_g::tui::state::TuiState;
+    /// use code_g::tui::model::Status;
+    /// 
     /// let mut state = TuiState::new();
     /// state.set_status(Some(Status::Thinking));
     /// ```
@@ -116,6 +130,8 @@ impl TuiState {
     /// # Examples
     /// 
     /// ```rust
+    /// use code_g::tui::state::TuiState;
+    /// 
     /// let mut state = TuiState::new();
     /// state.clear();
     /// ```

@@ -23,10 +23,11 @@ const MAX_ITERATIONS: usize = 10;
 /// use code_g::openai::client::OpenAIClient;
 /// use code_g::tools::registry::Registry;
 /// use code_g::chat::system_prompt::SystemPromptConfig;
+/// use code_g::tui::tui::Tui;
 ///
 /// let client = OpenAIClient::new("api_key".to_string());
 /// let tools = Registry::new();
-/// let event_handler = Box::new(MyEventHandler::new());
+/// let event_handler = Box::new(Tui::new());
 /// let session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::Default);
 /// ```
 pub struct ChatSession {

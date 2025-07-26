@@ -7,7 +7,7 @@
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat::SystemPromptConfig;
+/// use code_g::chat::system_prompt::SystemPromptConfig;
 ///
 /// // Use no system prompt
 /// let config = SystemPromptConfig::None;
@@ -38,7 +38,7 @@ pub enum SystemPromptConfig {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat::SYSTEM_PROMPT;
+/// use code_g::chat::system_prompt::SYSTEM_PROMPT;
 ///
 /// println!("Default prompt: {}", SYSTEM_PROMPT);
 /// ```

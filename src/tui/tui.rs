@@ -13,11 +13,15 @@ use std::io::{self, BufRead, Write};
 /// # Examples
 /// 
 /// ```rust
+/// use code_g::tui::tui::Tui;
+/// use code_g::chat::event::{Event, EventHandler};
+/// 
 /// let mut tui = Tui::new();
+/// 
 /// tui.handle_event(Event::SessionStarted);
-/// tui.handle_event(Event::ReceivedUserMessage("Hello, how are you?".to_string()));
+/// tui.handle_event(Event::ReceivedUserMessage { message: "Hello, how are you?".to_string() });
 /// tui.handle_event(Event::AwaitingAssistantResponse);
-/// tui.handle_event(Event::ReceivedAssistantMessage("I'm doing well, thank you!".to_string()));
+/// tui.handle_event(Event::ReceivedAssistantMessage { message: "I'm doing well, thank you!".to_string() });
 /// tui.handle_event(Event::SessionEnded);
 /// ```
 ///
@@ -51,7 +55,11 @@ impl EventHandler for Tui {
     /// # Examples
     /// 
     /// ```rust
+    /// use code_g::tui::tui::Tui;
+    /// use code_g::chat::event::{Event, EventHandler};
+    /// 
     /// let mut tui = Tui::new();
+    ///
     /// tui.handle_event(Event::SessionStarted);
     /// ```
     fn handle_event(&mut self, event: Event) {
@@ -102,6 +110,18 @@ impl EventHandler for Tui {
     /// # Errors
     /// Returns `io::Error` if reading from stdin fails or if terminal cursor
     /// operations cannot be performed.
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust, no_run
+    /// use code_g::tui::tui::Tui;
+    /// use code_g::chat::event::{Action, EventHandler};
+    /// 
+    /// let mut tui = Tui::new();
+    /// 
+    /// let result = tui.handle_action(Action::RequestUserInput); // This will block until user input is provided
+    /// assert_eq!(result.unwrap(), "Hello, how are you?");
+    /// ```
     fn handle_action(&mut self, action: Action) -> Result<String, io::Error> {
         match action {
             Action::RequestUserInput => self.read_user_input(),
@@ -119,6 +139,8 @@ impl Tui {
     /// # Examples
     /// 
     /// ```rust
+    /// use code_g::tui::tui::Tui;
+    /// 
     /// let tui = Tui::new();
     /// ```
     pub fn new() -> Self {
