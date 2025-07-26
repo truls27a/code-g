@@ -1,49 +1,127 @@
 use crate::openai::model::ChatMessage;
 
-/// The memory of the chat session.
-/// Stores the messages of the chat session.
+/// A storage container for managing chat conversation history.
+///
+/// ChatMemory maintains an ordered sequence of chat messages that represent
+/// the conversation history between users, assistants, and tools. It provides
+/// methods to add, retrieve, and manipulate messages while preserving the
+/// chronological order of the conversation.
+///
+/// # Examples
+///
+/// ```rust
+/// use code_g::chat::memory::ChatMemory;
+/// use code_g::openai::model::ChatMessage;
+///
+/// let mut memory = ChatMemory::new();
+/// memory.add_message(ChatMessage::User {
+///     content: "Hello, world!".to_string(),
+/// });
+///
+/// assert_eq!(memory.get_memory().len(), 1);
+/// ```
 #[derive(Debug, PartialEq, Clone)]
 pub struct ChatMemory {
     memory: Vec<ChatMessage>,
 }
 
 impl ChatMemory {
-    /// Create a new chat memory.
+    /// Creates a new empty chat memory.
+    ///
+    /// Initializes a ChatMemory instance with no messages. This is the
+    /// standard way to begin a new conversation session.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// let memory = ChatMemory::new();
+    /// assert_eq!(memory.get_memory().len(), 0);
+    /// ```
     pub fn new() -> Self {
         Self { memory: vec![] }
     }
 
-    /// Create a chat memory from a vector of chat messages.
+    /// Creates a chat memory from an existing vector of messages.
+    ///
+    /// This constructor allows you to initialize ChatMemory with a pre-existing
+    /// conversation history, which is useful for restoring saved sessions or
+    /// continuing conversations from a checkpoint.
+    ///
+    /// # Arguments
+    ///
+    /// * `memory` - A vector of ChatMessage instances representing the conversation history
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// let messages = vec![
+    ///     ChatMessage::User { content: "Hello".to_string() }
+    /// ];
+    /// let memory = ChatMemory::from(messages);
+    /// assert_eq!(memory.get_memory().len(), 1);
+    /// ```
     pub fn from(memory: Vec<ChatMessage>) -> Self {
         Self { memory }
     }
 
-    /// Add a message to the chat memory.
+    /// Adds a new message to the end of the conversation history.
+    ///
+    /// Messages are appended in chronological order, maintaining the sequence
+    /// of the conversation. This method should be called whenever a new message
+    /// is received from any participant (user, assistant, or tool).
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The ChatMessage to add to the conversation history
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// let mut memory = ChatMemory::new();
+    /// memory.add_message(ChatMessage::User {
+    ///     content: "Hello, world!".to_string(),
+    /// });
+    /// ```
     pub fn add_message(&mut self, message: ChatMessage) {
         self.memory.push(message);
     }
 
-    /// Get the memory of the chat session.
+    /// Returns a reference to the complete conversation history.
+    ///
+    /// Provides read-only access to all messages in the conversation,
+    /// ordered chronologically from first to last.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the vector containing all ChatMessage instances
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// let memory = ChatMemory::new();
+    /// let messages = memory.get_memory();
+    /// assert_eq!(messages.len(), 0);
+    /// ```
     pub fn get_memory(&self) -> &Vec<ChatMessage> {
         &self.memory
     }
 
-    /// Get the last message of the chat session.
-    pub fn get_last_message(&self) -> Option<&ChatMessage> {
-        self.memory.last()
-    }
-
-    /// Remove a message from the chat memory.
-    pub fn remove_message(&mut self, message: &ChatMessage) {
-        self.memory.retain(|m| m != message);
-    }
-
-    /// Remove the last message from the chat memory.
-    pub fn remove_last_message(&mut self) {
-        self.memory.pop();
-    }
-
-    /// Clear the chat memory.
+    /// Removes all messages from the conversation history.
+    ///
+    /// This operation empties the entire conversation, resetting the memory
+    /// to its initial state. Use this method to start fresh conversations
+    /// or when implementing session reset functionality.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// let mut memory = ChatMemory::new();
+    /// memory.add_message(ChatMessage::User {
+    ///     content: "Hello".to_string(),
+    /// });
+    /// memory.clear();
+    /// assert_eq!(memory.get_memory().len(), 0);
+    /// ```
     pub fn clear(&mut self) {
         self.memory.clear();
     }
@@ -51,9 +129,6 @@ impl ChatMemory {
 
 #[cfg(test)]
 mod tests {
-    use crate::openai::model::{AssistantMessage, ToolCall};
-    use std::collections::HashMap;
-
     use super::*;
 
     #[test]
@@ -86,99 +161,6 @@ mod tests {
             &[ChatMessage::User {
                 content: "Hello, world!".to_string(),
             }]
-        );
-    }
-
-    #[test]
-    fn get_last_message_returns_last_message() {
-        let mut memory = ChatMemory::new();
-
-        memory.add_message(ChatMessage::User {
-            content: "How are you?".to_string(),
-        });
-        memory.add_message(ChatMessage::Assistant {
-            message: AssistantMessage::Content("I'm fine, thank you!".to_string()),
-        });
-
-        assert_eq!(
-            memory.get_last_message(),
-            Some(&ChatMessage::Assistant {
-                message: AssistantMessage::Content("I'm fine, thank you!".to_string()),
-            }),
-        );
-    }
-
-    #[test]
-    fn remove_message_removes_message_from_memory() {
-        let mut memory = ChatMemory::new();
-
-        memory.add_message(ChatMessage::User {
-            content: "Hello, world!".to_string(),
-        });
-        memory.add_message(ChatMessage::Assistant {
-            message: AssistantMessage::ToolCalls(vec![ToolCall {
-                id: "1".to_string(),
-                name: "read_file".to_string(),
-                arguments: HashMap::new(),
-            }]),
-        });
-        memory.remove_message(&ChatMessage::User {
-            content: "Hello, world!".to_string(),
-        });
-
-        assert_eq!(memory.get_memory().len(), 1);
-        assert_eq!(
-            memory.get_memory()[0],
-            ChatMessage::Assistant {
-                message: AssistantMessage::ToolCalls(vec![ToolCall {
-                    id: "1".to_string(),
-                    name: "read_file".to_string(),
-                    arguments: HashMap::new(),
-                }]),
-            }
-        );
-    }
-
-    #[test]
-    fn remove_last_message_removes_last_message_from_memory() {
-        let mut memory = ChatMemory::new();
-
-        memory.add_message(ChatMessage::User {
-            content: "Hello, how are you?".to_string(),
-        });
-
-        memory.add_message(ChatMessage::Assistant {
-            message: AssistantMessage::Content("I'm fine, thank you!".to_string()),
-        });
-        memory.add_message(ChatMessage::User {
-            content: "Whats your name?".to_string(),
-        });
-        memory.add_message(ChatMessage::Assistant {
-            message: AssistantMessage::ToolCalls(vec![ToolCall {
-                id: "1".to_string(),
-                name: "read_file".to_string(),
-                arguments: HashMap::new(),
-            }]),
-        });
-        memory.add_message(ChatMessage::Tool {
-            content: "My name is John Doe".to_string(),
-            tool_call_id: "1".to_string(),
-            tool_name: "test_tool".to_string(),
-        });
-        memory.add_message(ChatMessage::Assistant {
-            message: AssistantMessage::Content("My name is John Doe".to_string()),
-        });
-
-        memory.remove_last_message();
-
-        assert_eq!(memory.get_memory().len(), 5);
-        assert_eq!(
-            memory.get_memory()[4],
-            ChatMessage::Tool {
-                content: "My name is John Doe".to_string(),
-                tool_call_id: "1".to_string(),
-                tool_name: "test_tool".to_string(),
-            }
         );
     }
 
