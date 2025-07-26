@@ -1,5 +1,7 @@
 use super::model::{TuiMessage, TuiStatus};
 
+/// The state of the TUI.
+/// Stores the messages and the current status.
 #[derive(Debug, Clone)]
 pub struct TuiState {
     pub messages: Vec<TuiMessage>,
@@ -7,6 +9,7 @@ pub struct TuiState {
 }
 
 impl TuiState {
+    /// Create a new TUI state.
     pub fn new() -> Self {
         Self {
             messages: Vec::new(),
@@ -14,26 +17,31 @@ impl TuiState {
         }
     }
 
+    /// Add a user message to the state.
     pub fn add_user_message(&mut self, content: String) {
         self.messages.push(TuiMessage::User { content });
         self.current_status = None;
     }
 
+    /// Add an assistant message to the state.
     pub fn add_assistant_message(&mut self, content: String) {
         self.messages.push(TuiMessage::Assistant { content });
         self.current_status = None;
     }
 
+    /// Add a tool response to the state.
     pub fn add_tool_response(&mut self, summary: String, is_error: bool) {
         self.messages
             .push(TuiMessage::ToolResponse { summary, is_error });
         self.current_status = None;
     }
 
+    /// Set the current status of the TUI.
     pub fn set_status(&mut self, status: Option<TuiStatus>) {
         self.current_status = status;
     }
 
+    /// Clear the state.
     pub fn clear(&mut self) {
         self.messages.clear();
         self.current_status = None;
