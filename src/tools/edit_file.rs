@@ -3,9 +3,9 @@ use crate::tools::tool::Tool;
 use std::collections::HashMap;
 use std::fs;
 
-pub struct EditFileTool;
+pub struct EditFile;
 
-impl Tool for EditFileTool {
+impl Tool for EditFile {
     fn name(&self) -> String {
         "edit_file".to_string()
     }
@@ -108,7 +108,7 @@ mod tests {
         let content = "Line 1\nLine 2\nLine 3";
         fs::write(path, content).unwrap();
 
-        let tool = EditFileTool;
+        let tool = EditFile;
         let result = tool.call(HashMap::from([
             ("path".to_string(), path.to_string()),
             ("old_string".to_string(), "Line 2".to_string()),
@@ -128,7 +128,7 @@ mod tests {
         let content = "Line 1\nLine 2\nLine 3\nLine 4";
         fs::write(path, content).unwrap();
 
-        let tool = EditFileTool;
+        let tool = EditFile;
         let result = tool.call(HashMap::from([
             ("path".to_string(), path.to_string()),
             ("old_string".to_string(), "Line 2\nLine 3".to_string()),
@@ -151,7 +151,7 @@ mod tests {
         let content = "Line 1\nLine 2\nLine 3";
         fs::write(path, content).unwrap();
 
-        let tool = EditFileTool;
+        let tool = EditFile;
         let result = tool.call(HashMap::from([
             ("path".to_string(), path.to_string()),
             ("old_string".to_string(), "\nLine 2".to_string()),
@@ -167,7 +167,7 @@ mod tests {
 
     #[test]
     fn call_returns_error_when_file_does_not_exist() {
-        let tool = EditFileTool;
+        let tool = EditFile;
         let result = tool.call(HashMap::from([
             ("path".to_string(), "non_existent_file.txt".to_string()),
             ("old_string".to_string(), "test".to_string()),
@@ -183,7 +183,7 @@ mod tests {
         let content = "Line 1\nLine 2";
         fs::write(path, content).unwrap();
 
-        let tool = EditFileTool;
+        let tool = EditFile;
         let result = tool.call(HashMap::from([
             ("path".to_string(), path.to_string()),
             ("old_string".to_string(), "Line 3".to_string()),
@@ -200,7 +200,7 @@ mod tests {
         let content = "Line\nLine\nLine 3";
         fs::write(path, content).unwrap();
 
-        let tool = EditFileTool;
+        let tool = EditFile;
         let result = tool.call(HashMap::from([
             ("path".to_string(), path.to_string()),
             ("old_string".to_string(), "Line".to_string()),
@@ -213,7 +213,7 @@ mod tests {
 
     #[test]
     fn call_returns_error_when_required_parameters_missing() {
-        let tool = EditFileTool;
+        let tool = EditFile;
         let result = tool.call(HashMap::from([(
             "path".to_string(),
             "test.txt".to_string(),

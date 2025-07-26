@@ -5,7 +5,7 @@ use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use crate::openai::client::OpenAIClient;
 use crate::openai::error::OpenAIError;
 use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
-use crate::tools::registry::ToolRegistry;
+use crate::tools::registry::Registry;
 
 // Maximum number of iterations per message to prevent infinite loops
 const MAX_ITERATIONS: usize = 10;
@@ -21,11 +21,11 @@ const MAX_ITERATIONS: usize = 10;
 /// ```rust
 /// use code_g::chat::session::ChatSession;
 /// use code_g::openai::client::OpenAIClient;
-/// use code_g::tools::registry::ToolRegistry;
+/// use code_g::tools::registry::Registry;
 /// use code_g::chat::system_prompt::SystemPromptConfig;
 ///
 /// let client = OpenAIClient::new("api_key".to_string());
-/// let tools = ToolRegistry::new();
+/// let tools = Registry::new();
 /// let event_handler = Box::new(MyEventHandler::new());
 /// let session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::Default);
 /// ```
@@ -35,7 +35,7 @@ pub struct ChatSession {
     /// OpenAI client for API communication
     client: OpenAIClient,
     /// Registry of available tools for the AI to use
-    tools: ToolRegistry,
+    tools: Registry,
     /// Handler for events and user interactions
     event_handler: Box<dyn EventHandler>,
 }
@@ -46,7 +46,7 @@ impl ChatSession {
     /// # Arguments
     ///
     /// * `client` - [`OpenAIClient`] configured with API credentials
-    /// * `tools` - [`ToolRegistry`] containing tools available to the AI assistant
+    /// * `tools` - [`Registry`] containing tools available to the AI assistant
     /// * `event_handler` - [`EventHandler`] for processing events and user interactions
     /// * `system_prompt_config` - [`SystemPromptConfig`] for the initial system prompt
     ///
@@ -55,7 +55,7 @@ impl ChatSession {
     /// A new `ChatSession` instance ready for conversation.
     pub fn new(
         client: OpenAIClient,
-        tools: ToolRegistry,
+        tools: Registry,
         event_handler: Box<dyn EventHandler>,
         system_prompt_config: SystemPromptConfig,
     ) -> Self {
@@ -105,8 +105,9 @@ impl ChatSession {
         });
 
         // Notify event handler about the user message
-        self.event_handler
-            .handle_event(Event::ReceivedUserMessage { message: message.to_string() });
+        self.event_handler.handle_event(Event::ReceivedUserMessage {
+            message: message.to_string(),
+        });
 
         // Track iterations to prevent infinite loops
         let mut iterations = 0;
@@ -159,7 +160,9 @@ impl ChatSession {
 
                     // 5.2 Render the memory to the event handler (only if not silent)
                     self.event_handler
-                        .handle_event(Event::ReceivedAssistantMessage { message: content.clone() });
+                        .handle_event(Event::ReceivedAssistantMessage {
+                            message: content.clone(),
+                        });
 
                     // 5.3 Return the content only if turn is over, otherwise continue
                     if turn_over {
@@ -196,11 +199,12 @@ impl ChatSession {
                         });
 
                         // 6.2.4 Send tool response event to the event handler
-                        self.event_handler.handle_event(Event::ReceivedToolResponse {
-                            tool_name: tool_call.name.clone(),
-                            response: tool_response.clone(),
-                            parameters: tool_call.arguments.clone(),
-                        });
+                        self.event_handler
+                            .handle_event(Event::ReceivedToolResponse {
+                                tool_name: tool_call.name.clone(),
+                                response: tool_response.clone(),
+                                parameters: tool_call.arguments.clone(),
+                            });
                     }
 
                     // 6.3 Continue the loop to get the assistants response
@@ -379,7 +383,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -392,7 +396,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::Default,
         );
@@ -411,7 +415,7 @@ mod tests {
         let custom_prompt = "You are a helpful assistant.".to_string();
         let chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::Custom(custom_prompt.clone()),
         );
@@ -429,7 +433,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -451,7 +455,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -483,7 +487,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -539,7 +543,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::from(vec![Box::new(TestTool)]),
+            Registry::from(vec![Box::new(TestTool)]),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -570,7 +574,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -587,7 +591,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -616,7 +620,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -664,7 +668,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -695,7 +699,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -716,7 +720,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -738,7 +742,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ToolRegistry::new(),
+            Registry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -763,12 +767,19 @@ mod tests {
 
         // Test that we can add events to the mock handler
         mock_handler.handle_event(Event::SessionStarted);
-        mock_handler.handle_event(Event::ReceivedUserMessage { message: "Hello".to_string() });
+        mock_handler.handle_event(Event::ReceivedUserMessage {
+            message: "Hello".to_string(),
+        });
 
         let events = mock_handler.get_events();
         assert_eq!(events.len(), 2);
         assert_eq!(events[0], Event::SessionStarted);
-        assert_eq!(events[1], Event::ReceivedUserMessage { message: "Hello".to_string() });
+        assert_eq!(
+            events[1],
+            Event::ReceivedUserMessage {
+                message: "Hello".to_string()
+            }
+        );
     }
 
     #[test]

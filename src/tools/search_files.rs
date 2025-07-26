@@ -6,9 +6,9 @@ use std::path::Path;
 
 const MAX_FILES_RETURNED: usize = 50;
 
-pub struct SearchFilesTool;
+pub struct SearchFiles;
 
-impl Tool for SearchFilesTool {
+impl Tool for SearchFiles {
     fn name(&self) -> String {
         "search_files".to_string()
     }
@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn call_searches_for_rust_files() {
-        let tool = SearchFilesTool;
+        let tool = SearchFiles;
 
         let result = tool.call(HashMap::from([("pattern".to_string(), "*.rs".to_string())]));
 
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn call_returns_error_when_pattern_is_not_provided() {
-        let tool = SearchFilesTool;
+        let tool = SearchFiles;
 
         let result = tool.call(HashMap::from([]));
 
@@ -249,7 +249,7 @@ mod tests {
 
     #[test]
     fn call_uses_current_directory_by_default() {
-        let tool = SearchFilesTool;
+        let tool = SearchFiles;
 
         let result = tool.call(HashMap::from([(
             "pattern".to_string(),
@@ -273,7 +273,7 @@ mod tests {
 
     #[test]
     fn call_does_not_show_truncation_message_for_small_results() {
-        let tool = SearchFilesTool;
+        let tool = SearchFiles;
 
         let result = tool.call(HashMap::from([(
             "pattern".to_string(),
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn call_shows_truncation_message_when_limit_reached() {
-        let tool = SearchFilesTool;
+        let tool = SearchFiles;
 
         // Search for all files (*) which should exceed the limit in a typical project
         let result = tool.call(HashMap::from([("pattern".to_string(), "*".to_string())]));

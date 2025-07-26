@@ -3,9 +3,9 @@ use crate::tools::tool::Tool;
 use std::collections::HashMap;
 use std::fs;
 
-pub struct WriteFileTool;
+pub struct WriteFile;
 
-impl Tool for WriteFileTool {
+impl Tool for WriteFile {
     fn name(&self) -> String {
         "write_file".to_string()
     }
@@ -63,7 +63,7 @@ mod tests {
     fn call_writes_to_file() {
         let path = "call_writes_to_file_tmp_file.txt";
         let content = "Hello, world!";
-        let tool = WriteFileTool;
+        let tool = WriteFile;
 
         let result = tool.call(HashMap::from([
             ("path".to_string(), path.to_string()),
@@ -83,7 +83,7 @@ mod tests {
 
     #[test]
     fn call_returns_error_when_path_is_not_provided() {
-        let tool = WriteFileTool;
+        let tool = WriteFile;
 
         let result = tool.call(HashMap::from([(
             "content".to_string(),
@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn call_returns_error_when_content_is_not_provided() {
-        let tool = WriteFileTool;
+        let tool = WriteFile;
 
         let result = tool.call(HashMap::from([(
             "path".to_string(),
@@ -110,7 +110,7 @@ mod tests {
         let path = "call_overwrites_file_tmp_file.txt";
         fs::write(path, "Hello, world!").unwrap();
 
-        let tool = WriteFileTool;
+        let tool = WriteFile;
         let result = tool.call(HashMap::from([
             ("path".to_string(), path.to_string()),
             ("content".to_string(), "Hej på dig!".to_string()),

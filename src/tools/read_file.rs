@@ -3,9 +3,9 @@ use crate::tools::tool::Tool;
 use std::collections::HashMap;
 use std::fs;
 
-pub struct ReadFileTool;
+pub struct ReadFile;
 
-impl Tool for ReadFileTool {
+impl Tool for ReadFile {
     fn name(&self) -> String {
         "read_file".to_string()
     }
@@ -56,7 +56,7 @@ mod tests {
         let content = "Hello, world!";
         fs::write(path, content).unwrap();
 
-        let tool = ReadFileTool;
+        let tool = ReadFile;
 
         let result = tool.call(HashMap::from([("path".to_string(), path.to_string())]));
 
@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn call_returns_error_when_file_does_not_exist() {
-        let tool = ReadFileTool;
+        let tool = ReadFile;
 
         let result = tool.call(HashMap::from([(
             "path".to_string(),
@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     fn call_returns_error_when_path_is_not_provided() {
-        let tool = ReadFileTool;
+        let tool = ReadFile;
 
         let result = tool.call(HashMap::new());
 
