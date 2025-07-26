@@ -1,8 +1,8 @@
 use super::formatting::{Formatter, Terminal};
 use super::model::{TuiMessage, TuiStatus};
 use super::state::TuiState;
+use super::tool_formatter::ToolFormatter;
 use crate::chat::event::{ChatSessionAction, ChatSessionEvent, ChatSessionEventHandler};
-use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
 
 pub struct Tui {
@@ -27,12 +27,12 @@ impl ChatSessionEventHandler for Tui {
                 self.state.add_assistant_message(message);
             }
             ChatSessionEvent::ReceivedToolCall(tool_name, arguments) => {
-                let status = self.create_tool_status(&tool_name, &arguments);
+                let status = ToolFormatter::create_status(&tool_name, &arguments);
                 self.state.set_status(Some(status));
             }
             ChatSessionEvent::ReceivedToolResponse(tool_response, tool_name, arguments) => {
                 let (summary, is_error) =
-                    self.create_tool_summary(&tool_response, &tool_name, arguments);
+                    ToolFormatter::create_summary(&tool_response, &tool_name, arguments);
                 self.state.add_tool_response(summary, is_error);
             }
             ChatSessionEvent::AwaitingAssistantResponse => {
@@ -54,72 +54,6 @@ impl Tui {
         Self {
             state: TuiState::new(),
             writer: Box::new(io::stdout()),
-        }
-    }
-
-    fn create_tool_status(
-        &self,
-        tool_name: &str,
-        arguments: &std::collections::HashMap<String, String>,
-    ) -> TuiStatus {
-        match tool_name {
-            "read_file" => {
-                let path = arguments.get("path").unwrap_or(&"".to_string()).clone();
-                TuiStatus::ReadingFile { path }
-            }
-            "write_file" => {
-                let path = arguments.get("path").unwrap_or(&"".to_string()).clone();
-                TuiStatus::WritingFile { path }
-            }
-            "search_files" => {
-                let pattern = arguments.get("pattern").unwrap_or(&"".to_string()).clone();
-                TuiStatus::SearchingFiles { pattern }
-            }
-            "edit_file" => {
-                let path = arguments.get("path").unwrap_or(&"".to_string()).clone();
-                TuiStatus::EditingFile { path }
-            }
-            _ => TuiStatus::ExecutingTool {
-                tool_name: tool_name.to_string(),
-            },
-        }
-    }
-
-    fn create_tool_summary(
-        &self,
-        content: &str,
-        tool_name: &str,
-        arguments: HashMap<String, String>,
-    ) -> (String, bool) {
-        let is_error = self.is_tool_error(content, tool_name);
-
-        if is_error {
-            (content.to_string(), true)
-        } else {
-            let summary = match tool_name {
-                "read_file" => {
-                    let path = arguments.get("path").unwrap_or(&"".to_string()).clone();
-                    format!("Read {} lines from {}", content.lines().count(), path)
-                }
-                "write_file" => {
-                    let path = arguments.get("path").unwrap_or(&"".to_string()).clone();
-                    format!("Wrote {} lines to {}", content.lines().count(), path)
-                }
-                "search_files" => {
-                    let pattern = arguments.get("pattern").unwrap_or(&"".to_string()).clone();
-                    format!(
-                        "Found {} files matching {}",
-                        content.lines().count(),
-                        pattern
-                    )
-                }
-                "edit_file" => {
-                    let path = arguments.get("path").unwrap_or(&"".to_string()).clone();
-                    format!("Edited {} lines in {}", content.lines().count(), path)
-                }
-                _ => format!("Tool '{}' completed", tool_name),
-            };
-            (summary, false)
         }
     }
 
@@ -194,24 +128,5 @@ impl Tui {
     fn clear_terminal(&mut self) -> Result<(), io::Error> {
         write!(self.writer, "{}", Terminal::clear_screen())?;
         Ok(())
-    }
-
-    fn is_tool_error(&self, content: &str, tool_name: &str) -> bool {
-        match tool_name {
-            "read_file" => {
-                content.starts_with("Error")
-                    || content.contains("not found") && content.starts_with("File")
-            }
-            "write_file" => content.starts_with("Error"),
-            "edit_file" => {
-                content.starts_with("Error")
-                    || content.contains("not found in file")
-                    || content.contains("appears") && content.contains("times in file")
-            }
-            "search_files" => {
-                content.starts_with("Error") || content.contains("No files found matching pattern")
-            }
-            _ => content.starts_with("Error"),
-        }
     }
 }
