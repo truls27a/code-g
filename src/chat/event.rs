@@ -13,20 +13,10 @@ pub enum Event {
     ReceivedToolCall(String, HashMap<String, String>),
     ReceivedToolResponse(String, String, HashMap<String, String>),
     AwaitingAssistantResponse,
-    
-    // Change management events
-    PendingFileChange { change_id: u64, file_path: String, diff: String },
-    ChangeAccepted { change_id: u64, accepted_changes: Vec<u64> },
-    ChangeDeclined { change_id: u64 },
-    ChangeError { change_id: u64, error: String },
 }
 
-#[derive(Debug)]
 pub enum Action {
     RequestUserInput,
-    AcceptChange(u64),
-    DeclineChange(u64),
-    ListPendingChanges,
 }
 
 /// Trait for handling chat session events and actions

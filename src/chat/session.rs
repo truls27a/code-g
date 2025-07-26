@@ -5,7 +5,7 @@ use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use crate::openai::client::OpenAIClient;
 use crate::openai::error::OpenAIError;
 use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
-use crate::tools::managed_registry::ManagedToolRegistry;
+use crate::tools::registry::ToolRegistry;
 
 // Maximum number of iterations per message to prevent infinite loops
 const MAX_ITERATIONS: usize = 10;
@@ -13,14 +13,14 @@ const MAX_ITERATIONS: usize = 10;
 pub struct ChatSession {
     memory: ChatMemory,
     client: OpenAIClient,
-    tools: ManagedToolRegistry,
+    tools: ToolRegistry,
     event_handler: Box<dyn EventHandler>,
 }
 
 impl ChatSession {
     pub fn new(
         client: OpenAIClient,
-        tools: ManagedToolRegistry,
+        tools: ToolRegistry,
         event_handler: Box<dyn EventHandler>,
         system_prompt_config: SystemPromptConfig,
     ) -> Self {
@@ -45,11 +45,6 @@ impl ChatSession {
     }
 
     pub async fn send_message(&mut self, message: &str) -> Result<String, ChatSessionError> {
-        // Check if this is a change management command
-        if let Some(response) = self.handle_change_command(message) {
-            return Ok(response);
-        }
-
         // Add user message to memory
         self.memory.add_message(ChatMessage::User {
             content: message.to_string(),
@@ -133,10 +128,10 @@ impl ChatSession {
                             tool_call.arguments.clone(),
                         ));
 
-                        // 6.2.2 Call the tool (now with change management)
+                        // 6.2.2 Call the tool
                         let tool_response = self
                             .tools
-                            .call_tool(tool_call.name.as_str(), tool_call.arguments.clone(), &mut *self.event_handler)
+                            .call_tool(tool_call.name.as_str(), tool_call.arguments.clone())
                             .unwrap_or_else(|e| e);
 
                         // 6.2.3 Add tool response to memory
@@ -159,51 +154,6 @@ impl ChatSession {
                 }
             }
         }
-    }
-
-    fn handle_change_command(&mut self, message: &str) -> Option<String> {
-        if message.starts_with("accept:") {
-            if let Some(id_str) = message.strip_prefix("accept:") {
-                if let Ok(change_id) = id_str.parse::<u64>() {
-                    match self.tools.accept_change(change_id, &mut *self.event_handler) {
-                        Ok(result) => return Some(result),
-                        Err(e) => return Some(format!("Error accepting change: {}", e)),
-                    }
-                }
-            }
-            return Some("Invalid accept command format".to_string());
-        }
-
-        if message.starts_with("decline:") {
-            if let Some(id_str) = message.strip_prefix("decline:") {
-                if let Ok(change_id) = id_str.parse::<u64>() {
-                    match self.tools.decline_change(change_id, &mut *self.event_handler) {
-                        Ok(result) => return Some(result),
-                        Err(e) => return Some(format!("Error declining change: {}", e)),
-                    }
-                }
-            }
-            return Some("Invalid decline command format".to_string());
-        }
-
-        if message == "list_changes" {
-            return Some(self.tools.list_pending_changes());
-        }
-
-        if message == "help:commands" {
-            return Some(self.get_help_text());
-        }
-
-        None
-    }
-
-    fn get_help_text(&self) -> String {
-        "Available commands:\n\
-         /accept <id> or /a <id> - Accept a pending change\n\
-         /decline <id> or /d <id> - Decline a pending change\n\
-         /changes or /c - List pending changes\n\
-         /help or /h - Show this help\n\
-         exit - Exit the chat session".to_string()
     }
 
     pub async fn run(&mut self) -> Result<(), ChatSessionError> {
@@ -338,15 +288,6 @@ mod tests {
                         Ok("exit".to_string())
                     }
                 }
-                Action::AcceptChange(change_id) => {
-                    Ok(format!("accept:{}", change_id))
-                }
-                Action::DeclineChange(change_id) => {
-                    Ok(format!("decline:{}", change_id))
-                }
-                Action::ListPendingChanges => {
-                    Ok("list_changes".to_string())
-                }
             }
         }
     }
@@ -357,7 +298,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -370,7 +311,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::Default,
         );
@@ -389,7 +330,7 @@ mod tests {
         let custom_prompt = "You are a helpful assistant.".to_string();
         let chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::Custom(custom_prompt.clone()),
         );
@@ -407,7 +348,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -429,7 +370,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -461,7 +402,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -517,7 +458,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::from(vec![Box::new(TestTool)]),
+            ToolRegistry::from(vec![Box::new(TestTool)]),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -548,7 +489,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -565,7 +506,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -594,7 +535,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -642,7 +583,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -673,7 +614,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -694,7 +635,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -716,7 +657,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            ManagedToolRegistry::new(),
+            ToolRegistry::new(),
             event_handler,
             SystemPromptConfig::None,
         );
