@@ -177,10 +177,10 @@ impl ChatSession {
                     // 6.2 Call each tool and collect responses
                     for tool_call in &tool_calls {
                         // 6.2.1 Set the status message to the tool call name
-                        self.event_handler.handle_event(Event::ReceivedToolCall(
-                            tool_call.name.clone(),
-                            tool_call.arguments.clone(),
-                        ));
+                        self.event_handler.handle_event(Event::ReceivedToolCall {
+                            tool_name: tool_call.name.clone(),
+                            parameters: tool_call.arguments.clone(),
+                        });
 
                         // 6.2.2 Call the tool
                         let tool_response = self
@@ -196,11 +196,11 @@ impl ChatSession {
                         });
 
                         // 6.2.4 Send tool response event to the event handler
-                        self.event_handler.handle_event(Event::ReceivedToolResponse(
-                            tool_response.clone(),
-                            tool_call.name.clone(),
-                            tool_call.arguments.clone(),
-                        ));
+                        self.event_handler.handle_event(Event::ReceivedToolResponse {
+                            tool_name: tool_call.name.clone(),
+                            response: tool_response.clone(),
+                            parameters: tool_call.arguments.clone(),
+                        });
                     }
 
                     // 6.3 Continue the loop to get the assistants response

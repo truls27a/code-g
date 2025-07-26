@@ -69,13 +69,13 @@ impl EventHandler for Tui {
             Event::ReceivedAssistantMessage(message) => {
                 self.state.add_assistant_message(message);
             }
-            Event::ReceivedToolCall(tool_name, arguments) => {
-                let status = ToolFormatter::create_status(&tool_name, &arguments);
+            Event::ReceivedToolCall { tool_name, parameters } => {
+                let status = ToolFormatter::create_status(&tool_name, &parameters);
                 self.state.set_status(Some(status));
             }
-            Event::ReceivedToolResponse(tool_response, tool_name, arguments) => {
+            Event::ReceivedToolResponse { tool_name, response, parameters } => {
                 let (summary, is_error) =
-                    ToolFormatter::create_summary(&tool_response, &tool_name, arguments);
+                    ToolFormatter::create_summary(&response, &tool_name, parameters);
                 self.state.add_tool_response(summary, is_error);
             }
             Event::AwaitingAssistantResponse => {
@@ -288,10 +288,10 @@ mod tests {
         let mut arguments = HashMap::new();
         arguments.insert("path".to_string(), "test.txt".to_string());
 
-        tui.handle_event(Event::ReceivedToolCall(
-            tool_name.clone(),
-            arguments.clone(),
-        ));
+        tui.handle_event(Event::ReceivedToolCall {
+            tool_name: tool_name.clone(),
+            parameters: arguments.clone(),
+        });
 
         assert!(tui.state.current_status.is_some());
         match &tui.state.current_status.as_ref().unwrap() {
@@ -309,11 +309,11 @@ mod tests {
         let mut arguments = HashMap::new();
         arguments.insert("path".to_string(), "test.txt".to_string());
 
-        tui.handle_event(Event::ReceivedToolResponse(
-            tool_response.clone(),
-            tool_name,
-            arguments,
-        ));
+        tui.handle_event(Event::ReceivedToolResponse {
+            tool_name: tool_name.clone(),
+            response: tool_response.clone(),
+            parameters: arguments.clone(),
+        });
 
         assert_eq!(tui.state.messages.len(), 1);
         match &tui.state.messages[0] {
