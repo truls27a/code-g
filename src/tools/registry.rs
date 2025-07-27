@@ -220,7 +220,7 @@ impl Registry {
     /// assert_eq!(registry.len(), 0);
     ///
     /// let registry = Registry::all_tools();
-    /// assert_eq!(registry.len(), 4);
+    /// assert_eq!(registry.len(), 5);
     /// ```
     pub fn len(&self) -> usize {
         self.tools.len()

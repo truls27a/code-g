@@ -24,6 +24,10 @@ impl ToolFormatter {
                 let path = arguments.get("path").unwrap_or(&"".to_string()).clone();
                 Status::EditingFile { path }
             }
+            "execute_command" => {
+                let command = arguments.get("command").unwrap_or(&"".to_string()).clone();
+                Status::ExecutingCommand { command }
+            }
             _ => Status::ExecutingTool {
                 tool_name: tool_name.to_string(),
             },
@@ -64,6 +68,10 @@ impl ToolFormatter {
                     let path = arguments.get("path").unwrap_or(&"".to_string()).clone();
                     format!("Edited {} lines in {}", content.lines().count(), path)
                 }
+                "execute_command" => {
+                    let command = arguments.get("command").unwrap_or(&"".to_string()).clone();
+                    format!("Executed command '{}'", command)
+                }
                 _ => format!("Tool '{}' completed", tool_name),
             };
             (summary, false)
@@ -85,6 +93,11 @@ impl ToolFormatter {
             }
             "search_files" => {
                 content.starts_with("Error") || content.contains("No files found matching pattern")
+            }
+            "execute_command" => {
+                content.starts_with("Command") && content.contains("failed with exit code")
+                    || content.starts_with("Failed to execute command")
+                    || content == "Command is required"
             }
             _ => content.starts_with("Error"),
         }
