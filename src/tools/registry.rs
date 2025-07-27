@@ -1,5 +1,6 @@
 use crate::openai::model::Tool as OpenAiTool;
 use crate::tools::edit_file::EditFile;
+use crate::tools::execute_command::ExecuteCommand;
 use crate::tools::read_file::ReadFile;
 use crate::tools::search_files::SearchFiles;
 use crate::tools::tool::Tool;
@@ -40,9 +41,9 @@ impl Registry {
     ///
     /// ```rust
     /// use code_g::tools::registry::Registry;
-    /// 
+    ///
     /// let registry = Registry::new();
-    /// 
+    ///
     /// assert_eq!(registry.len(), 0);
     /// ```
     pub fn new() -> Self {
@@ -61,10 +62,10 @@ impl Registry {
     /// use code_g::tools::registry::Registry;
     /// use code_g::tools::read_file::ReadFile;
     /// use code_g::tools::tool::Tool;
-    /// 
+    ///
     /// let tools: Vec<Box<dyn Tool>> = vec![Box::new(ReadFile)];
     /// let registry = Registry::from(tools);
-    /// 
+    ///
     /// assert_eq!(registry.len(), 1);
     /// ```
     pub fn from(tools: Vec<Box<dyn Tool>>) -> Self {
@@ -80,9 +81,9 @@ impl Registry {
     ///
     /// ```rust
     /// use code_g::tools::registry::Registry;
-    /// 
+    ///
     /// let registry = Registry::read_only_tools();
-    /// 
+    ///
     /// assert_eq!(registry.len(), 2);
     /// ```
     pub fn read_only_tools() -> Self {
@@ -90,19 +91,19 @@ impl Registry {
         Self { tools }
     }
 
-    /// Creates a Registry with all available tools (read-only + write file + edit file).
+    /// Creates a Registry with all available tools (read-only + write file + edit file + execute command).
     ///
-    /// This includes ReadFile, SearchFiles, WriteFile, and EditFile tools, providing
-    /// full filesystem access capabilities.
+    /// This includes ReadFile, SearchFiles, WriteFile, EditFile, and ExecuteCommand tools, providing
+    /// full filesystem access and command execution capabilities.
     ///
     /// # Examples
     ///
     /// ```rust
     /// use code_g::tools::registry::Registry;
-    /// 
+    ///
     /// let registry = Registry::all_tools();
-    /// 
-    /// assert_eq!(registry.len(), 4);
+    ///
+    /// assert_eq!(registry.len(), 5);
     /// ```
     pub fn all_tools() -> Self {
         let tools: Vec<Box<dyn Tool>> = vec![
@@ -110,6 +111,7 @@ impl Registry {
             Box::new(SearchFiles),
             Box::new(WriteFile),
             Box::new(EditFile),
+            Box::new(ExecuteCommand),
         ];
         Self { tools }
     }
@@ -138,11 +140,11 @@ impl Registry {
     /// ```rust
     /// use code_g::tools::registry::Registry;
     /// use std::collections::HashMap;
-    /// 
+    ///
     /// let registry = Registry::all_tools();
     /// let mut args = HashMap::new();
     /// args.insert("path".to_string(), "example.txt".to_string());
-    /// 
+    ///
     /// let result = registry.call_tool("read_file", args);
     /// ```
     pub fn call_tool(
@@ -168,10 +170,10 @@ impl Registry {
     ///
     /// ```rust
     /// use code_g::tools::registry::Registry;
-    /// 
+    ///
     /// let registry = Registry::all_tools();
     /// let tools = registry.get_tools();
-    /// 
+    ///
     /// println!("Registry contains {} tools", tools.len());
     /// ```
     pub fn get_tools(&self) -> &[Box<dyn Tool>] {
@@ -191,7 +193,7 @@ impl Registry {
     ///
     /// ```rust
     /// use code_g::tools::registry::Registry;
-    /// 
+    ///
     /// let registry = Registry::all_tools();
     /// let openai_tools = registry.to_openai_tools();
     /// // Use openai_tools with OpenAI API
@@ -213,7 +215,7 @@ impl Registry {
     ///
     /// ```rust
     /// use code_g::tools::registry::Registry;
-    /// 
+    ///
     /// let registry = Registry::new();
     /// assert_eq!(registry.len(), 0);
     ///
@@ -265,7 +267,7 @@ mod tests {
     #[test]
     fn all_tools_creates_a_tool_registry_with_all_tools() {
         let registry = Registry::all_tools();
-        assert_eq!(registry.len(), 4);
+        assert_eq!(registry.len(), 5);
 
         let tool_names: Vec<String> = registry.get_tools().iter().map(|t| t.name()).collect();
         assert_eq!(
@@ -274,7 +276,8 @@ mod tests {
                 "read_file".to_string(),
                 "search_files".to_string(),
                 "write_file".to_string(),
-                "edit_file".to_string()
+                "edit_file".to_string(),
+                "execute_command".to_string()
             ]
         );
     }
