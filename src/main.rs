@@ -5,6 +5,13 @@ use code_g::tools::registry::Registry;
 use code_g::tui::tui::Tui;
 use std::env;
 
+// Entry point for the CodeG terminal chat application.
+//
+// Initializes the chat session and TUI.
+// Responsible for starting the async runtime and wiring
+// together the OpenAI client, tools, and TUI renderer.
+//
+// Panics if required environment variables (e.g. OPENAI_API_KEY) are missing.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_key = env::var("OPENAI_API_KEY")?;
