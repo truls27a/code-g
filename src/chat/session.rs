@@ -6,6 +6,7 @@ use crate::openai::client::OpenAIClient;
 use crate::openai::error::OpenAIError;
 use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
 use crate::tools::registry::Registry;
+use std::collections::HashMap;
 
 // Maximum number of iterations per message to prevent infinite loops
 const MAX_ITERATIONS: usize = 10;
@@ -78,6 +79,51 @@ impl ChatSession {
             tools,
             event_handler,
         }
+    }
+
+    /// Requests user approval for a potentially dangerous operation.
+    ///
+    /// This method prompts the user to approve or decline the execution of a tool
+    /// that could modify the filesystem or execute system commands.
+    ///
+    /// # Arguments
+    ///
+    /// * `tool_name` - The name of the tool requiring approval
+    /// * `parameters` - The parameters being passed to the tool
+    ///
+    /// # Returns
+    ///
+    /// `true` if the user approved the operation, `false` if declined.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChatSessionError`] if the approval request fails.
+    fn request_approval(
+        &mut self,
+        tool_name: &str,
+        parameters: &HashMap<String, String>,
+    ) -> Result<bool, ChatSessionError> {
+        let (operation, details) = if let Some(tool) = self.tools.get_tool(tool_name) {
+            tool.approval_message(parameters)
+        } else {
+            (
+                "Unknown Operation".to_string(),
+                format!("Tool: {}", tool_name),
+            )
+        };
+
+        let response = self
+            .event_handler
+            .handle_action(Action::RequestUserApproval {
+                operation,
+                details,
+                tool_name: tool_name.to_string(),
+            })
+            .map_err(|e| {
+                ChatSessionError::ToolError(format!("Failed to request approval: {}", e))
+            })?;
+
+        Ok(response == "approved")
     }
 
     /// Sends a message to the AI assistant and returns the response.
@@ -186,11 +232,44 @@ impl ChatSession {
                             parameters: tool_call.arguments.clone(),
                         });
 
-                        // 6.2.2 Call the tool
-                        let tool_response = self
+                        // 6.2.2 Check if tool requires approval and request if needed
+                        let tool_response = if self
                             .tools
-                            .call_tool(tool_call.name.as_str(), tool_call.arguments.clone())
-                            .unwrap_or_else(|e| e);
+                            .get_tool(&tool_call.name)
+                            .map(|tool| tool.requires_approval())
+                            .unwrap_or(false)
+                        {
+                            match self.request_approval(&tool_call.name, &tool_call.arguments) {
+                                Ok(true) => {
+                                    // User approved, proceed with tool execution
+                                    self.tools
+                                        .call_tool(
+                                            tool_call.name.as_str(),
+                                            tool_call.arguments.clone(),
+                                        )
+                                        .unwrap_or_else(|e| e)
+                                }
+                                Ok(false) => {
+                                    // User declined, return cancellation message
+                                    format!(
+                                        "Operation cancelled by user: {} with parameters {:?}",
+                                        tool_call.name, tool_call.arguments
+                                    )
+                                }
+                                Err(e) => {
+                                    // Error requesting approval
+                                    format!(
+                                        "Failed to request approval for {}: {}",
+                                        tool_call.name, e
+                                    )
+                                }
+                            }
+                        } else {
+                            // Tool doesn't require approval, execute directly
+                            self.tools
+                                .call_tool(tool_call.name.as_str(), tool_call.arguments.clone())
+                                .unwrap_or_else(|e| e)
+                        };
 
                         // 6.2.3 Add tool response to memory
                         self.memory.add_message(ChatMessage::Tool {
@@ -374,6 +453,10 @@ mod tests {
                         Ok("exit".to_string())
                     }
                 }
+                Action::RequestUserApproval { .. } => {
+                    // For tests, always approve
+                    Ok("approved".to_string())
+                }
             }
         }
     }
@@ -534,6 +617,15 @@ mod tests {
 
             fn strict(&self) -> bool {
                 true
+            }
+
+            fn requires_approval(&self) -> bool {
+                false
+            }
+
+            fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+                let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+                ("Read File".to_string(), format!("File: {}", path))
             }
 
             fn call(&self, _args: HashMap<String, String>) -> Result<String, String> {
@@ -799,5 +891,62 @@ mod tests {
         // After exhausting responses, should return "exit"
         let response3 = mock_handler.handle_action(Action::RequestUserInput);
         assert_eq!(response3.unwrap(), "exit");
+    }
+
+    #[test]
+    fn requires_approval_identifies_dangerous_tools() {
+        let registry = Registry::all_tools();
+
+        // Dangerous tools should require approval
+        assert!(registry.get_tool("edit_file").unwrap().requires_approval());
+        assert!(registry.get_tool("write_file").unwrap().requires_approval());
+        assert!(
+            registry
+                .get_tool("execute_command")
+                .unwrap()
+                .requires_approval()
+        );
+
+        // Safe tools should not require approval
+        assert!(!registry.get_tool("read_file").unwrap().requires_approval());
+        assert!(
+            !registry
+                .get_tool("search_files")
+                .unwrap()
+                .requires_approval()
+        );
+    }
+
+    #[test]
+    fn request_approval_returns_true_when_approved() {
+        let openai_client = OpenAIClient::new("test_key".to_string());
+        let event_handler = Box::new(MockEventHandler::new());
+        let mut chat_session = ChatSession::new(
+            openai_client,
+            Registry::new(),
+            event_handler,
+            SystemPromptConfig::None,
+        );
+
+        let mut parameters = HashMap::new();
+        parameters.insert("path".to_string(), "test.txt".to_string());
+        parameters.insert("content".to_string(), "Hello world".to_string());
+
+        let result = chat_session.request_approval("write_file", &parameters);
+        assert!(result.is_ok());
+        assert!(result.unwrap()); // MockEventHandler always approves
+    }
+
+    #[test]
+    fn event_handler_handles_approval_requests() {
+        let mut mock_handler = MockEventHandler::new();
+
+        let response = mock_handler.handle_action(Action::RequestUserApproval {
+            operation: "Edit File".to_string(),
+            details: "File: test.txt\nReplace: old\nWith: new".to_string(),
+            tool_name: "edit_file".to_string(),
+        });
+
+        assert_eq!(response.unwrap(), "approved");
     }
 }

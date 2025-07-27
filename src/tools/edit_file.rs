@@ -105,6 +105,37 @@ impl Tool for EditFile {
         true
     }
 
+    /// Returns whether this tool requires user approval before execution.
+    ///
+    /// # Returns
+    ///
+    /// Always returns true, as editing files modifies the filesystem.
+    fn requires_approval(&self) -> bool {
+        true
+    }
+
+    /// Generates the approval message for this tool with the given arguments.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing (operation_name, details) for display to the user.
+    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+        let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+        let old_string = args.get("old_string").map(|s| s.as_str()).unwrap_or("");
+        let new_string = args.get("new_string").map(|s| s.as_str()).unwrap_or("");
+        (
+            "Edit File".to_string(),
+            format!(
+                "File: {}\nReplace: {:?}\nWith: {:?}",
+                path, old_string, new_string
+            ),
+        )
+    }
+
     /// Executes the file editing operation.
     ///
     /// Reads the specified file, finds the exact occurrence of the old string,

@@ -57,6 +57,12 @@ pub enum Event {
 pub enum Action {
     /// Request input from the user
     RequestUserInput,
+    /// Request user approval for a potentially dangerous operation
+    RequestUserApproval {
+        operation: String,
+        details: String,
+        tool_name: String,
+    },
 }
 
 /// Trait for handling chat session events and actions.

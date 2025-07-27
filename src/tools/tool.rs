@@ -38,6 +38,14 @@ use std::collections::HashMap;
 ///         true
 ///     }
 ///
+///     fn requires_approval(&self) -> bool {
+///         false
+///     }
+///
+///     fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+///         ("Simple Tool".to_string(), "Running my_tool".to_string())
+///     }
+///
 ///     fn call(&self, args: HashMap<String, String>) -> Result<String, String> {
 ///         // Implement the tool's logic here
 ///         Ok("Tool executed successfully".to_string())
@@ -85,6 +93,31 @@ pub trait Tool {
     ///
     /// `true` if strict validation is required, `false` otherwise.
     fn strict(&self) -> bool;
+
+    /// Returns whether the tool requires user approval before execution.
+    ///
+    /// Tools that modify the filesystem or execute system commands should
+    /// require user approval to prevent potentially dangerous operations.
+    ///
+    /// # Returns
+    ///
+    /// `true` if user approval is required, `false` otherwise.
+    fn requires_approval(&self) -> bool;
+
+    /// Generates the approval message for this tool with the given arguments.
+    ///
+    /// This method creates a user-friendly description of what the tool will do
+    /// when executed with the provided arguments. It returns a tuple containing
+    /// the operation name and detailed description.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing (operation_name, details) for display to the user.
+    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String);
 
     /// Executes the tool with the provided arguments.
     ///

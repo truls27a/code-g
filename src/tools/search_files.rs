@@ -87,6 +87,32 @@ impl Tool for SearchFiles {
         true
     }
 
+    /// Returns whether this tool requires user approval before execution.
+    ///
+    /// # Returns
+    ///
+    /// Always returns false, as searching files is a safe, read-only operation.
+    fn requires_approval(&self) -> bool {
+        false
+    }
+
+    /// Generates the approval message for this tool with the given arguments.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing (operation_name, details) for display to the user.
+    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+        let pattern = args.get("pattern").map(|s| s.as_str()).unwrap_or("unknown");
+        (
+            "Search Files".to_string(),
+            format!("Pattern: {}", pattern),
+        )
+    }
+
     /// Executes the file search operation with the provided arguments.
     ///
     /// Searches recursively from the current directory for files matching the

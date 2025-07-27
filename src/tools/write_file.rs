@@ -89,6 +89,38 @@ impl Tool for WriteFile {
         true
     }
 
+    /// Returns whether this tool requires user approval before execution.
+    ///
+    /// # Returns
+    ///
+    /// Always returns true, as writing files modifies the filesystem.
+    fn requires_approval(&self) -> bool {
+        true
+    }
+
+    /// Generates the approval message for this tool with the given arguments.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing (operation_name, details) for display to the user.
+    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+        let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+        let content = args.get("content").map(|s| s.as_str()).unwrap_or("");
+        let content_preview = if content.len() > 100 {
+            format!("{}...", &content[..100])
+        } else {
+            content.to_string()
+        };
+        (
+            "Write File".to_string(),
+            format!("File: {}\nContent: {}", path, content_preview),
+        )
+    }
+
     /// Executes the write file operation with the provided arguments.
     ///
     /// Creates a new file or overwrites an existing file at the specified path

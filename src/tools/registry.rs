@@ -180,6 +180,30 @@ impl Registry {
         &self.tools
     }
 
+    /// Returns a reference to a tool by name if it exists in the registry.
+    ///
+    /// # Arguments
+    ///
+    /// * `tool_name` - The name of the tool to find.
+    ///
+    /// # Returns
+    ///
+    /// An `Option` containing a reference to the tool if found, or `None` if not found.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tools::registry::Registry;
+    ///
+    /// let registry = Registry::all_tools();
+    /// if let Some(tool) = registry.get_tool("read_file") {
+    ///     println!("Tool requires approval: {}", tool.requires_approval());
+    /// }
+    /// ```
+    pub fn get_tool(&self, tool_name: &str) -> Option<&Box<dyn Tool>> {
+        self.tools.iter().find(|t| t.name() == tool_name)
+    }
+
     /// Converts all tools in the registry to OpenAI-compatible tool format.
     ///
     /// This is useful when integrating with OpenAI's function calling capabilities,

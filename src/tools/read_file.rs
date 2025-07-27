@@ -80,6 +80,32 @@ impl Tool for ReadFile {
         true
     }
 
+    /// Returns whether this tool requires user approval before execution.
+    ///
+    /// # Returns
+    ///
+    /// Always returns false, as reading files is a safe operation.
+    fn requires_approval(&self) -> bool {
+        false
+    }
+
+    /// Generates the approval message for this tool with the given arguments.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing (operation_name, details) for display to the user.
+    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+        let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+        (
+            "Read File".to_string(),
+            format!("File: {}", path),
+        )
+    }
+
     /// Executes the read file operation with the provided arguments.
     ///
     /// Reads the entire content of the file at the specified path and returns

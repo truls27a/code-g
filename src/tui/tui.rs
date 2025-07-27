@@ -9,15 +9,15 @@ use std::io::{self, BufRead, Write};
 /// The `Tui` struct is responsible for managing the visual presentation and user interaction
 /// layer of the [`ChatSession`]. It acts as a bridge between the chat logic and the terminal,
 /// handling both input from the user and output rendering to the screen.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```rust
 /// use code_g::tui::tui::Tui;
 /// use code_g::chat::event::{Event, EventHandler};
-/// 
+///
 /// let mut tui = Tui::new();
-/// 
+///
 /// tui.handle_event(Event::SessionStarted);
 /// tui.handle_event(Event::ReceivedUserMessage { message: "Hello, how are you?".to_string() });
 /// tui.handle_event(Event::AwaitingAssistantResponse);
@@ -26,7 +26,7 @@ use std::io::{self, BufRead, Write};
 /// ```
 ///
 /// # Notes
-/// 
+///
 /// - The TUI is designed to easily replace with a web UI or other UI layer by implementing the [`EventHandler`] trait
 /// - The TUI is designed to be used in conjunction with a [`ChatSession`]
 pub struct Tui {
@@ -47,17 +47,17 @@ impl EventHandler for Tui {
     ///
     /// After processing each event, the entire terminal is cleared and re-rendered to ensure
     /// a consistent display state.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// - `event`: [`Event`] The event to handle
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```rust
     /// use code_g::tui::tui::Tui;
     /// use code_g::chat::event::{Event, EventHandler};
-    /// 
+    ///
     /// let mut tui = Tui::new();
     ///
     /// tui.handle_event(Event::SessionStarted);
@@ -77,11 +77,18 @@ impl EventHandler for Tui {
             Event::ReceivedAssistantMessage { message } => {
                 self.state.add_assistant_message(message);
             }
-            Event::ReceivedToolCall { tool_name, parameters } => {
+            Event::ReceivedToolCall {
+                tool_name,
+                parameters,
+            } => {
                 let status = ToolFormatter::create_status(&tool_name, &parameters);
                 self.state.set_status(Some(status));
             }
-            Event::ReceivedToolResponse { tool_name, response, parameters } => {
+            Event::ReceivedToolResponse {
+                tool_name,
+                response,
+                parameters,
+            } => {
                 let (summary, is_error) =
                     ToolFormatter::create_summary(&response, &tool_name, parameters);
                 self.state.add_tool_response(summary, is_error);
@@ -100,47 +107,52 @@ impl EventHandler for Tui {
     ///   and returns the trimmed input string
     ///
     /// # Arguments
-    /// 
+    ///
     /// - `action`: [`Action`] The action to handle
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// - `String` The user input
-    /// 
+    ///
     /// # Errors
     /// Returns `io::Error` if reading from stdin fails or if terminal cursor
     /// operations cannot be performed.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```rust, no_run
     /// use code_g::tui::tui::Tui;
     /// use code_g::chat::event::{Action, EventHandler};
-    /// 
+    ///
     /// let mut tui = Tui::new();
-    /// 
+    ///
     /// let result = tui.handle_action(Action::RequestUserInput); // This will block until user input is provided
     /// assert_eq!(result.unwrap(), "Hello, how are you?");
     /// ```
     fn handle_action(&mut self, action: Action) -> Result<String, io::Error> {
         match action {
             Action::RequestUserInput => self.read_user_input(),
+            Action::RequestUserApproval {
+                operation,
+                details,
+                tool_name: _,
+            } => self.request_user_approval(&operation, &details),
         }
     }
 }
 
 impl Tui {
     /// Create a new TUI.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// - `Tui` The new TUI instance
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```rust
     /// use code_g::tui::tui::Tui;
-    /// 
+    ///
     /// let tui = Tui::new();
     /// ```
     pub fn new() -> Self {
@@ -191,6 +203,41 @@ impl Tui {
         io::stdout().flush()?;
 
         Ok(input.trim().to_string())
+    }
+
+    fn request_user_approval(
+        &mut self,
+        operation: &str,
+        details: &str,
+    ) -> Result<String, io::Error> {
+        // Save current cursor position and move to bottom to show approval prompt
+        print!("{}", TerminalFormatter::save_cursor());
+        print!("{}", TerminalFormatter::move_to_bottom());
+
+        // Display approval prompt
+        writeln!(self.writer)?;
+        writeln!(self.writer, "⚠️  Permission Required ⚠️")?;
+        writeln!(self.writer, "Operation: {}", operation)?;
+        writeln!(self.writer, "Details: {}", details)?;
+        writeln!(self.writer)?;
+        print!("[A]pprove / [D]ecline: ");
+        io::stdout().flush()?;
+
+        // Capture the user's response
+        let mut input = String::new();
+        self.reader.read_line(&mut input)?;
+        let response = input.trim().to_lowercase();
+
+        // Clear the approval prompt and restore cursor position
+        print!("{}", TerminalFormatter::move_to_bottom_and_clear());
+        print!("{}", TerminalFormatter::restore_cursor());
+        io::stdout().flush()?;
+
+        // Return "approved" or "declined" based on user input
+        match response.as_str() {
+            "a" | "approve" | "y" | "yes" => Ok("approved".to_string()),
+            _ => Ok("declined".to_string()),
+        }
     }
 
     fn render_message(&mut self, message: &Message) -> Result<(), io::Error> {
@@ -279,7 +326,9 @@ mod tests {
         let mut tui = Tui::new();
 
         let message = "Hello, how are you?".to_string();
-        tui.handle_event(Event::ReceivedUserMessage { message: message.clone() });
+        tui.handle_event(Event::ReceivedUserMessage {
+            message: message.clone(),
+        });
 
         assert_eq!(tui.state.messages.len(), 1);
         match &tui.state.messages[0] {
@@ -293,7 +342,9 @@ mod tests {
         let mut tui = Tui::new();
 
         let message = "I'm doing well, thank you!".to_string();
-        tui.handle_event(Event::ReceivedAssistantMessage { message: message.clone() });
+        tui.handle_event(Event::ReceivedAssistantMessage {
+            message: message.clone(),
+        });
 
         assert_eq!(tui.state.messages.len(), 1);
         match &tui.state.messages[0] {
@@ -462,9 +513,13 @@ mod tests {
 
         // Simulate a complete interaction sequence
         tui.handle_event(Event::SessionStarted);
-        tui.handle_event(Event::ReceivedUserMessage { message: "Hello".to_string() });
+        tui.handle_event(Event::ReceivedUserMessage {
+            message: "Hello".to_string(),
+        });
         tui.handle_event(Event::AwaitingAssistantResponse);
-        tui.handle_event(Event::ReceivedAssistantMessage { message: "Hi there!".to_string() });
+        tui.handle_event(Event::ReceivedAssistantMessage {
+            message: "Hi there!".to_string(),
+        });
 
         assert_eq!(tui.state.messages.len(), 2);
         assert!(tui.state.current_status.is_none()); // Should be cleared after assistant message
@@ -478,7 +533,9 @@ mod tests {
         tui.handle_event(Event::AwaitingAssistantResponse);
         assert!(tui.state.current_status.is_some());
 
-        tui.handle_event(Event::ReceivedUserMessage { message: "test".to_string() });
+        tui.handle_event(Event::ReceivedUserMessage {
+            message: "test".to_string(),
+        });
         assert!(tui.state.current_status.is_none());
     }
 }

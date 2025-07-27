@@ -84,6 +84,32 @@ impl Tool for ExecuteCommand {
         true
     }
 
+    /// Returns whether this tool requires user approval before execution.
+    ///
+    /// # Returns
+    ///
+    /// Always returns true, as executing commands can potentially modify the system.
+    fn requires_approval(&self) -> bool {
+        true
+    }
+
+    /// Generates the approval message for this tool with the given arguments.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing (operation_name, details) for display to the user.
+    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+        let command = args.get("command").map(|s| s.as_str()).unwrap_or("unknown");
+        (
+            "Execute Command".to_string(),
+            format!("Command: {}", command),
+        )
+    }
+
     /// Executes the shell command and returns its output.
     ///
     /// Runs the specified command using the system shell and captures both
