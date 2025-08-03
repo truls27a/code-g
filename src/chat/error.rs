@@ -1,4 +1,4 @@
-use crate::openai::error::OpenAIError;
+use crate::chat_session::error::OpenAIError;
 use thiserror::Error;
 
 /// Represents different strategies for handling chat session errors.

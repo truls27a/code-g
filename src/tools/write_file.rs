@@ -1,4 +1,4 @@
-use crate::openai::model::{Parameters, Property};
+use crate::chat_session::model::{Parameters, Property};
 use crate::tools::tool::Tool;
 use std::collections::HashMap;
 use std::fs;

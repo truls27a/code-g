@@ -2,9 +2,9 @@ use crate::chat::error::{ChatSessionError, ChatSessionErrorHandling};
 use crate::chat::event::{Action, Event, EventHandler};
 use crate::chat::memory::ChatMemory;
 use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
-use crate::openai::error::OpenAIError;
-use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
-use crate::openai::traits::ChatClient;
+use crate::chat_session::error::OpenAIError;
+use crate::chat_session::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
+use crate::chat_session::traits::ChatClient;
 use crate::tools::registry::Registry;
 use std::collections::HashMap;
 
@@ -403,7 +403,7 @@ impl ChatSession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::openai::client::OpenAIClient;
+    use crate::chat_session::client::OpenAIClient;
     use std::collections::HashMap;
     use std::io;
 

@@ -1,4 +1,4 @@
-use crate::openai::model::{AssistantMessage, ChatMessage, OpenAiModel, Tool, ToolCall, ToolType};
+use crate::chat_session::model::{AssistantMessage, ChatMessage, OpenAiModel, Tool, ToolCall, ToolType};
 use serde::de::Error;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;

@@ -1,4 +1,4 @@
-use crate::openai::model::ChatMessage;
+use crate::chat_session::model::ChatMessage;
 
 /// A storage container for managing chat conversation history.
 ///
