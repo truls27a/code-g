@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::chat_client::providers::openai::model::OpenAiModel;
 
-// Chat
 /// Represents the result of a chat completion operation.
 ///
 /// This enum encapsulates the two possible outcomes of a chat completion:
@@ -117,43 +117,26 @@ pub enum AssistantMessage {
     ToolCalls(Vec<ToolCall>),
 }
 
-// Model
-/// Represents the available OpenAI models for chat completions.
+/// Represents the model used for chat completions.
 ///
-/// This enum defines the different OpenAI models that can be used for chat
-/// completions, each with different capabilities, performance characteristics,
-/// and pricing. The enum uses serde renaming to match the exact model names
-/// expected by the OpenAI API.
+/// This enum encapsulates the different models that can be used for chat
+/// completions, currently supporting only OpenAI models. It provides a
+/// unified interface for working with different AI providers and their
+/// model configurations.
 ///
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat_client::model::OpenAiModel;
+/// use code_g::chat_client::model::Model;
+/// use code_g::chat_client::providers::openai::model::OpenAiModel;
 ///
-/// let model = OpenAiModel::Gpt4o;
-/// let mini_model = OpenAiModel::Gpt4oMini;
-/// let latest_model = OpenAiModel::GptO3;
+/// let model = Model::OpenAi(OpenAiModel::Gpt4o);
 /// ```
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub enum OpenAiModel {
-    /// GPT-4o - Latest high-performance model with vision capabilities
-    #[serde(rename = "gpt-4o")]
-    Gpt4o,
-    /// GPT-4o Mini - Smaller, faster, and more cost-effective variant
-    #[serde(rename = "gpt-4o-mini")]
-    Gpt4oMini,
-    /// GPT-o3 - Next-generation model with enhanced reasoning capabilities
-    #[serde(rename = "gpt-o3")]
-    GptO3,
-    /// GPT-o4 Mini - Compact version of the o4 model family
-    #[serde(rename = "gpt-o4-mini")]
-    GptO4Mini,
-    /// GPT-o4 Mini High - High-performance variant of the o4 mini model
-    #[serde(rename = "gpt-o4-mini-high")]
-    GptO4MiniHigh,
+pub enum Model {
+    OpenAi(OpenAiModel),
 }
 
-// Tool
 /// Represents a tool or function available to the assistant.
 ///
 /// This struct defines a tool that the OpenAI assistant can call during

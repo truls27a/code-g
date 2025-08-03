@@ -1,5 +1,5 @@
 use crate::chat_client::error::ChatClientError;
-use crate::chat_client::model::{ChatMessage, ChatResult, OpenAiModel, Tool};
+use crate::chat_client::model::{ChatMessage, ChatResult, Model, Tool};
 use async_trait::async_trait;
 
 /// Trait defining the interface for chat completion clients.
@@ -12,7 +12,7 @@ use async_trait::async_trait;
 ///
 /// ```rust
 /// use code_g::chat_client::traits::ChatClient;
-/// use code_g::chat_client::model::{ChatMessage, ChatResult, OpenAiModel, Tool};
+/// use code_g::chat_client::model::{ChatMessage, ChatResult, Model, Tool};
 /// use code_g::chat_client::error::ChatClientError;
 /// use async_trait::async_trait;
 /// 
@@ -22,7 +22,7 @@ use async_trait::async_trait;
 /// impl ChatClient for MockClient {
 ///     async fn create_chat_completion(
 ///         &self,
-///         model: &OpenAiModel,
+///         model: &Model,
 ///         chat_history: &[ChatMessage],
 ///         tools: &[Tool],
 ///     ) -> Result<ChatResult, ChatClientError> {
@@ -57,7 +57,7 @@ pub trait ChatClient: Send + Sync {
     /// network errors, API errors, parsing errors, etc.
     async fn create_chat_completion(
         &self,
-        model: &OpenAiModel,
+        model: &Model,
         chat_history: &[ChatMessage],
         tools: &[Tool],
     ) -> Result<ChatResult, ChatClientError>;

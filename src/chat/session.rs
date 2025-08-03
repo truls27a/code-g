@@ -3,8 +3,9 @@ use crate::chat::event::{Action, Event, EventHandler};
 use crate::chat::memory::ChatMemory;
 use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use crate::chat_client::error::{ChatClientError, ErrorRetryStrategy};
-use crate::chat_client::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
+use crate::chat_client::model::{AssistantMessage, ChatMessage, ChatResult, Model};
 use crate::chat_client::traits::ChatClient;
+use crate::chat_client::providers::openai::model::OpenAiModel;
 use crate::tools::registry::Registry;
 use std::collections::HashMap;
 
@@ -178,7 +179,7 @@ impl ChatSession {
             let response = match self
                 .client
                 .create_chat_completion(
-                    &OpenAiModel::Gpt4oMini, // TODO: Make this configurable
+                    &Model::OpenAi(OpenAiModel::Gpt4oMini), // TODO: Make this configurable
                     &self.memory.get_memory(),
                     &self.tools.to_openai_tools(),
                 )

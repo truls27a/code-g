@@ -1,5 +1,5 @@
 use crate::chat_client::error::ChatClientError;
-use crate::chat_client::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
+use crate::chat_client::model::{ChatMessage, ChatResult, Model, Tool, ToolCall};
 use crate::chat_client::providers::openai::error::OpenAIError;
 use crate::chat_client::traits::ChatClient;
 use async_trait::async_trait;
@@ -15,7 +15,8 @@ use async_trait::async_trait;
 ///
 /// ```rust
 /// use code_g::chat_client::mock::MockChatClient;
-/// use code_g::chat_client::model::{ChatResult, OpenAiModel, ChatMessage};
+/// use code_g::chat_client::model::{ChatResult, ChatMessage};
+/// use code_g::chat_client::providers::openai::model::OpenAiModel;
 /// use code_g::chat_client::traits::ChatClient;
 /// use tokio::runtime::Runtime;
 ///
@@ -26,7 +27,7 @@ use async_trait::async_trait;
 /// let rt = Runtime::new().unwrap();
 /// rt.block_on(async {
 ///     let result = mock.create_chat_completion(
-///         &OpenAiModel::Gpt4oMini,
+///         &Model::OpenAi(OpenAiModel::Gpt4oMini),
 ///         &[ChatMessage::User { content: "Hi".to_string() }],
 ///         &[],
 ///     ).await.unwrap();
@@ -154,7 +155,7 @@ impl MockChatClient {
 impl ChatClient for MockChatClient {
     async fn create_chat_completion(
         &self,
-        _model: &OpenAiModel,
+        _model: &Model,
         _chat_history: &[ChatMessage],
         _tools: &[Tool],
     ) -> Result<ChatResult, ChatClientError> {
@@ -174,7 +175,8 @@ impl ChatClient for MockChatClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chat_client::model::{ChatMessage, OpenAiModel};
+    use crate::chat_client::model::{ChatMessage, Model};
+    use crate::chat_client::providers::openai::model::OpenAiModel;
     use std::collections::HashMap;
 
     #[tokio::test]
@@ -183,7 +185,7 @@ mod tests {
 
         let result = mock
             .create_chat_completion(
-                &OpenAiModel::Gpt4oMini,
+                &Model::OpenAi(OpenAiModel::Gpt4oMini),
                 &[ChatMessage::User {
                     content: "Hello".to_string(),
                 }],
@@ -216,7 +218,7 @@ mod tests {
 
         let result = mock
             .create_chat_completion(
-                &OpenAiModel::Gpt4oMini,
+                &Model::OpenAi(OpenAiModel::Gpt4oMini),
                 &[ChatMessage::User {
                     content: "Hello".to_string(),
                 }],
@@ -240,7 +242,7 @@ mod tests {
 
         let result = mock
             .create_chat_completion(
-                &OpenAiModel::Gpt4oMini,
+                &Model::OpenAi(OpenAiModel::Gpt4oMini),
                 &[ChatMessage::User {
                     content: "Hello".to_string(),
                 }],
@@ -263,7 +265,7 @@ mod tests {
 
         let result = mock
             .create_chat_completion(
-                &OpenAiModel::Gpt4oMini,
+                &Model::OpenAi(OpenAiModel::Gpt4oMini),
                 &[ChatMessage::User {
                     content: "Hello".to_string(),
                 }],

@@ -1,6 +1,6 @@
 use crate::chat_client::error::ChatClientError;
 use crate::chat_client::providers::openai::error::OpenAIError;
-use crate::chat_client::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
+use crate::chat_client::model::{ChatMessage, ChatResult, Model, Tool, ToolCall};
 use crate::chat_client::providers::openai::schema::{
     ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest, ContentResponse, JsonSchema,
     ResponseFormat,
@@ -26,7 +26,8 @@ use std::collections::HashMap;
 ///
 /// ```rust,no_run
 /// use code_g::chat_client::providers::openai::client::OpenAIClient;
-/// use code_g::chat_client::model::{ChatMessage, OpenAiModel};
+/// use code_g::chat_client::model::{ChatMessage, Model};
+/// use code_g::chat_client::providers::openai::model::OpenAiModel;
 /// use code_g::chat_client::traits::ChatClient;
 /// use tokio::runtime::Runtime;
 ///
@@ -40,7 +41,7 @@ use std::collections::HashMap;
 ///
 /// let rt = Runtime::new().unwrap();
 /// let result = rt.block_on(client
-///     .create_chat_completion(&OpenAiModel::Gpt4oMini, &chat_history, &[]));
+///     .create_chat_completion(&Model::OpenAi(OpenAiModel::Gpt4oMini), &chat_history, &[]));
 /// ```
 pub struct OpenAIClient {
     client: Client,
@@ -115,7 +116,8 @@ impl ChatClient for OpenAIClient {
     ///
     /// ```rust,no_run
     /// use code_g::chat_client::providers::openai::client::OpenAIClient;
-    /// use code_g::chat_client::model::{ChatMessage, ChatResult, OpenAiModel};
+    /// use code_g::chat_client::model::{ChatMessage, ChatResult, Model};
+    /// use code_g::chat_client::providers::openai::model::OpenAiModel;
     /// use code_g::chat_client::traits::ChatClient;
     /// use tokio::runtime::Runtime;
     ///
@@ -132,7 +134,7 @@ impl ChatClient for OpenAIClient {
     ///
     /// let rt = Runtime::new().unwrap();
     /// match rt.block_on(client
-    ///     .create_chat_completion(&OpenAiModel::Gpt4oMini, &chat_history, &[]))
+    ///     .create_chat_completion(&Model::OpenAi(OpenAiModel::Gpt4oMini), &chat_history, &[]))
     /// {
     ///     Ok(ChatResult::Message { content, turn_over }) => {
     ///         println!("Assistant: {}", content);
@@ -148,7 +150,7 @@ impl ChatClient for OpenAIClient {
     /// ```
     async fn create_chat_completion(
         &self,
-        model: &OpenAiModel,
+        model: &Model,
         chat_history: &[ChatMessage],
         tools: &[Tool],
     ) -> Result<ChatResult, ChatClientError> {
@@ -157,7 +159,11 @@ impl ChatClient for OpenAIClient {
         }
 
         let request_body = ChatCompletionRequest {
-            model: model.clone(),
+            model: match model {
+                Model::OpenAi(model) => model.clone(),
+                // Unreachable for now, but we should handle other models in the future
+                _ => return Err(ChatClientError::InvalidModel),
+            },
             messages: chat_history
                 .iter()
                 .map(|m| ChatMessageRequest::try_from(m.clone()))
@@ -251,6 +257,7 @@ impl ChatClient for OpenAIClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::chat_client::providers::openai::model::OpenAiModel;
 
     #[test]
     fn new_creates_a_client_with_the_provided_api_key() {
@@ -261,14 +268,14 @@ mod tests {
     #[tokio::test]
     async fn create_chat_completion_returns_error_when_chat_history_is_empty() {
         let client = OpenAIClient::new("test-api-key".to_string());
-        let result = client.create_chat_completion(&OpenAiModel::Gpt4oMini, &[], &[]).await;
+        let result = client.create_chat_completion(&Model::OpenAi(OpenAiModel::Gpt4oMini), &[], &[]).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn create_chat_completion_returns_error_when_api_key_is_invalid() {
         let client = OpenAIClient::new("invalid-api-key".to_string());
-        let result = client.create_chat_completion(&OpenAiModel::Gpt4oMini, &[], &[]).await;
+        let result = client.create_chat_completion(&Model::OpenAi(OpenAiModel::Gpt4oMini), &[], &[]).await;
         assert!(result.is_err());
     }
 }
