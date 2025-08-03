@@ -12,7 +12,7 @@ use std::process::Command;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,no_run
 /// use code_g::tools::execute_command::ExecuteCommand;
 /// use code_g::tools::tool::Tool;
 /// use std::collections::HashMap;

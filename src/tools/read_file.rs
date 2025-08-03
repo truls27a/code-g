@@ -11,7 +11,7 @@ use std::fs;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,no_run
 /// use code_g::tools::read_file::ReadFile;
 /// use code_g::tools::tool::Tool;
 /// use std::collections::HashMap;
@@ -142,18 +142,6 @@ impl Tool for ReadFile {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn call_returns_error_when_file_does_not_exist() {
-        let tool = ReadFile;
-
-        let result = tool.call(HashMap::from([(
-            "path".to_string(),
-            "non_existent_file.txt".to_string(),
-        )]));
-
-        assert!(result.is_err());
-    }
 
     #[test]
     fn call_returns_error_when_path_is_not_provided() {

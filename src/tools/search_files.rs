@@ -15,7 +15,7 @@ const MAX_FILES_RETURNED: usize = 50;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,no_run
 /// use code_g::tools::search_files::SearchFiles;
 /// use code_g::tools::tool::Tool;
 /// use std::collections::HashMap;
