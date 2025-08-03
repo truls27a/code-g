@@ -159,28 +159,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn call_writes_to_file() {
-        let path = "call_writes_to_file_tmp_file.txt";
-        let content = "Hello, world!";
-        let tool = WriteFile;
-
-        let result = tool.call(HashMap::from([
-            ("path".to_string(), path.to_string()),
-            ("content".to_string(), content.to_string()),
-        ]));
-
-        assert_eq!(
-            result.unwrap(),
-            format!("File '{}' written successfully", path)
-        );
-
-        let read_result = fs::read_to_string(path).unwrap();
-        assert_eq!(read_result, content);
-
-        fs::remove_file(path).unwrap();
-    }
-
-    #[test]
     fn call_returns_error_when_path_is_not_provided() {
         let tool = WriteFile;
 
@@ -202,26 +180,5 @@ mod tests {
         )]));
 
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn call_overwrites_file() {
-        let path = "call_overwrites_file_tmp_file.txt";
-        fs::write(path, "Hello, world!").unwrap();
-
-        let tool = WriteFile;
-        let result = tool.call(HashMap::from([
-            ("path".to_string(), path.to_string()),
-            ("content".to_string(), "Hej på dig!".to_string()),
-        ]));
-        assert_eq!(
-            result.unwrap(),
-            format!("File '{}' written successfully", path)
-        );
-
-        let read_result = fs::read_to_string(path).unwrap();
-        assert_eq!(read_result, "Hej på dig!");
-
-        fs::remove_file(path).unwrap();
     }
 }

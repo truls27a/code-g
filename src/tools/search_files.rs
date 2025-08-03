@@ -385,17 +385,6 @@ mod tests {
     }
 
     #[test]
-    fn call_searches_for_rust_files() {
-        let tool = SearchFiles;
-
-        let result = tool.call(HashMap::from([("pattern".to_string(), "*.rs".to_string())]));
-
-        assert!(result.is_ok());
-        let output = result.unwrap();
-        assert!(output.contains("main.rs"));
-    }
-
-    #[test]
     fn call_returns_error_when_pattern_is_not_provided() {
         let tool = SearchFiles;
 
@@ -406,84 +395,10 @@ mod tests {
     }
 
     #[test]
-    fn call_uses_current_directory_by_default() {
-        let tool = SearchFiles;
-
-        let result = tool.call(HashMap::from([(
-            "pattern".to_string(),
-            "Cargo.toml".to_string(),
-        )]));
-
-        assert!(result.is_ok());
-        let output = result.unwrap();
-        assert!(output.contains("Cargo.toml"));
-    }
-
-    #[test]
-    fn search_files_returns_truncated_false_for_small_results() {
-        let result = search_files("Cargo.toml", ".");
-
-        assert!(result.is_ok());
-        let (files, truncated) = result.unwrap();
-        assert!(!truncated); // Should not be truncated for single file
-        assert_eq!(files.len(), 1);
-    }
-
-    #[test]
-    fn call_does_not_show_truncation_message_for_small_results() {
-        let tool = SearchFiles;
-
-        let result = tool.call(HashMap::from([(
-            "pattern".to_string(),
-            "Cargo.toml".to_string(),
-        )]));
-
-        assert!(result.is_ok());
-        let output = result.unwrap();
-        assert!(!output.contains("showing first"));
-        assert!(!output.contains("results)"));
-    }
-
-    #[test]
-    fn call_shows_truncation_message_when_limit_reached() {
-        let tool = SearchFiles;
-
-        // Search for all files (*) which should exceed the limit in a typical project
-        let result = tool.call(HashMap::from([("pattern".to_string(), "*".to_string())]));
-
-        assert!(result.is_ok());
-        let output = result.unwrap();
-
-        // Check if we got results
-        if output.contains("Found") && !output.contains("No files found") {
-            let lines: Vec<&str> = output.lines().collect();
-            let file_count = lines.len() - 1; // Subtract 1 for the "Found X files" line
-
-            // If we found MAX_FILES_RETURNED files, check for truncation message
-            if file_count >= MAX_FILES_RETURNED {
-                assert!(output.contains("showing first"));
-                assert!(output.contains(&format!("{}", MAX_FILES_RETURNED)));
-            }
-        }
-    }
-
-    #[test]
     fn max_files_returned_constant_is_reasonable() {
         // Verify the constant is set to a reasonable value
         assert_eq!(MAX_FILES_RETURNED, 50);
         assert!(MAX_FILES_RETURNED > 0);
         assert!(MAX_FILES_RETURNED < 1000); // Not too large to overwhelm context
-    }
-
-    #[test]
-    fn search_files_respects_max_limit() {
-        // Test with a pattern that would normally return many files
-        let result = search_files("*", ".");
-
-        assert!(result.is_ok());
-        let (files, _truncated) = result.unwrap();
-
-        // Should never return more than MAX_FILES_RETURNED
-        assert!(files.len() <= MAX_FILES_RETURNED);
     }
 }

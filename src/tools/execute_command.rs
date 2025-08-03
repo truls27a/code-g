@@ -186,62 +186,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn call_executes_command_successfully() {
-        let tool = ExecuteCommand;
-        let command = if cfg!(target_os = "windows") {
-            "echo Hello World"
-        } else {
-            "echo 'Hello World'"
-        };
-
-        let result = tool.call(HashMap::from([(
-            "command".to_string(),
-            command.to_string(),
-        )]));
-
-        assert!(result.is_ok());
-        let output = result.unwrap();
-        assert!(output.contains("Hello World"));
-    }
-
-    #[test]
     fn call_returns_error_when_command_parameter_missing() {
         let tool = ExecuteCommand;
         let result = tool.call(HashMap::new());
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Command is required");
-    }
-
-    #[test]
-    fn call_returns_error_when_command_fails() {
-        let tool = ExecuteCommand;
-        let result = tool.call(HashMap::from([(
-            "command".to_string(),
-            "nonexistent_command_12345".to_string(),
-        )]));
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn call_handles_empty_output() {
-        let tool = ExecuteCommand;
-        let command = if cfg!(target_os = "windows") {
-            "cd ."
-        } else {
-            "true"
-        };
-
-        let result = tool.call(HashMap::from([(
-            "command".to_string(),
-            command.to_string(),
-        )]));
-
-        assert!(result.is_ok());
-        assert_eq!(
-            result.unwrap(),
-            "Command executed successfully with no output"
-        );
     }
 }

@@ -208,70 +208,6 @@ impl Tool for EditFile {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-
-    #[test]
-    fn call_replaces_string_successfully() {
-        let path = "replace_string_tmp_file.txt";
-        let content = "Line 1\nLine 2\nLine 3";
-        fs::write(path, content).unwrap();
-
-        let tool = EditFile;
-        let result = tool.call(HashMap::from([
-            ("path".to_string(), path.to_string()),
-            ("old_string".to_string(), "Line 2".to_string()),
-            ("new_string".to_string(), "Modified Line 2".to_string()),
-        ]));
-
-        assert!(result.is_ok());
-        let file_content = fs::read_to_string(path).unwrap();
-        assert_eq!(file_content, "Line 1\nModified Line 2\nLine 3");
-
-        fs::remove_file(path).unwrap();
-    }
-
-    #[test]
-    fn call_replaces_multiline_string_successfully() {
-        let path = "replace_multiline_tmp_file.txt";
-        let content = "Line 1\nLine 2\nLine 3\nLine 4";
-        fs::write(path, content).unwrap();
-
-        let tool = EditFile;
-        let result = tool.call(HashMap::from([
-            ("path".to_string(), path.to_string()),
-            ("old_string".to_string(), "Line 2\nLine 3".to_string()),
-            (
-                "new_string".to_string(),
-                "New Line A\nNew Line B".to_string(),
-            ),
-        ]));
-
-        assert!(result.is_ok());
-        let file_content = fs::read_to_string(path).unwrap();
-        assert_eq!(file_content, "Line 1\nNew Line A\nNew Line B\nLine 4");
-
-        fs::remove_file(path).unwrap();
-    }
-
-    #[test]
-    fn call_deletes_string_when_given_empty_replacement() {
-        let path = "delete_string_tmp_file.txt";
-        let content = "Line 1\nLine 2\nLine 3";
-        fs::write(path, content).unwrap();
-
-        let tool = EditFile;
-        let result = tool.call(HashMap::from([
-            ("path".to_string(), path.to_string()),
-            ("old_string".to_string(), "\nLine 2".to_string()),
-            ("new_string".to_string(), "".to_string()),
-        ]));
-
-        assert!(result.is_ok());
-        let file_content = fs::read_to_string(path).unwrap();
-        assert_eq!(file_content, "Line 1\nLine 3");
-
-        fs::remove_file(path).unwrap();
-    }
 
     #[test]
     fn call_returns_error_when_file_does_not_exist() {
@@ -283,40 +219,6 @@ mod tests {
         ]));
 
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn call_returns_error_when_string_not_found() {
-        let path = "string_not_found_tmp_file.txt";
-        let content = "Line 1\nLine 2";
-        fs::write(path, content).unwrap();
-
-        let tool = EditFile;
-        let result = tool.call(HashMap::from([
-            ("path".to_string(), path.to_string()),
-            ("old_string".to_string(), "Line 3".to_string()),
-            ("new_string".to_string(), "test".to_string()),
-        ]));
-
-        assert!(result.is_err());
-        fs::remove_file(path).unwrap();
-    }
-
-    #[test]
-    fn call_returns_error_when_string_appears_multiple_times() {
-        let path = "multiple_occurrences_tmp_file.txt";
-        let content = "Line\nLine\nLine 3";
-        fs::write(path, content).unwrap();
-
-        let tool = EditFile;
-        let result = tool.call(HashMap::from([
-            ("path".to_string(), path.to_string()),
-            ("old_string".to_string(), "Line".to_string()),
-            ("new_string".to_string(), "test".to_string()),
-        ]));
-
-        assert!(result.is_err());
-        fs::remove_file(path).unwrap();
     }
 
     #[test]

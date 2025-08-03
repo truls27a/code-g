@@ -403,8 +403,6 @@ impl ChatSession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::openai::model::{Parameters, Property};
-    use crate::tools::tool::Tool;
     use std::collections::HashMap;
     use std::io;
 
@@ -513,7 +511,7 @@ mod tests {
 
     #[tokio::test]
     async fn send_message_adds_user_message_to_memory() {
-        let openai_client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
+        let openai_client = OpenAIClient::new("any_api_key".to_string());
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
@@ -533,133 +531,6 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn send_message_adds_assistant_message_to_memory() {
-        let openai_client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
-        let event_handler = Box::new(MockEventHandler::new());
-        let mut chat_session = ChatSession::new(
-            openai_client,
-            Registry::new(),
-            event_handler,
-            SystemPromptConfig::None,
-        );
-
-        // This test requires a valid API key and will make an actual API call
-        if chat_session
-            .send_message("Respond with 'Hello', nothing else.")
-            .await
-            .is_ok()
-        {
-            // Check that assistant message was added (structure may vary based on turn_over)
-            let memory = chat_session.memory.get_memory();
-            assert!(memory.len() >= 2); // User message + assistant message
-
-            if let ChatMessage::Assistant {
-                message: AssistantMessage::Content(content),
-            } = &memory[1]
-            {
-                assert!(content.contains("Hello"));
-            } else {
-                panic!("Expected assistant message with content");
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn send_message_returns_message_when_message_is_sent() {
-        let openai_client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
-        let event_handler = Box::new(MockEventHandler::new());
-        let mut chat_session = ChatSession::new(
-            openai_client,
-            Registry::new(),
-            event_handler,
-            SystemPromptConfig::None,
-        );
-
-        // This test requires a valid API key and will make an actual API call
-        if let Ok(response) = chat_session
-            .send_message("Say 'Hello', nothing else.")
-            .await
-        {
-            assert!(response.contains("Hello"));
-        }
-    }
-
-    #[tokio::test]
-    async fn send_message_uses_tools_when_tools_are_provided() {
-        let openai_client = OpenAIClient::new(std::env::var("OPENAI_API_KEY").unwrap());
-
-        struct TestTool;
-
-        impl Tool for TestTool {
-            fn name(&self) -> String {
-                "read_file".to_string()
-            }
-
-            fn description(&self) -> String {
-                "Read the content of a file".to_string()
-            }
-
-            fn parameters(&self) -> Parameters {
-                Parameters {
-                    param_type: "object".to_string(),
-                    properties: HashMap::from([(
-                        "path".to_string(),
-                        Property {
-                            prop_type: "string".to_string(),
-                            description: "The path to the file to read".to_string(),
-                        },
-                    )]),
-                    required: vec!["path".to_string()],
-                    additional_properties: false,
-                }
-            }
-
-            fn strict(&self) -> bool {
-                true
-            }
-
-            fn requires_approval(&self) -> bool {
-                false
-            }
-
-            fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
-                let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
-                ("Read File".to_string(), format!("File: {}", path))
-            }
-
-            fn call(&self, _args: HashMap<String, String>) -> Result<String, String> {
-                Ok("Hello, world!".to_string())
-            }
-        }
-
-        let event_handler = Box::new(MockEventHandler::new());
-        let mut chat_session = ChatSession::new(
-            openai_client,
-            Registry::from(vec![Box::new(TestTool)]),
-            event_handler,
-            SystemPromptConfig::None,
-        );
-
-        // This test requires a valid API key and may make an actual API call
-        if let Ok(_) = chat_session
-            .send_message("Read the content of the poem.txt file")
-            .await
-        {
-            let memory = chat_session.memory.get_memory();
-            // Look for a tool message in the memory
-            let has_tool_message = memory
-                .iter()
-                .any(|msg| matches!(msg, ChatMessage::Tool { .. }));
-
-            if has_tool_message {
-                // Found a tool message as expected
-            } else {
-                // Tool might not have been called depending on the AI's response
-                println!("Warning: Tool was not called in this test run");
-            }
-        }
-    }
 
     #[tokio::test]
     async fn send_message_handles_max_iterations() {

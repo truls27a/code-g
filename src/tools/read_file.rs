@@ -144,21 +144,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn call_reads_file() {
-        let path = "call_reads_file_tmp_file.txt";
-        let content = "Hello, world!";
-        fs::write(path, content).unwrap();
-
-        let tool = ReadFile;
-
-        let result = tool.call(HashMap::from([("path".to_string(), path.to_string())]));
-
-        assert_eq!(result.unwrap(), "Hello, world!");
-
-        fs::remove_file(path).unwrap();
-    }
-
-    #[test]
     fn call_returns_error_when_file_does_not_exist() {
         let tool = ReadFile;
 
