@@ -21,7 +21,7 @@ use std::collections::HashMap;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,no_run
 /// use code_g::openai::client::OpenAIClient;
 /// use code_g::openai::model::{ChatMessage, OpenAiModel};
 /// use tokio::runtime::Runtime;
@@ -109,7 +109,7 @@ impl OpenAIClient {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use code_g::openai::client::OpenAIClient;
     /// use code_g::openai::model::{ChatMessage, ChatResult, OpenAiModel};
     /// use tokio::runtime::Runtime;

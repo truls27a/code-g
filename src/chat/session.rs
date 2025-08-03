@@ -509,46 +509,6 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn send_message_adds_user_message_to_memory() {
-        let openai_client = OpenAIClient::new("any_api_key".to_string());
-        let event_handler = Box::new(MockEventHandler::new());
-        let mut chat_session = ChatSession::new(
-            openai_client,
-            Registry::new(),
-            event_handler,
-            SystemPromptConfig::None,
-        );
-
-        // This will likely fail due to API call, but we can check if user message was added
-        let _ = chat_session.send_message("Hello").await;
-
-        assert_eq!(
-            chat_session.memory.get_memory()[0],
-            ChatMessage::User {
-                content: "Hello".to_string()
-            }
-        );
-    }
-
-
-    #[tokio::test]
-    async fn send_message_handles_max_iterations() {
-        let openai_client = OpenAIClient::new("invalid_key".to_string());
-        let event_handler = Box::new(MockEventHandler::new());
-        let mut chat_session = ChatSession::new(
-            openai_client,
-            Registry::new(),
-            event_handler,
-            SystemPromptConfig::None,
-        );
-
-        let result = chat_session.send_message("Hello").await;
-
-        // Should eventually hit max iterations or return an API error
-        assert!(result.is_err());
-    }
-
     #[test]
     fn handle_openai_error_fatal_errors_return_fatal() {
         let openai_client = OpenAIClient::new("test_key".to_string());
