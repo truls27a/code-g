@@ -2,9 +2,9 @@ use crate::chat::error::{ChatSessionError, ChatSessionErrorHandling};
 use crate::chat::event::{Action, Event, EventHandler};
 use crate::chat::memory::ChatMemory;
 use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
-use crate::chat_session::error::OpenAIError;
-use crate::chat_session::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
-use crate::chat_session::traits::ChatClient;
+use crate::chat_client::error::ChatClientError;
+use crate::chat_client::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
+use crate::chat_client::traits::ChatClient;
 use crate::tools::registry::Registry;
 use std::collections::HashMap;
 
@@ -347,22 +347,22 @@ impl ChatSession {
     /// A [`ChatSessionErrorHandling`] enum indicating the recovery strategy.
     fn handle_openai_error(
         &self,
-        error: OpenAIError,
+        error: ChatClientError,
         iteration: usize,
     ) -> ChatSessionErrorHandling {
-        use OpenAIError::*;
+        use ChatClientError::*;
 
         match error {
             // Fatal errors - configuration or account issues that won't resolve by retrying
             InvalidApiKey | MissingApiKey | InsufficientCredits | InvalidModel
-            | EmptyChatHistory => ChatSessionErrorHandling::Fatal(ChatSessionError::OpenAI(error)),
+            | EmptyChatHistory => ChatSessionErrorHandling::Fatal(ChatSessionError::ChatClient(error)),
 
             // Network/service errors - might be temporary, retry a few times
             RateLimitExceeded | ServiceUnavailable | HttpError(_) => {
                 if iteration <= 3 {
                     ChatSessionErrorHandling::Retry
                 } else {
-                    ChatSessionErrorHandling::Fatal(ChatSessionError::OpenAI(error))
+                    ChatSessionErrorHandling::Fatal(ChatSessionError::ChatClient(error))
                 }
             }
 
@@ -403,7 +403,7 @@ impl ChatSession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chat_session::client::OpenAIClient;
+    use crate::chat_client::providers::openai::client::OpenAIClient;
     use std::collections::HashMap;
     use std::io;
 
@@ -511,7 +511,7 @@ mod tests {
     }
 
     #[test]
-    fn handle_openai_error_fatal_errors_return_fatal() {
+    fn handle_chat_client_error_fatal_errors_return_fatal() {
         let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
@@ -523,11 +523,11 @@ mod tests {
 
         // Test all fatal error types
         let fatal_errors = vec![
-            OpenAIError::InvalidApiKey,
-            OpenAIError::MissingApiKey,
-            OpenAIError::InsufficientCredits,
-            OpenAIError::InvalidModel,
-            OpenAIError::EmptyChatHistory,
+            ChatClientError::InvalidApiKey,
+            ChatClientError::MissingApiKey,
+            ChatClientError::InsufficientCredits,
+            ChatClientError::InvalidModel,
+            ChatClientError::EmptyChatHistory,
         ];
 
         for error in fatal_errors {
@@ -540,7 +540,7 @@ mod tests {
     }
 
     #[test]
-    fn handle_openai_error_retryable_errors_retry_then_fatal() {
+    fn handle_chat_client_error_retryable_errors_retry_then_fatal() {
         let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
@@ -553,7 +553,7 @@ mod tests {
         // Test RateLimitExceeded
         for iteration in 1..=3 {
             let result =
-                chat_session.handle_openai_error(OpenAIError::RateLimitExceeded, iteration);
+                chat_session.handle_openai_error(ChatClientError::RateLimitExceeded, iteration);
             match result {
                 ChatSessionErrorHandling::Retry => (), // Expected
                 _ => panic!(
@@ -562,7 +562,7 @@ mod tests {
                 ),
             }
         }
-        let result = chat_session.handle_openai_error(OpenAIError::RateLimitExceeded, 4);
+        let result = chat_session.handle_openai_error(ChatClientError::RateLimitExceeded, 4);
         match result {
             ChatSessionErrorHandling::Fatal(_) => (), // Expected
             _ => panic!("Expected Fatal for RateLimitExceeded at iteration 4"),
@@ -571,7 +571,7 @@ mod tests {
         // Test ServiceUnavailable
         for iteration in 1..=3 {
             let result =
-                chat_session.handle_openai_error(OpenAIError::ServiceUnavailable, iteration);
+                chat_session.handle_openai_error(ChatClientError::ServiceUnavailable, iteration);
             match result {
                 ChatSessionErrorHandling::Retry => (), // Expected
                 _ => panic!(
@@ -580,7 +580,7 @@ mod tests {
                 ),
             }
         }
-        let result = chat_session.handle_openai_error(OpenAIError::ServiceUnavailable, 4);
+        let result = chat_session.handle_openai_error(ChatClientError::ServiceUnavailable, 4);
         match result {
             ChatSessionErrorHandling::Fatal(_) => (), // Expected
             _ => panic!("Expected Fatal for ServiceUnavailable at iteration 4"),
@@ -588,7 +588,7 @@ mod tests {
     }
 
     #[test]
-    fn handle_openai_error_content_errors_add_to_memory_and_retry() {
+    fn handle_chat_client_error_content_errors_add_to_memory_and_retry() {
         let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
@@ -599,11 +599,11 @@ mod tests {
         );
 
         let content_errors = vec![
-            OpenAIError::InvalidContentResponse,
-            OpenAIError::InvalidToolCallArguments,
-            OpenAIError::NoCompletionFound,
-            OpenAIError::NoChoicesFound,
-            OpenAIError::NoContentFound,
+            ChatClientError::InvalidContentResponse,
+            ChatClientError::InvalidToolCallArguments,
+            ChatClientError::NoCompletionFound,
+            ChatClientError::NoChoicesFound,
+            ChatClientError::NoContentFound,
         ];
 
         for error in content_errors {
@@ -619,7 +619,7 @@ mod tests {
     }
 
     #[test]
-    fn handle_openai_error_request_errors_add_to_memory_and_retry() {
+    fn handle_chat_client_error_request_errors_add_to_memory_and_retry() {
         let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
@@ -629,7 +629,7 @@ mod tests {
             SystemPromptConfig::None,
         );
 
-        let result = chat_session.handle_openai_error(OpenAIError::InvalidChatMessageRequest, 1);
+        let result = chat_session.handle_openai_error(ChatClientError::InvalidChatMessageRequest, 1);
         match result {
             ChatSessionErrorHandling::AddToMemoryAndRetry(message) => {
                 assert!(message.contains("Invalid request format"));
@@ -640,7 +640,7 @@ mod tests {
     }
 
     #[test]
-    fn handle_openai_error_other_errors_add_to_memory_and_retry() {
+    fn handle_chat_client_error_other_errors_add_to_memory_and_retry() {
         let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
@@ -651,7 +651,7 @@ mod tests {
         );
 
         let result = chat_session
-            .handle_openai_error(OpenAIError::Other("Some unexpected error".to_string()), 1);
+            .handle_openai_error(ChatClientError::Other("Some unexpected error".to_string()), 1);
         match result {
             ChatSessionErrorHandling::AddToMemoryAndRetry(message) => {
                 assert!(message.contains("unexpected error"));
@@ -662,7 +662,7 @@ mod tests {
     }
 
     #[test]
-    fn handle_openai_error_preserves_original_error_in_fatal_cases() {
+    fn handle_chat_client_error_preserves_original_error_in_fatal_cases() {
         let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
@@ -672,13 +672,13 @@ mod tests {
             SystemPromptConfig::None,
         );
 
-        let original_error = OpenAIError::InvalidApiKey;
+        let original_error = ChatClientError::InvalidApiKey;
         let result = chat_session.handle_openai_error(original_error, 1);
 
         match result {
-            ChatSessionErrorHandling::Fatal(ChatSessionError::OpenAI(preserved_error)) => {
+            ChatSessionErrorHandling::Fatal(ChatSessionError::ChatClient(preserved_error)) => {
                 match preserved_error {
-                    OpenAIError::InvalidApiKey => (), // Expected
+                    ChatClientError::InvalidApiKey => (), // Expected
                     _ => panic!("Original error not preserved correctly"),
                 }
             }

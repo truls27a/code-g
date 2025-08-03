@@ -1,4 +1,4 @@
-use crate::chat_session::error::OpenAIError;
+use crate::chat_client::error::ChatClientError;
 use thiserror::Error;
 
 /// Represents different strategies for handling chat session errors.
@@ -40,9 +40,9 @@ pub enum ChatSessionErrorHandling {
 /// ```
 #[derive(Error, Debug)]
 pub enum ChatSessionError {
-    /// Error originating from the OpenAI API
-    #[error("OpenAI API error: {0}")]
-    OpenAI(#[from] OpenAIError),
+    /// Error originating from the Chat Client
+    #[error("Chat Client error: {0}")]
+    ChatClient(#[from] ChatClientError),
 
     /// Maximum iterations exceeded.j
     #[error(

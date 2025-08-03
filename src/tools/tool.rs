@@ -1,4 +1,4 @@
-use crate::chat_session::model::{Function, Parameters, Tool as OpenAiTool, ToolType};
+use crate::chat_client::model::{Function, Parameters, Tool as OpenAiTool, ToolType};
 use std::collections::HashMap;
 
 /// A trait defining the interface for tools that can be called with arguments.

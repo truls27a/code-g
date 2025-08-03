@@ -1,6 +1,6 @@
 use code_g::chat::session::ChatSession;
 use code_g::chat::system_prompt::SystemPromptConfig;
-use code_g::chat_session::client::OpenAIClient;
+use code_g::chat_client::client::OpenAIClient;
 use code_g::tools::registry::Registry;
 use code_g::tui::tui::Tui;
 use std::env;

@@ -1,5 +1,5 @@
-use crate::chat_session::providers::openai::error::OpenAIError;
-use crate::chat_session::model::{ChatMessage, ChatResult, OpenAiModel, Tool};
+use crate::chat_client::providers::openai::error::OpenAIError;
+use crate::chat_client::model::{ChatMessage, ChatResult, OpenAiModel, Tool};
 use async_trait::async_trait;
 
 /// Trait defining the interface for chat completion clients.

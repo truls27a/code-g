@@ -1,10 +1,10 @@
-use crate::chat_session::providers::openai::error::OpenAIError;
-use crate::chat_session::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
-use crate::chat_session::providers::openai::schema::{
+use crate::chat_client::providers::openai::error::OpenAIError;
+use crate::chat_client::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
+use crate::chat_client::providers::openai::schema::{
     ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest, ContentResponse, JsonSchema,
     ResponseFormat,
 };
-use crate::chat_session::traits::ChatClient;
+use crate::chat_client::traits::ChatClient;
 use async_trait::async_trait;
 use reqwest::Client;
 use std::collections::HashMap;
