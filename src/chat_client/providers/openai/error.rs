@@ -1,11 +1,10 @@
+use crate::chat_client::error::ErrorRetryStrategy;
 use thiserror::Error;
 
 /// Represents errors that can occur when interacting with the OpenAI API.
 ///
-/// This enum encompasses all possible error conditions that may arise during
-/// OpenAI API operations, from authentication and validation issues to network
-/// problems and API limitations. It uses the `thiserror` crate to provide
-/// detailed error messages and automatic error conversion from underlying types.
+/// This enum encompasses the specific errors that can occur when interacting with the OpenAI API.
+/// Generally errors that are not specifly related to the OpenAI API should be handled by the [`ChatClientError`](crate::chat_client::error::ChatClientError) enum.
 ///
 /// # Examples
 ///
@@ -32,30 +31,6 @@ use thiserror::Error;
 /// ```
 #[derive(Error, Debug)]
 pub enum OpenAIError {
-    /// The specified model is not valid or supported
-    #[error("Invalid model")]
-    InvalidModel,
-
-    /// The chat history provided is empty when it should contain messages
-    #[error("Chat history cannot be empty")]
-    EmptyChatHistory,
-
-    /// The chat message request format is invalid or malformed
-    #[error("Invalid chat message request")]
-    InvalidChatMessageRequest,
-
-    /// The provided API key is invalid or malformed
-    #[error("Invalid API key")]
-    InvalidApiKey,
-
-    /// No API key was provided when one is required
-    #[error("Missing API key")]
-    MissingApiKey,
-
-    /// The account has insufficient credits to complete the request
-    #[error("Not enough credits")]
-    InsufficientCredits,
-
     /// The API response did not contain a completion
     #[error("No completion found")]
     NoCompletionFound,
@@ -76,19 +51,45 @@ pub enum OpenAIError {
     #[error("Invalid content response")]
     InvalidContentResponse,
 
-    /// The API rate limit has been exceeded
-    #[error("Rate limit exceeded")]
-    RateLimitExceeded,
-
-    /// The OpenAI service is temporarily unavailable
-    #[error("Service unavailable")]
-    ServiceUnavailable,
-
-    /// An HTTP request failed with the underlying reqwest error
-    #[error("HTTP request failed: {0}")]
-    HttpError(#[from] reqwest::Error),
-
-    /// A catch-all for other errors with a custom message
+    /// Other errors
     #[error("Other error: {0}")]
     Other(String),
+}
+
+impl OpenAIError {
+    /// Determines the retry strategy for this OpenAI-specific error.
+    ///
+    /// This method categorizes OpenAI API errors based on their type and returns
+    /// the appropriate retry strategy. The categorization follows OpenAI's
+    /// error handling best practices and recommendations.
+    ///
+    /// # Returns
+    ///
+    /// An [`ErrorRetryStrategy`] indicating how this error should be handled.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::chat_client::providers::openai::error::OpenAIError;
+    /// use code_g::chat_client::error::ErrorRetryStrategy;
+    ///
+    /// let error = OpenAIError::InvalidApiKey;
+    /// assert_eq!(error.retry_strategy(), ErrorRetryStrategy::Fatal);
+    ///
+    /// let error = OpenAIError::RateLimitExceeded;
+    /// assert_eq!(error.retry_strategy(), ErrorRetryStrategy::Retryable);
+    /// ```
+    pub fn retry_strategy(&self) -> ErrorRetryStrategy {
+        match self {
+            // Content/parsing errors - AI might have made a mistake, inform it and retry
+            OpenAIError::InvalidContentResponse
+            | OpenAIError::InvalidToolCallArguments
+            | OpenAIError::NoCompletionFound
+            | OpenAIError::NoChoicesFound
+            | OpenAIError::NoContentFound => ErrorRetryStrategy::AddToMemoryAndRetry,
+
+            // Other errors - treat as potentially recoverable
+            OpenAIError::Other(_) => ErrorRetryStrategy::AddToMemoryAndRetry,
+        }
+    }
 }

@@ -1,3 +1,4 @@
+use crate::chat_client::error::ChatClientError;
 use crate::chat_client::providers::openai::error::OpenAIError;
 use crate::chat_client::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
 use crate::chat_client::traits::ChatClient;
@@ -152,14 +153,14 @@ impl ChatClient for MockChatClient {
         _model: &OpenAiModel,
         _chat_history: &[ChatMessage],
         _tools: &[Tool],
-    ) -> Result<ChatResult, OpenAIError> {
+    ) -> Result<ChatResult, ChatClientError> {
         match &self.response {
             MockResponse::Message { content, turn_over } => Ok(ChatResult::Message {
                 content: content.clone(),
                 turn_over: *turn_over,
             }),
             MockResponse::ToolCalls(tool_calls) => Ok(ChatResult::ToolCalls(tool_calls.clone())),
-            MockResponse::Error(error_message) => Err(OpenAIError::Other(error_message.clone())),
+            MockResponse::Error(error_message) => Err(ChatClientError::OpenAIError(OpenAIError::Other(error_message.clone()))),
         }
     }
 }
@@ -243,7 +244,7 @@ mod tests {
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            OpenAIError::Other(message) => {
+            ChatClientError::OpenAIError(OpenAIError::Other(message)) => {
                 assert_eq!(message, "Test error");
             }
             _ => panic!("Expected Other error"),

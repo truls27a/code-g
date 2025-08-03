@@ -1,3 +1,4 @@
+use crate::chat_client::error::ChatClientError;
 use crate::chat_client::providers::openai::error::OpenAIError;
 use crate::chat_client::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
 use crate::chat_client::providers::openai::schema::{
@@ -152,9 +153,9 @@ impl ChatClient for OpenAIClient {
         model: &OpenAiModel,
         chat_history: &[ChatMessage],
         tools: &[Tool],
-    ) -> Result<ChatResult, OpenAIError> {
+    ) -> Result<ChatResult, ChatClientError> {
         if chat_history.is_empty() {
-            return Err(OpenAIError::EmptyChatHistory);
+            return Err(ChatClientError::EmptyChatHistory);
         }
 
         let request_body = ChatCompletionRequest {
@@ -163,7 +164,7 @@ impl ChatClient for OpenAIClient {
                 .iter()
                 .map(|m| ChatMessageRequest::try_from(m.clone()))
                 .collect::<Result<Vec<ChatMessageRequest>, serde_json::Error>>()
-                .map_err(|_| OpenAIError::InvalidChatMessageRequest)?,
+                .map_err(|_| ChatClientError::InvalidChatMessageRequest)?,
             tools: Some(tools.to_vec()),
             response_format: Some(ResponseFormat {
                 response_format_type: "json_schema".to_string(),
@@ -195,17 +196,17 @@ impl ChatClient for OpenAIClient {
                 let completions: ChatCompletionResponse = response
                     .json()
                     .await
-                    .map_err(|_| OpenAIError::NoCompletionFound)?;
+                    .map_err(|_| ChatClientError::OpenAIError(OpenAIError::NoCompletionFound))?;
                 let choice = completions
                     .choices
                     .get(0)
-                    .ok_or(OpenAIError::NoChoicesFound)?;
+                    .ok_or(ChatClientError::OpenAIError(OpenAIError::NoChoicesFound))?;
 
                 let message = &choice.message;
 
                 if let Some(content) = &message.content {
                     let content_response = ContentResponse::try_from(content.as_str())
-                        .map_err(|_| OpenAIError::InvalidContentResponse)?;
+                        .map_err(|_| ChatClientError::OpenAIError(OpenAIError::InvalidContentResponse))?;
                     return Ok(ChatResult::Message {
                         content: content_response.message,
                         turn_over: content_response.turn_over,
@@ -213,12 +214,12 @@ impl ChatClient for OpenAIClient {
                 }
 
                 if let Some(tool_calls_response) = &message.tool_calls {
-                    let tool_calls: Result<Vec<ToolCall>, OpenAIError> = tool_calls_response
+                    let tool_calls: Result<Vec<ToolCall>, ChatClientError> = tool_calls_response
                         .into_iter()
                         .map(|tool_call| {
                             let arguments: HashMap<String, String> =
                                 serde_json::from_str(&tool_call.function.arguments)
-                                    .map_err(|_| OpenAIError::InvalidToolCallArguments)?;
+                                    .map_err(|_| ChatClientError::OpenAIError(OpenAIError::InvalidToolCallArguments))?;
                             Ok(ToolCall {
                                 id: tool_call.id.clone(),
                                 name: tool_call.function.name.clone(),
@@ -229,18 +230,18 @@ impl ChatClient for OpenAIClient {
                     return Ok(ChatResult::ToolCalls(tool_calls?));
                 }
 
-                Err(OpenAIError::NoContentFound)
+                Err(ChatClientError::OpenAIError(OpenAIError::NoContentFound))
             }
-            reqwest::StatusCode::UNAUTHORIZED => Err(OpenAIError::InvalidApiKey),
-            reqwest::StatusCode::FORBIDDEN => Err(OpenAIError::InsufficientCredits),
-            reqwest::StatusCode::TOO_MANY_REQUESTS => Err(OpenAIError::RateLimitExceeded),
-            reqwest::StatusCode::INTERNAL_SERVER_ERROR => Err(OpenAIError::ServiceUnavailable),
-            reqwest::StatusCode::NOT_FOUND => Err(OpenAIError::InvalidModel),
+            reqwest::StatusCode::UNAUTHORIZED => Err(ChatClientError::InvalidApiKey),
+            reqwest::StatusCode::FORBIDDEN => Err(ChatClientError::InsufficientCredits),
+            reqwest::StatusCode::TOO_MANY_REQUESTS => Err(ChatClientError::RateLimitExceeded),
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR => Err(ChatClientError::ServiceUnavailable),
+            reqwest::StatusCode::NOT_FOUND => Err(ChatClientError::InvalidModel),
             _ => {
                 let status = response.status();
                 println!("Unexpected HTTP status: {:?}", status);
                 println!("Response: {:?}", response.text().await.unwrap());
-                Err(OpenAIError::Other(format!(
+                Err(ChatClientError::Other(format!(
                     "Unexpected HTTP status: {}",
                     status
                 )))

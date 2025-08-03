@@ -2,7 +2,7 @@ use crate::chat::error::{ChatSessionError, ChatSessionErrorHandling};
 use crate::chat::event::{Action, Event, EventHandler};
 use crate::chat::memory::ChatMemory;
 use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
-use crate::chat_client::error::ChatClientError;
+use crate::chat_client::error::{ChatClientError, ErrorRetryStrategy};
 use crate::chat_client::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
 use crate::chat_client::traits::ChatClient;
 use crate::tools::registry::Registry;
@@ -185,7 +185,7 @@ impl ChatSession {
                 .await
             {
                 Ok(response) => response,
-                Err(e) => match self.handle_openai_error(e, iterations) {
+                Err(e) => match self.handle_chat_client_error(e, iterations) {
                     ChatSessionErrorHandling::Fatal(err) => return Err(err),
                     ChatSessionErrorHandling::Retry => continue,
                     ChatSessionErrorHandling::AddToMemoryAndRetry(message) => {
@@ -330,68 +330,40 @@ impl ChatSession {
         Ok(())
     }
 
-    /// Categorizes and handles OpenAI errors with appropriate recovery strategies.
+    /// Categorizes and handles chat client errors with appropriate recovery strategies.
     ///
-    /// This method implements error handling logic that categorizes OpenAI API errors
-    /// and determines the best recovery strategy. Fatal errors (configuration/account issues)
+    /// This method implements error handling logic that uses the error's retry strategy
+    /// to determine the best recovery approach. Fatal errors (configuration/account issues)
     /// are returned immediately. Retryable errors (network/service issues) are retried up to 3 times.
     /// Content/request errors inform the AI of the issue and retry.
     ///
     /// # Arguments
     ///
-    /// * `error` - The OpenAI error to handle
+    /// * `error` - The chat client error to handle
     /// * `iteration` - Current iteration number for retry logic
     ///
     /// # Returns
     ///
     /// A [`ChatSessionErrorHandling`] enum indicating the recovery strategy.
-    fn handle_openai_error(
+    fn handle_chat_client_error(
         &self,
         error: ChatClientError,
         iteration: usize,
     ) -> ChatSessionErrorHandling {
-        use ChatClientError::*;
-
-        match error {
-            // Fatal errors - configuration or account issues that won't resolve by retrying
-            InvalidApiKey | MissingApiKey | InsufficientCredits | InvalidModel
-            | EmptyChatHistory => ChatSessionErrorHandling::Fatal(ChatSessionError::ChatClient(error)),
-
-            // Network/service errors - might be temporary, retry a few times
-            RateLimitExceeded | ServiceUnavailable | HttpError(_) => {
+        match error.retry_strategy() {
+            ErrorRetryStrategy::Fatal => {
+                ChatSessionErrorHandling::Fatal(ChatSessionError::ChatClient(error))
+            }
+            ErrorRetryStrategy::Retryable => {
                 if iteration <= 3 {
                     ChatSessionErrorHandling::Retry
                 } else {
                     ChatSessionErrorHandling::Fatal(ChatSessionError::ChatClient(error))
                 }
             }
-
-            // Content/parsing errors - AI might have made a mistake, inform it and retry
-            InvalidContentResponse
-            | InvalidToolCallArguments
-            | NoCompletionFound
-            | NoChoicesFound
-            | NoContentFound => {
+            ErrorRetryStrategy::AddToMemoryAndRetry => {
                 let message = format!(
-                    "An error occurred with the AI response: {}. Please try again with a different approach.",
-                    error
-                );
-                ChatSessionErrorHandling::AddToMemoryAndRetry(message)
-            }
-
-            // Request errors - likely a programming bug, but inform AI in case it can adapt
-            InvalidChatMessageRequest => {
-                let message = format!(
-                    "Invalid request format: {}. Please ensure your response follows the correct format.",
-                    error
-                );
-                ChatSessionErrorHandling::AddToMemoryAndRetry(message)
-            }
-
-            // Other errors - treat as potentially recoverable
-            Other(_) => {
-                let message = format!(
-                    "An unexpected error occurred: {}. Please try a different approach.",
+                    "An error occurred: {}. Please try again with a different approach.",
                     error
                 );
                 ChatSessionErrorHandling::AddToMemoryAndRetry(message)
@@ -531,7 +503,7 @@ mod tests {
         ];
 
         for error in fatal_errors {
-            let result = chat_session.handle_openai_error(error, 1);
+            let result = chat_session.handle_chat_client_error(error, 1);
             match result {
                 ChatSessionErrorHandling::Fatal(_) => (), // Expected
                 _ => panic!("Expected Fatal error handling for fatal error"),
@@ -553,7 +525,7 @@ mod tests {
         // Test RateLimitExceeded
         for iteration in 1..=3 {
             let result =
-                chat_session.handle_openai_error(ChatClientError::RateLimitExceeded, iteration);
+                chat_session.handle_chat_client_error(ChatClientError::RateLimitExceeded, iteration);
             match result {
                 ChatSessionErrorHandling::Retry => (), // Expected
                 _ => panic!(
@@ -562,7 +534,7 @@ mod tests {
                 ),
             }
         }
-        let result = chat_session.handle_openai_error(ChatClientError::RateLimitExceeded, 4);
+        let result = chat_session.handle_chat_client_error(ChatClientError::RateLimitExceeded, 4);
         match result {
             ChatSessionErrorHandling::Fatal(_) => (), // Expected
             _ => panic!("Expected Fatal for RateLimitExceeded at iteration 4"),
@@ -571,7 +543,7 @@ mod tests {
         // Test ServiceUnavailable
         for iteration in 1..=3 {
             let result =
-                chat_session.handle_openai_error(ChatClientError::ServiceUnavailable, iteration);
+                chat_session.handle_chat_client_error(ChatClientError::ServiceUnavailable, iteration);
             match result {
                 ChatSessionErrorHandling::Retry => (), // Expected
                 _ => panic!(
@@ -580,7 +552,7 @@ mod tests {
                 ),
             }
         }
-        let result = chat_session.handle_openai_error(ChatClientError::ServiceUnavailable, 4);
+        let result = chat_session.handle_chat_client_error(ChatClientError::ServiceUnavailable, 4);
         match result {
             ChatSessionErrorHandling::Fatal(_) => (), // Expected
             _ => panic!("Expected Fatal for ServiceUnavailable at iteration 4"),
@@ -598,16 +570,19 @@ mod tests {
             SystemPromptConfig::None,
         );
 
+        // These errors are now wrapped in OpenAIError, so we need to create them properly
+        use crate::chat_client::providers::openai::error::OpenAIError;
+        
         let content_errors = vec![
-            ChatClientError::InvalidContentResponse,
-            ChatClientError::InvalidToolCallArguments,
-            ChatClientError::NoCompletionFound,
-            ChatClientError::NoChoicesFound,
-            ChatClientError::NoContentFound,
+            ChatClientError::OpenAIError(OpenAIError::InvalidContentResponse),
+            ChatClientError::OpenAIError(OpenAIError::InvalidToolCallArguments),
+            ChatClientError::OpenAIError(OpenAIError::NoCompletionFound),
+            ChatClientError::OpenAIError(OpenAIError::NoChoicesFound),
+            ChatClientError::OpenAIError(OpenAIError::NoContentFound),
         ];
 
         for error in content_errors {
-            let result = chat_session.handle_openai_error(error, 1);
+            let result = chat_session.handle_chat_client_error(error, 1);
             match result {
                 ChatSessionErrorHandling::AddToMemoryAndRetry(message) => {
                     assert!(message.contains("error occurred"));
@@ -629,11 +604,11 @@ mod tests {
             SystemPromptConfig::None,
         );
 
-        let result = chat_session.handle_openai_error(ChatClientError::InvalidChatMessageRequest, 1);
+        let result = chat_session.handle_chat_client_error(ChatClientError::InvalidChatMessageRequest, 1);
         match result {
             ChatSessionErrorHandling::AddToMemoryAndRetry(message) => {
-                assert!(message.contains("Invalid request format"));
-                assert!(message.contains("correct format"));
+                assert!(message.contains("error occurred"));
+                assert!(message.contains("try again"));
             }
             _ => panic!("Expected AddToMemoryAndRetry for InvalidChatMessageRequest"),
         }
@@ -651,11 +626,11 @@ mod tests {
         );
 
         let result = chat_session
-            .handle_openai_error(ChatClientError::Other("Some unexpected error".to_string()), 1);
+            .handle_chat_client_error(ChatClientError::Other("Some unexpected error".to_string()), 1);
         match result {
             ChatSessionErrorHandling::AddToMemoryAndRetry(message) => {
-                assert!(message.contains("unexpected error"));
-                assert!(message.contains("different approach"));
+                assert!(message.contains("error occurred"));
+                assert!(message.contains("try again"));
             }
             _ => panic!("Expected AddToMemoryAndRetry for Other error"),
         }
@@ -673,7 +648,7 @@ mod tests {
         );
 
         let original_error = ChatClientError::InvalidApiKey;
-        let result = chat_session.handle_openai_error(original_error, 1);
+        let result = chat_session.handle_chat_client_error(original_error, 1);
 
         match result {
             ChatSessionErrorHandling::Fatal(ChatSessionError::ChatClient(preserved_error)) => {
@@ -682,7 +657,7 @@ mod tests {
                     _ => panic!("Original error not preserved correctly"),
                 }
             }
-            _ => panic!("Expected Fatal with preserved OpenAI error"),
+            _ => panic!("Expected Fatal with preserved chat client error"),
         }
     }
 

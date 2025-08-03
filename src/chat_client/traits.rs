@@ -1,4 +1,4 @@
-use crate::chat_client::providers::openai::error::OpenAIError;
+use crate::chat_client::error::ChatClientError;
 use crate::chat_client::model::{ChatMessage, ChatResult, OpenAiModel, Tool};
 use async_trait::async_trait;
 
@@ -24,7 +24,7 @@ use async_trait::async_trait;
 ///         model: &OpenAiModel,
 ///         chat_history: &[ChatMessage],
 ///         tools: &[Tool],
-///     ) -> Result<ChatResult, OpenAIError> {
+///     ) -> Result<ChatResult, ChatClientError> {
 ///         Ok(ChatResult::Message {
 ///             content: "Mock response".to_string(),
 ///             turn_over: true,
@@ -52,12 +52,12 @@ pub trait ChatClient: Send + Sync {
     ///
     /// # Errors
     ///
-    /// Returns an [`OpenAIError`] for various failure conditions including
+    /// Returns a [`ChatClientError`] for various failure conditions including
     /// network errors, API errors, parsing errors, etc.
     async fn create_chat_completion(
         &self,
         model: &OpenAiModel,
         chat_history: &[ChatMessage],
         tools: &[Tool],
-    ) -> Result<ChatResult, OpenAIError>;
+    ) -> Result<ChatResult, ChatClientError>;
 }
