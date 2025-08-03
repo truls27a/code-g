@@ -44,7 +44,7 @@ pub enum ChatSessionError {
     #[error("OpenAI API error: {0}")]
     OpenAI(#[from] OpenAIError),
 
-    /// Maximum iterations exceeded.
+    /// Maximum iterations exceeded.j
     #[error(
         "Maximum iterations ({max_iterations}) exceeded. The AI may be stuck in a tool-calling loop."
     )]

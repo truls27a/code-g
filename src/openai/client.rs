@@ -4,6 +4,8 @@ use crate::openai::schema::{
     ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest, ContentResponse, JsonSchema,
     ResponseFormat,
 };
+use crate::openai::traits::ChatClient;
+use async_trait::async_trait;
 use reqwest::Client;
 use std::collections::HashMap;
 
@@ -72,6 +74,10 @@ impl OpenAIClient {
         }
     }
 
+}
+
+#[async_trait]
+impl ChatClient for OpenAIClient {
     /// Creates a chat completion request to the OpenAI API.
     ///
     /// This method sends a chat completion request with the specified model,
@@ -141,7 +147,7 @@ impl OpenAIClient {
     ///     }
     /// }
     /// ```
-    pub async fn create_chat_completion(
+    async fn create_chat_completion(
         &self,
         model: &OpenAiModel,
         chat_history: &[ChatMessage],

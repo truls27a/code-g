@@ -2,9 +2,9 @@ use crate::chat::error::{ChatSessionError, ChatSessionErrorHandling};
 use crate::chat::event::{Action, Event, EventHandler};
 use crate::chat::memory::ChatMemory;
 use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
-use crate::openai::client::OpenAIClient;
 use crate::openai::error::OpenAIError;
 use crate::openai::model::{AssistantMessage, ChatMessage, ChatResult, OpenAiModel};
+use crate::openai::traits::ChatClient;
 use crate::tools::registry::Registry;
 use std::collections::HashMap;
 
@@ -26,7 +26,7 @@ const MAX_ITERATIONS: usize = 10;
 /// use code_g::chat::system_prompt::SystemPromptConfig;
 /// use code_g::tui::tui::Tui;
 ///
-/// let client = OpenAIClient::new("api_key".to_string());
+/// let client = Box::new(OpenAIClient::new("api_key".to_string()));
 /// let tools = Registry::new();
 /// let event_handler = Box::new(Tui::new());
 /// let session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::Default);
@@ -34,8 +34,8 @@ const MAX_ITERATIONS: usize = 10;
 pub struct ChatSession {
     /// Manages conversation history and context
     memory: ChatMemory,
-    /// OpenAI client for API communication
-    client: OpenAIClient,
+    /// Chat client for API communication
+    client: Box<dyn ChatClient>,
     /// Registry of available tools for the AI to use
     tools: Registry,
     /// Handler for events and user interactions
@@ -47,7 +47,7 @@ impl ChatSession {
     ///
     /// # Arguments
     ///
-    /// * `client` - [`OpenAIClient`] configured with API credentials
+    /// * `client` - [`ChatClient`] implementation for API communication
     /// * `tools` - [`Registry`] containing tools available to the AI assistant
     /// * `event_handler` - [`EventHandler`] for processing events and user interactions
     /// * `system_prompt_config` - [`SystemPromptConfig`] for the initial system prompt
@@ -56,7 +56,7 @@ impl ChatSession {
     ///
     /// A new `ChatSession` instance ready for conversation.
     pub fn new(
-        client: OpenAIClient,
+        client: Box<dyn ChatClient>,
         tools: Registry,
         event_handler: Box<dyn EventHandler>,
         system_prompt_config: SystemPromptConfig,
@@ -403,6 +403,7 @@ impl ChatSession {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::openai::client::OpenAIClient;
     use std::collections::HashMap;
     use std::io;
 
@@ -461,7 +462,7 @@ mod tests {
 
     #[test]
     fn new_creates_a_chat_session_with_empty_memory() {
-        let openai_client = OpenAIClient::new("any_api_key".to_string());
+        let openai_client = Box::new(OpenAIClient::new("any_api_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
@@ -474,7 +475,7 @@ mod tests {
 
     #[test]
     fn new_creates_a_chat_session_with_system_prompt_when_default() {
-        let openai_client = OpenAIClient::new("any_api_key".to_string());
+        let openai_client = Box::new(OpenAIClient::new("any_api_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
@@ -492,7 +493,7 @@ mod tests {
 
     #[test]
     fn new_creates_a_chat_session_with_custom_system_prompt() {
-        let openai_client = OpenAIClient::new("any_api_key".to_string());
+        let openai_client = Box::new(OpenAIClient::new("any_api_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let custom_prompt = "You are a helpful assistant.".to_string();
         let chat_session = ChatSession::new(
@@ -511,7 +512,7 @@ mod tests {
 
     #[test]
     fn handle_openai_error_fatal_errors_return_fatal() {
-        let openai_client = OpenAIClient::new("test_key".to_string());
+        let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
@@ -540,7 +541,7 @@ mod tests {
 
     #[test]
     fn handle_openai_error_retryable_errors_retry_then_fatal() {
-        let openai_client = OpenAIClient::new("test_key".to_string());
+        let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
@@ -588,7 +589,7 @@ mod tests {
 
     #[test]
     fn handle_openai_error_content_errors_add_to_memory_and_retry() {
-        let openai_client = OpenAIClient::new("test_key".to_string());
+        let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
@@ -619,7 +620,7 @@ mod tests {
 
     #[test]
     fn handle_openai_error_request_errors_add_to_memory_and_retry() {
-        let openai_client = OpenAIClient::new("test_key".to_string());
+        let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
@@ -640,7 +641,7 @@ mod tests {
 
     #[test]
     fn handle_openai_error_other_errors_add_to_memory_and_retry() {
-        let openai_client = OpenAIClient::new("test_key".to_string());
+        let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
@@ -662,7 +663,7 @@ mod tests {
 
     #[test]
     fn handle_openai_error_preserves_original_error_in_fatal_cases() {
-        let openai_client = OpenAIClient::new("test_key".to_string());
+        let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
@@ -750,7 +751,7 @@ mod tests {
 
     #[test]
     fn request_approval_returns_true_when_approved() {
-        let openai_client = OpenAIClient::new("test_key".to_string());
+        let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
