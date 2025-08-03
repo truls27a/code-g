@@ -1,6 +1,6 @@
 use crate::chat_client::error::ChatClientError;
-use crate::chat_client::providers::openai::error::OpenAIError;
 use crate::chat_client::model::{ChatMessage, ChatResult, OpenAiModel, Tool, ToolCall};
+use crate::chat_client::providers::openai::error::OpenAIError;
 use crate::chat_client::traits::ChatClient;
 use async_trait::async_trait;
 
@@ -14,19 +14,23 @@ use async_trait::async_trait;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::mock::MockChatClient;
-/// use code_g::openai::model::{ChatResult, OpenAiModel, ChatMessage};
-/// use code_g::openai::traits::ChatClient;
+/// use code_g::chat_client::mock::MockChatClient;
+/// use code_g::chat_client::model::{ChatResult, OpenAiModel, ChatMessage};
+/// use code_g::chat_client::traits::ChatClient;
+/// use tokio::runtime::Runtime;
 ///
 /// // Create a mock that returns a simple message
 /// let mock = MockChatClient::new_with_message("Hello from mock!".to_string(), true);
 ///
 /// // Use it like any other ChatClient
-/// let result = mock.create_chat_completion(
-///     &OpenAiModel::Gpt4oMini,
-///     &[ChatMessage::User { content: "Hi".to_string() }],
-///     &[]
-/// ).await;
+/// let rt = Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let result = mock.create_chat_completion(
+///         &OpenAiModel::Gpt4oMini,
+///         &[ChatMessage::User { content: "Hi".to_string() }],
+///         &[],
+///     ).await.unwrap();
+/// });
 /// ```
 #[derive(Debug, Clone)]
 pub struct MockChatClient {
@@ -59,7 +63,7 @@ impl MockChatClient {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::openai::mock::MockChatClient;
+    /// use code_g::chat_client::mock::MockChatClient;
     ///
     /// let mock = MockChatClient::new_with_message("Test response".to_string(), true);
     /// ```
@@ -82,19 +86,19 @@ impl MockChatClient {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::openai::mock::MockChatClient;
-    /// use code_g::openai::model::ToolCall;
+    /// use code_g::chat_client::mock::MockChatClient;
+    /// use code_g::chat_client::model::ToolCall;
     /// use std::collections::HashMap;
     ///
     /// let mut args = HashMap::new();
     /// args.insert("file".to_string(), "test.txt".to_string());
-    /// 
+    ///
     /// let tool_call = ToolCall {
     ///     id: "call_123".to_string(),
     ///     name: "read_file".to_string(),
     ///     arguments: args,
     /// };
-    /// 
+    ///
     /// let mock = MockChatClient::new_with_tool_calls(vec![tool_call]);
     /// ```
     pub fn new_with_tool_calls(tool_calls: Vec<ToolCall>) -> Self {
@@ -116,7 +120,7 @@ impl MockChatClient {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::openai::mock::MockChatClient;
+    /// use code_g::chat_client::mock::MockChatClient;
     ///
     /// let mock = MockChatClient::new_with_error("Invalid API key".to_string());
     /// ```
@@ -137,7 +141,7 @@ impl MockChatClient {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::openai::mock::MockChatClient;
+    /// use code_g::chat_client::mock::MockChatClient;
     ///
     /// let mock = MockChatClient::default();
     /// ```
@@ -160,7 +164,9 @@ impl ChatClient for MockChatClient {
                 turn_over: *turn_over,
             }),
             MockResponse::ToolCalls(tool_calls) => Ok(ChatResult::ToolCalls(tool_calls.clone())),
-            MockResponse::Error(error_message) => Err(ChatClientError::OpenAIError(OpenAIError::Other(error_message.clone()))),
+            MockResponse::Error(error_message) => Err(ChatClientError::OpenAIError(
+                OpenAIError::Other(error_message.clone()),
+            )),
         }
     }
 }
@@ -174,7 +180,7 @@ mod tests {
     #[tokio::test]
     async fn mock_returns_configured_message() {
         let mock = MockChatClient::new_with_message("Test message".to_string(), true);
-        
+
         let result = mock
             .create_chat_completion(
                 &OpenAiModel::Gpt4oMini,
@@ -199,15 +205,15 @@ mod tests {
     async fn mock_returns_configured_tool_calls() {
         let mut args = HashMap::new();
         args.insert("param".to_string(), "value".to_string());
-        
+
         let tool_call = ToolCall {
             id: "call_test".to_string(),
             name: "test_tool".to_string(),
             arguments: args,
         };
-        
+
         let mock = MockChatClient::new_with_tool_calls(vec![tool_call.clone()]);
-        
+
         let result = mock
             .create_chat_completion(
                 &OpenAiModel::Gpt4oMini,
@@ -231,7 +237,7 @@ mod tests {
     #[tokio::test]
     async fn mock_returns_configured_error() {
         let mock = MockChatClient::new_with_error("Test error".to_string());
-        
+
         let result = mock
             .create_chat_completion(
                 &OpenAiModel::Gpt4oMini,
@@ -254,7 +260,7 @@ mod tests {
     #[tokio::test]
     async fn default_mock_returns_default_message() {
         let mock = MockChatClient::default();
-        
+
         let result = mock
             .create_chat_completion(
                 &OpenAiModel::Gpt4oMini,

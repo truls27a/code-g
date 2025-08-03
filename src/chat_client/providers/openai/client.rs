@@ -25,8 +25,9 @@ use std::collections::HashMap;
 /// # Examples
 ///
 /// ```rust,no_run
-/// use code_g::openai::client::OpenAIClient;
-/// use code_g::openai::model::{ChatMessage, OpenAiModel};
+/// use code_g::chat_client::providers::openai::client::OpenAIClient;
+/// use code_g::chat_client::model::{ChatMessage, OpenAiModel};
+/// use code_g::chat_client::traits::ChatClient;
 /// use tokio::runtime::Runtime;
 ///
 /// let client = OpenAIClient::new("your-api-key".to_string());
@@ -64,7 +65,7 @@ impl OpenAIClient {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::openai::client::OpenAIClient;
+    /// use code_g::chat_client::providers::openai::client::OpenAIClient;
     ///
     /// let client = OpenAIClient::new("sk-your-api-key-here".to_string());
     /// ```
@@ -99,26 +100,23 @@ impl ChatClient for OpenAIClient {
     ///
     /// # Errors
     ///
-    /// Returns an [`OpenAIError`] in the following cases:
-    /// - [`OpenAIError::EmptyChatHistory`] if the chat history is empty
-    /// - [`OpenAIError::InvalidChatMessageRequest`] if message conversion fails
-    /// - [`OpenAIError::InvalidApiKey`] if the API key is invalid (HTTP 401)
-    /// - [`OpenAIError::InsufficientCredits`] if the account has no credits (HTTP 403)
-    /// - [`OpenAIError::RateLimitExceeded`] if rate limits are hit (HTTP 429)
-    /// - [`OpenAIError::InvalidModel`] if the model is not found (HTTP 404)
-    /// - [`OpenAIError::ServiceUnavailable`] if OpenAI service is down (HTTP 500)
-    /// - [`OpenAIError::HttpError`] for other network-related errors
-    /// - [`OpenAIError::NoCompletionFound`] if response parsing fails
-    /// - [`OpenAIError::NoChoicesFound`] if no choices in the response
-    /// - [`OpenAIError::NoContentFound`] if no content or tool calls found
-    /// - [`OpenAIError::InvalidContentResponse`] if content JSON is malformed
-    /// - [`OpenAIError::InvalidToolCallArguments`] if tool call args are invalid
+    /// Returns a [`ChatClientError`] in the following cases:
+    /// - [`ChatClientError::EmptyChatHistory`] if the chat history is empty
+    /// - [`ChatClientError::InvalidChatMessageRequest`] if message conversion fails
+    /// - [`ChatClientError::InvalidApiKey`] if the API key is invalid (HTTP 401)
+    /// - [`ChatClientError::InsufficientCredits`] if the account has no credits (HTTP 403)
+    /// - [`ChatClientError::RateLimitExceeded`] if rate limits are hit (HTTP 429)
+    /// - [`ChatClientError::InvalidModel`] if the model is not found (HTTP 404)
+    /// - [`ChatClientError::ServiceUnavailable`] if OpenAI service is down (HTTP 500)
+    /// - [`ChatClientError::Other`] for other network-related errors
+    /// - [`ChatClientError::OpenAIError`] for OpenAI-specific errors
     ///
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use code_g::openai::client::OpenAIClient;
-    /// use code_g::openai::model::{ChatMessage, ChatResult, OpenAiModel};
+    /// use code_g::chat_client::providers::openai::client::OpenAIClient;
+    /// use code_g::chat_client::model::{ChatMessage, ChatResult, OpenAiModel};
+    /// use code_g::chat_client::traits::ChatClient;
     /// use tokio::runtime::Runtime;
     ///
     /// let client = OpenAIClient::new("your-api-key".to_string());

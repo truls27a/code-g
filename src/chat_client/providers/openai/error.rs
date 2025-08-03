@@ -9,19 +9,19 @@ use thiserror::Error;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::error::OpenAIError;
+/// use code_g::chat_client::providers::openai::error::OpenAIError;
 ///
 /// // Handle different types of errors
 /// fn handle_openai_error(error: OpenAIError) {
 ///     match error {
-///         OpenAIError::InvalidApiKey => {
-///             eprintln!("Please check your API key");
+///         OpenAIError::NoCompletionFound => {
+///             eprintln!("No completion found");
 ///         }
-///         OpenAIError::RateLimitExceeded => {
-///             eprintln!("Rate limit hit, please wait before retrying");
+///         OpenAIError::NoChoicesFound => {
+///             eprintln!("No choices found");
 ///         }
-///         OpenAIError::HttpError(e) => {
-///             eprintln!("Network error: {}", e);
+///         OpenAIError::NoContentFound => {
+///             eprintln!("No content found");
 ///         }
 ///         _ => {
 ///             eprintln!("Other OpenAI error: {}", error);
@@ -73,11 +73,11 @@ impl OpenAIError {
     /// use code_g::chat_client::providers::openai::error::OpenAIError;
     /// use code_g::chat_client::error::ErrorRetryStrategy;
     ///
-    /// let error = OpenAIError::InvalidApiKey;
-    /// assert_eq!(error.retry_strategy(), ErrorRetryStrategy::Fatal);
+    /// let error = OpenAIError::NoCompletionFound;
+    /// assert_eq!(error.retry_strategy(), ErrorRetryStrategy::AddToMemoryAndRetry);
     ///
-    /// let error = OpenAIError::RateLimitExceeded;
-    /// assert_eq!(error.retry_strategy(), ErrorRetryStrategy::Retryable);
+    /// let error = OpenAIError::NoChoicesFound;
+    /// assert_eq!(error.retry_strategy(), ErrorRetryStrategy::AddToMemoryAndRetry);
     /// ```
     pub fn retry_strategy(&self) -> ErrorRetryStrategy {
         match self {

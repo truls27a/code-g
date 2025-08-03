@@ -11,7 +11,7 @@ use std::collections::HashMap;
 ///
 /// ```rust
 /// use code_g::tools::tool::Tool;
-/// use code_g::openai::model::Parameters;
+/// use code_g::chat_client::model::Parameters;
 /// use std::collections::HashMap;
 ///
 /// struct MyTool;

@@ -21,7 +21,7 @@ const MAX_ITERATIONS: usize = 10;
 ///
 /// ```rust
 /// use code_g::chat::session::ChatSession;
-/// use code_g::openai::client::OpenAIClient;
+/// use code_g::chat_client::providers::openai::client::OpenAIClient;
 /// use code_g::tools::registry::Registry;
 /// use code_g::chat::system_prompt::SystemPromptConfig;
 /// use code_g::tui::tui::Tui;
