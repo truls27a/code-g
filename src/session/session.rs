@@ -1,7 +1,7 @@
-use crate::chat::error::{ChatSessionError, ChatSessionErrorHandling};
-use crate::chat::event::{Action, Event, EventHandler};
-use crate::chat::memory::ChatMemory;
-use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
+use crate::session::error::{ChatSessionError, ChatSessionErrorHandling};
+use crate::session::event::{Action, Event, EventHandler};
+use crate::session::memory::ChatMemory;
+use crate::session::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use crate::client::error::{ChatClientError, ErrorRetryStrategy};
 use crate::client::model::{AssistantMessage, ChatMessage, ChatResult, Model};
 use crate::client::providers::openai::schema::Model as OpenAiModel;

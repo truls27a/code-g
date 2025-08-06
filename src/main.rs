@@ -1,5 +1,5 @@
-use code_g::chat::session::ChatSession;
-use code_g::chat::system_prompt::SystemPromptConfig;
+use code_g::session::session::ChatSession;
+use code_g::session::system_prompt::SystemPromptConfig;
 use code_g::client::providers::openai::client::OpenAIClient;
 use code_g::tools::registry::Registry;
 use code_g::tui::tui::Tui;
@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         SystemPromptConfig::Default,
     );
 
-    chat_session.run().await;
+    chat_session.run().await?;
 
     Ok(())
 }

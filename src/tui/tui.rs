@@ -1,7 +1,7 @@
 use super::formatter::{terminal::TerminalFormatter, text::TextFormatter, tool::ToolFormatter};
 use super::model::{Message, Status};
 use super::state::TuiState;
-use crate::chat::event::{Action, Event, EventHandler};
+use crate::session::event::{Action, Event, EventHandler};
 use std::io::{self, BufRead, Write};
 
 /// Terminal User Interface for the chat application.
@@ -275,7 +275,7 @@ impl Tui {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chat::event::Event;
+    use crate::session::event::Event;
     use std::collections::HashMap;
     use std::io::Cursor;
 
