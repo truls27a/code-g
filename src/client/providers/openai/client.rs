@@ -1,11 +1,11 @@
-use crate::chat_client::error::ChatClientError;
-use crate::chat_client::providers::openai::error::OpenAIError;
-use crate::chat_client::model::{ChatMessage, ChatResult, Model, Tool, ToolCall};
-use crate::chat_client::providers::openai::schema::{
+use crate::client::error::ChatClientError;
+use crate::client::providers::openai::error::OpenAIError;
+use crate::client::model::{ChatMessage, ChatResult, Model, Tool, ToolCall};
+use crate::client::providers::openai::schema::{
     ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest, ContentResponse, JsonSchema,
     ResponseFormat,
 };
-use crate::chat_client::traits::ChatClient;
+use crate::client::traits::ChatClient;
 use async_trait::async_trait;
 use reqwest::Client;
 use std::collections::HashMap;
@@ -257,7 +257,7 @@ impl ChatClient for OpenAIClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chat_client::providers::openai::schema::OpenAiModel;
+    use crate::client::providers::openai::schema::OpenAiModel;
 
     #[test]
     fn new_creates_a_client_with_the_provided_api_key() {

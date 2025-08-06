@@ -1,4 +1,4 @@
-use crate::chat_client::model::Tool as OpenAiTool;
+use crate::client::model::Tool as OpenAiTool;
 use crate::tools::edit_file::EditFile;
 use crate::tools::execute_command::ExecuteCommand;
 use crate::tools::read_file::ReadFile;

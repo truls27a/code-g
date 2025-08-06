@@ -1,4 +1,4 @@
-use crate::chat_client::model::{Parameters, Property};
+use crate::client::model::{Parameters, Property};
 use crate::tools::tool::Tool;
 use std::collections::HashMap;
 use std::fs;

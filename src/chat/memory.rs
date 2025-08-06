@@ -1,4 +1,4 @@
-use crate::chat_client::model::ChatMessage;
+use crate::client::model::ChatMessage;
 
 /// A storage container for managing chat conversation history.
 ///

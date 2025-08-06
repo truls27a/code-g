@@ -1,4 +1,4 @@
 pub mod chat;
-pub mod chat_client;
+pub mod client;
 pub mod tools;
 pub mod tui;

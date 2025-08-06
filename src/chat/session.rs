@@ -2,10 +2,10 @@ use crate::chat::error::{ChatSessionError, ChatSessionErrorHandling};
 use crate::chat::event::{Action, Event, EventHandler};
 use crate::chat::memory::ChatMemory;
 use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
-use crate::chat_client::error::{ChatClientError, ErrorRetryStrategy};
-use crate::chat_client::model::{AssistantMessage, ChatMessage, ChatResult, Model};
-use crate::chat_client::traits::ChatClient;
-use crate::chat_client::providers::openai::schema::OpenAiModel;
+use crate::client::error::{ChatClientError, ErrorRetryStrategy};
+use crate::client::model::{AssistantMessage, ChatMessage, ChatResult, Model};
+use crate::client::traits::ChatClient;
+use crate::client::providers::openai::schema::OpenAiModel;
 use crate::tools::registry::Registry;
 use std::collections::HashMap;
 
@@ -376,7 +376,7 @@ impl ChatSession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chat_client::providers::openai::client::OpenAIClient;
+    use crate::client::providers::openai::client::OpenAIClient;
     use std::collections::HashMap;
     use std::io;
 
@@ -572,7 +572,7 @@ mod tests {
         );
 
         // These errors are now wrapped in OpenAIError, so we need to create them properly
-        use crate::chat_client::providers::openai::error::OpenAIError;
+        use crate::client::providers::openai::error::OpenAIError;
         
         let content_errors = vec![
             ChatClientError::OpenAIError(OpenAIError::InvalidContentResponse),

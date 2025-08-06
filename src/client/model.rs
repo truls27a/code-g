@@ -1,4 +1,4 @@
-use crate::chat_client::providers::openai::schema::OpenAiModel;
+use crate::client::providers::openai::schema::OpenAiModel;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

@@ -1,4 +1,4 @@
-use crate::chat_client::error::ChatClientError;
+use crate::client::error::ChatClientError;
 use thiserror::Error;
 
 

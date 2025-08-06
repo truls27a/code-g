@@ -1,7 +1,7 @@
-use crate::chat_client::error::ChatClientError;
-use crate::chat_client::model::{ChatMessage, ChatResult, Model, Tool, ToolCall};
-use crate::chat_client::providers::openai::error::OpenAIError;
-use crate::chat_client::traits::ChatClient;
+use crate::client::error::ChatClientError;
+use crate::client::model::{ChatMessage, ChatResult, Model, Tool, ToolCall};
+use crate::client::providers::openai::error::OpenAIError;
+use crate::client::traits::ChatClient;
 use async_trait::async_trait;
 
 /// Mock implementation of ChatClient for testing purposes.
@@ -175,8 +175,8 @@ impl ChatClient for MockChatClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chat_client::model::{ChatMessage, Model};
-    use crate::chat_client::providers::openai::schema::OpenAiModel;
+    use crate::client::model::{ChatMessage, Model};
+    use crate::client::providers::openai::schema::OpenAiModel;
     use std::collections::HashMap;
 
     #[tokio::test]

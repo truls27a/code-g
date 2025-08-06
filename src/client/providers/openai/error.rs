@@ -1,4 +1,4 @@
-use crate::chat_client::error::ErrorRetryStrategy;
+use crate::client::error::ErrorRetryStrategy;
 use thiserror::Error;
 
 /// Represents errors that can occur when interacting with the OpenAI API.
