@@ -27,7 +27,7 @@ use std::collections::HashMap;
 /// ```rust,no_run
 /// use code_g::chat_client::providers::openai::client::OpenAIClient;
 /// use code_g::chat_client::model::{ChatMessage, Model};
-/// use code_g::chat_client::providers::openai::model::OpenAiModel;
+/// use code_g::chat_client::providers::openai::schema::OpenAiModel;
 /// use code_g::chat_client::traits::ChatClient;
 /// use tokio::runtime::Runtime;
 ///
@@ -117,7 +117,7 @@ impl ChatClient for OpenAIClient {
     /// ```rust,no_run
     /// use code_g::chat_client::providers::openai::client::OpenAIClient;
     /// use code_g::chat_client::model::{ChatMessage, ChatResult, Model};
-    /// use code_g::chat_client::providers::openai::model::OpenAiModel;
+    /// use code_g::chat_client::providers::openai::schema::OpenAiModel;
     /// use code_g::chat_client::traits::ChatClient;
     /// use tokio::runtime::Runtime;
     ///
@@ -257,7 +257,7 @@ impl ChatClient for OpenAIClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chat_client::providers::openai::model::OpenAiModel;
+    use crate::chat_client::providers::openai::schema::OpenAiModel;
 
     #[test]
     fn new_creates_a_client_with_the_provided_api_key() {

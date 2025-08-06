@@ -16,7 +16,7 @@ use async_trait::async_trait;
 /// ```rust
 /// use code_g::chat_client::mock::MockChatClient;
 /// use code_g::chat_client::model::{ChatResult, ChatMessage};
-/// use code_g::chat_client::providers::openai::model::OpenAiModel;
+/// use code_g::chat_client::providers::openai::schema::OpenAiModel;
 /// use code_g::chat_client::traits::ChatClient;
 /// use tokio::runtime::Runtime;
 ///
@@ -176,7 +176,7 @@ impl ChatClient for MockChatClient {
 mod tests {
     use super::*;
     use crate::chat_client::model::{ChatMessage, Model};
-    use crate::chat_client::providers::openai::model::OpenAiModel;
+    use crate::chat_client::providers::openai::schema::OpenAiModel;
     use std::collections::HashMap;
 
     #[tokio::test]

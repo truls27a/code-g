@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         SystemPromptConfig::Default,
     );
 
-    chat_session.run().await?;
+    chat_session.run().await;
 
     Ok(())
 }

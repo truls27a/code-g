@@ -5,7 +5,7 @@ use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use crate::chat_client::error::{ChatClientError, ErrorRetryStrategy};
 use crate::chat_client::model::{AssistantMessage, ChatMessage, ChatResult, Model};
 use crate::chat_client::traits::ChatClient;
-use crate::chat_client::providers::openai::model::OpenAiModel;
+use crate::chat_client::providers::openai::schema::OpenAiModel;
 use crate::tools::registry::Registry;
 use std::collections::HashMap;
 
