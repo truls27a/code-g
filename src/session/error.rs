@@ -16,7 +16,7 @@ use thiserror::Error;
 ///
 /// let error = ChatSessionError::ToolError("Failed to execute command".to_string());
 /// ```
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum ChatSessionError {
     /// Error originating from the Chat Client
     #[error("Chat Client error: {0}")]
@@ -46,7 +46,7 @@ pub enum ChatSessionError {
 ///
 /// let handling = ChatSessionErrorHandling::Retry;
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ChatSessionErrorHandling {
     /// Fatal error that should immediately stop processing
     Fatal(ChatSessionError),

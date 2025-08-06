@@ -54,6 +54,7 @@ pub enum Event {
 ///
 /// let action = Action::RequestUserInput;
 /// ```
+#[derive(Debug, PartialEq)]
 pub enum Action {
     /// Request input from the user
     RequestUserInput,

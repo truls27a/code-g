@@ -107,6 +107,26 @@ pub enum ChatClientError {
     Other(String),
 }
 
+impl Clone for ChatClientError {
+    fn clone(&self) -> Self {
+        match self {
+            ChatClientError::InvalidModel => ChatClientError::InvalidModel,
+            ChatClientError::EmptyChatHistory => ChatClientError::EmptyChatHistory,
+            ChatClientError::InvalidChatMessageRequest => {
+                ChatClientError::InvalidChatMessageRequest
+            }
+            ChatClientError::InvalidApiKey => ChatClientError::InvalidApiKey,
+            ChatClientError::MissingApiKey => ChatClientError::MissingApiKey,
+            ChatClientError::InsufficientCredits => ChatClientError::InsufficientCredits,
+            ChatClientError::RateLimitExceeded => ChatClientError::RateLimitExceeded,
+            ChatClientError::ServiceUnavailable => ChatClientError::ServiceUnavailable,
+            ChatClientError::HttpError(e) => ChatClientError::Other(e.to_string()),
+            ChatClientError::OpenAIError(e) => ChatClientError::Other(e.to_string()),
+            ChatClientError::Other(e) => ChatClientError::Other(e.clone()),
+        }
+    }
+}
+
 impl ChatClientError {
     /// Determines the retry strategy for this error.
     ///

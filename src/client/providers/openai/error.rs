@@ -29,7 +29,7 @@ use thiserror::Error;
 ///     }
 /// }
 /// ```
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum OpenAIError {
     /// The API response did not contain a completion
     #[error("No completion found")]
