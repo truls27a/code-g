@@ -82,49 +82,58 @@ impl ChatSession {
         }
     }
 
-    /// Requests user approval for a potentially dangerous operation.
+    /// Runs an interactive chat loop that continues until the user exits.
     ///
-    /// This method prompts the user to approve or decline the execution of a tool
-    /// that could modify the filesystem or execute system commands.
-    ///
-    /// # Arguments
-    ///
-    /// * `tool_name` - The name of the tool requiring approval
-    /// * `parameters` - The parameters being passed to the tool
+    /// Provides a complete interactive chat experience by continuously prompting for
+    /// user input, processing each message, and displaying responses. The loop exits
+    /// when the user types "exit".
     ///
     /// # Returns
     ///
-    /// `true` if the user approved the operation, `false` if declined.
+    /// Returns [`Ok(())`] when session completes normally.
     ///
     /// # Errors
     ///
-    /// Returns [`ChatSessionError`] if the approval request fails.
-    fn request_approval(
-        &mut self,
-        tool_name: &str,
-        parameters: &HashMap<String, String>,
-    ) -> Result<bool, ChatSessionError> {
-        let (operation, details) = if let Some(tool) = self.tools.get_tool(tool_name) {
-            tool.approval_message(parameters)
-        } else {
-            (
-                "Unknown Operation".to_string(),
-                format!("Tool: {}", tool_name),
-            )
-        };
+    /// Returns [`ChatSessionError`] if an error occurs during conversation.
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// use code_g::session::session::ChatSession;
+    /// use code_g::client::providers::openai::client::OpenAIClient;
+    /// use code_g::tools::registry::Registry;
+    /// use code_g::session::system_prompt::SystemPromptConfig;
+    /// use code_g::tui::tui::Tui;
+    /// 
+    /// let client = Box::new(OpenAIClient::new("api_key".to_string()));
+    /// let tools = Registry::new();
+    /// let event_handler = Box::new(Tui::new());
+    /// 
+    /// let mut session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::Default);
+    /// 
+    /// session.run().await;
+    /// ```
+    pub async fn run(&mut self) -> Result<(), ChatSessionError> {
+        // Clear the terminal
+        self.event_handler.handle_event(Event::SessionStarted);
 
-        let response = self
-            .event_handler
-            .handle_action(Action::RequestUserApproval {
-                operation,
-                details,
-                tool_name: tool_name.to_string(),
-            })
-            .map_err(|e| {
-                ChatSessionError::ToolError(format!("Failed to request approval: {}", e))
-            })?;
+        loop {
+            let user_input = self
+                .event_handler
+                .handle_action(Action::RequestUserInput)
+                .unwrap(); // TODO: Handle errors
 
-        Ok(response == "approved")
+            if user_input == "exit" {
+                // Exit the loop
+                break;
+            }
+
+            self.send_message(&user_input).await?;
+        }
+
+        self.event_handler.handle_event(Event::SessionEnded);
+
+        Ok(())
     }
 
     /// Sends a message to the AI assistant and returns the response.
@@ -146,7 +155,7 @@ impl ChatSession {
     ///
     /// Returns [`ChatSessionError`] for API errors, maximum iteration limit exceeded,
     /// or tool execution failures.
-    pub async fn send_message(&mut self, message: &str) -> Result<String, ChatSessionError> {
+    async fn send_message(&mut self, message: &str) -> Result<String, ChatSessionError> {
         // Add user message to memory
         self.memory.add_message(ChatMessage::User {
             content: message.to_string(),
@@ -295,40 +304,49 @@ impl ChatSession {
         }
     }
 
-    /// Runs an interactive chat loop that continues until the user exits.
+    /// Requests user approval for a potentially dangerous operation.
     ///
-    /// Provides a complete interactive chat experience by continuously prompting for
-    /// user input, processing each message, and displaying responses. The loop exits
-    /// when the user types "exit".
+    /// This method prompts the user to approve or decline the execution of a tool
+    /// that could modify the filesystem or execute system commands.
+    ///
+    /// # Arguments
+    ///
+    /// * `tool_name` - The name of the tool requiring approval
+    /// * `parameters` - The parameters being passed to the tool
     ///
     /// # Returns
     ///
-    /// Returns [`Ok(())`] when session completes normally.
+    /// `true` if the user approved the operation, `false` if declined.
     ///
     /// # Errors
     ///
-    /// Returns [`ChatSessionError`] if an error occurs during conversation.
-    pub async fn run(&mut self) -> Result<(), ChatSessionError> {
-        // Clear the terminal
-        self.event_handler.handle_event(Event::SessionStarted);
+    /// Returns [`ChatSessionError`] if the approval request fails.
+    fn request_approval(
+        &mut self,
+        tool_name: &str,
+        parameters: &HashMap<String, String>,
+    ) -> Result<bool, ChatSessionError> {
+        let (operation, details) = if let Some(tool) = self.tools.get_tool(tool_name) {
+            tool.approval_message(parameters)
+        } else {
+            (
+                "Unknown Operation".to_string(),
+                format!("Tool: {}", tool_name),
+            )
+        };
 
-        loop {
-            let user_input = self
-                .event_handler
-                .handle_action(Action::RequestUserInput)
-                .unwrap(); // TODO: Handle errors
+        let response = self
+            .event_handler
+            .handle_action(Action::RequestUserApproval {
+                operation,
+                details,
+                tool_name: tool_name.to_string(),
+            })
+            .map_err(|e| {
+                ChatSessionError::ToolError(format!("Failed to request approval: {}", e))
+            })?;
 
-            if user_input == "exit" {
-                // Exit the loop
-                break;
-            }
-
-            self.send_message(&user_input).await?;
-        }
-
-        self.event_handler.handle_event(Event::SessionEnded);
-
-        Ok(())
+        Ok(response == "approved")
     }
 
     /// Categorizes and handles chat client errors with appropriate recovery strategies.
