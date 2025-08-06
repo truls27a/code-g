@@ -1,4 +1,4 @@
-use crate::client::providers::openai::schema::OpenAiModel;
+use crate::client::providers::openai::schema::Model as OpenAiModel;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -128,7 +128,7 @@ pub enum AssistantMessage {
 ///
 /// ```rust
 /// use code_g::chat_client::model::Model;
-/// use code_g::chat_client::providers::openai::schema::OpenAiModel;
+/// use code_g::chat_client::providers::openai::schema::Model as OpenAiModel;
 ///
 /// let model = Model::OpenAi(OpenAiModel::Gpt4o);
 /// ```

@@ -4,8 +4,8 @@ use crate::chat::memory::ChatMemory;
 use crate::chat::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use crate::client::error::{ChatClientError, ErrorRetryStrategy};
 use crate::client::model::{AssistantMessage, ChatMessage, ChatResult, Model};
+use crate::client::providers::openai::schema::Model as OpenAiModel;
 use crate::client::traits::ChatClient;
-use crate::client::providers::openai::schema::OpenAiModel;
 use crate::tools::registry::Registry;
 use std::collections::HashMap;
 
@@ -525,8 +525,8 @@ mod tests {
 
         // Test RateLimitExceeded
         for iteration in 1..=3 {
-            let result =
-                chat_session.handle_chat_client_error(ChatClientError::RateLimitExceeded, iteration);
+            let result = chat_session
+                .handle_chat_client_error(ChatClientError::RateLimitExceeded, iteration);
             match result {
                 ChatSessionErrorHandling::Retry => (), // Expected
                 _ => panic!(
@@ -543,8 +543,8 @@ mod tests {
 
         // Test ServiceUnavailable
         for iteration in 1..=3 {
-            let result =
-                chat_session.handle_chat_client_error(ChatClientError::ServiceUnavailable, iteration);
+            let result = chat_session
+                .handle_chat_client_error(ChatClientError::ServiceUnavailable, iteration);
             match result {
                 ChatSessionErrorHandling::Retry => (), // Expected
                 _ => panic!(
@@ -573,7 +573,7 @@ mod tests {
 
         // These errors are now wrapped in OpenAIError, so we need to create them properly
         use crate::client::providers::openai::error::OpenAIError;
-        
+
         let content_errors = vec![
             ChatClientError::OpenAIError(OpenAIError::InvalidContentResponse),
             ChatClientError::OpenAIError(OpenAIError::InvalidToolCallArguments),
@@ -605,7 +605,8 @@ mod tests {
             SystemPromptConfig::None,
         );
 
-        let result = chat_session.handle_chat_client_error(ChatClientError::InvalidChatMessageRequest, 1);
+        let result =
+            chat_session.handle_chat_client_error(ChatClientError::InvalidChatMessageRequest, 1);
         match result {
             ChatSessionErrorHandling::AddToMemoryAndRetry(message) => {
                 assert!(message.contains("error occurred"));
@@ -626,8 +627,10 @@ mod tests {
             SystemPromptConfig::None,
         );
 
-        let result = chat_session
-            .handle_chat_client_error(ChatClientError::Other("Some unexpected error".to_string()), 1);
+        let result = chat_session.handle_chat_client_error(
+            ChatClientError::Other("Some unexpected error".to_string()),
+            1,
+        );
         match result {
             ChatSessionErrorHandling::AddToMemoryAndRetry(message) => {
                 assert!(message.contains("error occurred"));

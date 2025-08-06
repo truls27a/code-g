@@ -1,6 +1,6 @@
 use crate::client::error::ChatClientError;
-use crate::client::providers::openai::error::OpenAIError;
 use crate::client::model::{ChatMessage, ChatResult, Model, Tool, ToolCall};
+use crate::client::providers::openai::error::OpenAIError;
 use crate::client::providers::openai::schema::{
     ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest, ContentResponse, JsonSchema,
     ResponseFormat,
@@ -27,7 +27,7 @@ use std::collections::HashMap;
 /// ```rust,no_run
 /// use code_g::chat_client::providers::openai::client::OpenAIClient;
 /// use code_g::chat_client::model::{ChatMessage, Model};
-/// use code_g::chat_client::providers::openai::schema::OpenAiModel;
+/// use code_g::chat_client::providers::openai::schema::Model as OpenAiModel;
 /// use code_g::chat_client::traits::ChatClient;
 /// use tokio::runtime::Runtime;
 ///
@@ -76,7 +76,6 @@ impl OpenAIClient {
             api_key,
         }
     }
-
 }
 
 #[async_trait]
@@ -117,7 +116,7 @@ impl ChatClient for OpenAIClient {
     /// ```rust,no_run
     /// use code_g::chat_client::providers::openai::client::OpenAIClient;
     /// use code_g::chat_client::model::{ChatMessage, ChatResult, Model};
-    /// use code_g::chat_client::providers::openai::schema::OpenAiModel;
+    /// use code_g::chat_client::providers::openai::schema::Model as OpenAiModel;
     /// use code_g::chat_client::traits::ChatClient;
     /// use tokio::runtime::Runtime;
     ///
@@ -209,8 +208,10 @@ impl ChatClient for OpenAIClient {
                 let message = &choice.message;
 
                 if let Some(content) = &message.content {
-                    let content_response = ContentResponse::try_from(content.as_str())
-                        .map_err(|_| ChatClientError::OpenAIError(OpenAIError::InvalidContentResponse))?;
+                    let content_response =
+                        ContentResponse::try_from(content.as_str()).map_err(|_| {
+                            ChatClientError::OpenAIError(OpenAIError::InvalidContentResponse)
+                        })?;
                     return Ok(ChatResult::Message {
                         content: content_response.message,
                         turn_over: content_response.turn_over,
@@ -221,9 +222,12 @@ impl ChatClient for OpenAIClient {
                     let tool_calls: Result<Vec<ToolCall>, ChatClientError> = tool_calls_response
                         .into_iter()
                         .map(|tool_call| {
-                            let arguments: HashMap<String, String> =
-                                serde_json::from_str(&tool_call.function.arguments)
-                                    .map_err(|_| ChatClientError::OpenAIError(OpenAIError::InvalidToolCallArguments))?;
+                            let arguments: HashMap<String, String> = serde_json::from_str(
+                                &tool_call.function.arguments,
+                            )
+                            .map_err(|_| {
+                                ChatClientError::OpenAIError(OpenAIError::InvalidToolCallArguments)
+                            })?;
                             Ok(ToolCall {
                                 id: tool_call.id.clone(),
                                 name: tool_call.function.name.clone(),
@@ -257,7 +261,7 @@ impl ChatClient for OpenAIClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::client::providers::openai::schema::OpenAiModel;
+    use crate::client::providers::openai::schema::Model as OpenAiModel;
 
     #[test]
     fn new_creates_a_client_with_the_provided_api_key() {
@@ -268,14 +272,18 @@ mod tests {
     #[tokio::test]
     async fn create_chat_completion_returns_error_when_chat_history_is_empty() {
         let client = OpenAIClient::new("test-api-key".to_string());
-        let result = client.create_chat_completion(&Model::OpenAi(OpenAiModel::Gpt4oMini), &[], &[]).await;
+        let result = client
+            .create_chat_completion(&Model::OpenAi(OpenAiModel::Gpt4oMini), &[], &[])
+            .await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn create_chat_completion_returns_error_when_api_key_is_invalid() {
         let client = OpenAIClient::new("invalid-api-key".to_string());
-        let result = client.create_chat_completion(&Model::OpenAi(OpenAiModel::Gpt4oMini), &[], &[]).await;
+        let result = client
+            .create_chat_completion(&Model::OpenAi(OpenAiModel::Gpt4oMini), &[], &[])
+            .await;
         assert!(result.is_err());
     }
 }

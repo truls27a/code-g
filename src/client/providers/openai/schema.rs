@@ -14,14 +14,14 @@ use std::convert::TryFrom;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat_client::providers::openai::schema::OpenAiModel;
+/// use code_g::chat_client::providers::openai::schema::Model;
 ///
-/// let model = OpenAiModel::Gpt4o;
-/// let mini_model = OpenAiModel::Gpt4oMini;
-/// let latest_model = OpenAiModel::GptO3;
+/// let model = Model::Gpt4o;
+/// let mini_model = Model::Gpt4oMini;
+/// let latest_model = Model::GptO3;
 /// ```
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub enum OpenAiModel {
+pub enum Model {
     /// GPT-4o - Latest high-performance model with vision capabilities
     #[serde(rename = "gpt-4o")]
     Gpt4o,
@@ -56,10 +56,10 @@ pub enum OpenAiModel {
 ///
 /// ```rust
 /// use code_g::chat_client::providers::openai::schema::ChatCompletionRequest;
-/// use code_g::chat_client::model::OpenAiModel;
+/// use code_g::chat_client::model::Model;
 ///
 /// let request = ChatCompletionRequest {
-///     model: OpenAiModel::Gpt4o,
+///     model: Model::Gpt4o,
 ///     messages: vec![],
 ///     tools: None,
 ///     response_format: None,
@@ -67,7 +67,7 @@ pub enum OpenAiModel {
 /// ```
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChatCompletionRequest {
-    pub model: OpenAiModel,
+    pub model: Model,
     pub messages: Vec<ChatMessageRequest>,
     pub tools: Option<Vec<Tool>>,
     pub response_format: Option<ResponseFormat>,
