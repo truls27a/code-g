@@ -156,9 +156,21 @@ mod tests {
         assert_eq!(mock.to_openai_tools().len(), 1);
         assert_eq!(mock.to_openai_tools()[0].function.name, "test_tool");
         assert_eq!(mock.to_openai_tools()[0].function.description, "Test tool");
-        assert_eq!(mock.to_openai_tools()[0].function.parameters.param_type, "object");
-        assert_eq!(mock.to_openai_tools()[0].function.parameters.required, vec!["test_tool".to_string()]);
-        assert_eq!(mock.to_openai_tools()[0].function.parameters.additional_properties, false);
+        assert_eq!(
+            mock.to_openai_tools()[0].function.parameters.param_type,
+            "object"
+        );
+        assert_eq!(
+            mock.to_openai_tools()[0].function.parameters.required,
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            mock.to_openai_tools()[0]
+                .function
+                .parameters
+                .additional_properties,
+            false
+        );
         assert_eq!(mock.to_openai_tools()[0].function.strict, false);
     }
 }
