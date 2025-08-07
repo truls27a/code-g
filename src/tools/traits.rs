@@ -15,22 +15,6 @@ use std::collections::HashMap;
 /// struct MyToolRegistry;
 /// 
 /// impl ToolRegistry for MyToolRegistry {
-///     fn new() -> Self {
-///         Self { tools: vec![] }
-///     }
-/// 
-///     fn from_tools(tools: Vec<Box<dyn Tool>>) -> Self {
-///         Self { tools }
-///     }
-/// 
-///     fn read_only_tools() -> Self {
-///         Self { tools: vec![Box::new(ReadFile), Box::new(SearchFiles)] }
-///     }
-/// 
-///     fn all_tools() -> Self {
-///         Self { tools: vec![Box::new(ReadFile), Box::new(SearchFiles)] }
-///     }
-/// 
 ///     fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String> {
 ///         // Implement the tool execution logic here
 ///         Ok("Tool executed successfully".to_string())
@@ -38,35 +22,6 @@ use std::collections::HashMap;
 /// }
 /// ```
 pub trait ToolRegistry {
-    /// Creates a new tool registry.
-    /// 
-    /// # Returns
-    /// A new `ToolRegistry` instance.
-    fn new() -> Self;
-    
-    /// Returns a tool registry with the provided tools.
-    /// 
-    /// # Arguments
-    /// 
-    /// * `tools` - A vector of tools to include in the registry.
-    /// 
-    /// # Returns
-    /// A tool registry with the provided tools.
-    fn from_tools(tools: Vec<Box<dyn Tool>>) -> Self;
-
-    /// Returns a read-only tool registry.
-    /// 
-    /// # Returns
-    /// A read-only `ToolRegistry` instance.
-    fn read_only_tools() -> Self;
-    
-    /// Returns a tool registry with all available tools.
-    /// 
-    /// # Returns
-    /// A tool registry with all available tools.
-    fn all_tools() -> Self;
-
-
     /// Executes a tool by name with the provided arguments.
     /// 
     /// Searches for a tool with the given name in the registry and executes it
@@ -84,6 +39,36 @@ pub trait ToolRegistry {
     /// Returns an error if the tool is not found in the registry or if the tool
     /// execution fails.
     fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String>;
+
+    /// Converts all tools in the registry to OpenAI-compatible tool format.
+    ///
+    /// This is useful when integrating with OpenAI's function calling capabilities,
+    /// as it provides the tool definitions in the expected format.
+    ///
+    /// # Returns
+    /// A vector of OpenAI tool definitions.
+    fn to_openai_tools(&self) -> Vec<OpenAiTool>;
+
+    /// Returns the number of tools in the registry.
+    ///
+    /// # Returns
+    /// The count of tools currently registered.
+    fn len(&self) -> usize;
+
+    /// Returns a tool by name.
+    ///
+    /// # Arguments
+    /// * `tool_name` - The name of the tool to find.
+    ///
+    /// # Returns
+    /// An `Option` containing a reference to the tool if found, or `None` if not found.
+    fn get_tool(&self, tool_name: &str) -> Option<&Box<dyn Tool>>;
+
+    /// Returns a reference to all tools in the registry.
+    ///
+    /// # Returns
+    /// A slice of references to all tools in the registry.
+    fn get_tools(&self) -> &[Box<dyn Tool>];
 }
 
 

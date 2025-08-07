@@ -6,7 +6,7 @@ use crate::client::error::{ChatClientError, ErrorRetryStrategy};
 use crate::client::model::{AssistantMessage, ChatMessage, ChatResult, Model};
 use crate::client::providers::openai::schema::Model as OpenAiModel;
 use crate::client::traits::ChatClient;
-use crate::tools::registry::Registry;
+use crate::tools::traits::ToolRegistry;
 use std::collections::HashMap;
 
 // Maximum number of iterations per message to prevent infinite loops
@@ -38,7 +38,7 @@ pub struct ChatSession {
     /// Chat client for API communication
     client: Box<dyn ChatClient>,
     /// Registry of available tools for the AI to use
-    tools: Registry,
+    tools: Box<dyn ToolRegistry>,
     /// Handler for events and user interactions
     event_handler: Box<dyn EventHandler>,
 }
@@ -58,7 +58,7 @@ impl ChatSession {
     /// A new `ChatSession` instance ready for conversation.
     pub fn new(
         client: Box<dyn ChatClient>,
-        tools: Registry,
+        tools: Box<dyn ToolRegistry>,
         event_handler: Box<dyn EventHandler>,
         system_prompt_config: SystemPromptConfig,
     ) -> Self {
@@ -457,7 +457,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            Registry::new(),
+            Box::new(Registry::new()),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -470,7 +470,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            Registry::new(),
+            Box::new(Registry::new()),
             event_handler,
             SystemPromptConfig::Default,
         );
@@ -489,7 +489,7 @@ mod tests {
         let custom_prompt = "You are a helpful assistant.".to_string();
         let chat_session = ChatSession::new(
             openai_client,
-            Registry::new(),
+            Box::new(Registry::new()),
             event_handler,
             SystemPromptConfig::Custom(custom_prompt.clone()),
         );
@@ -507,7 +507,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            Registry::new(),
+            Box::new(Registry::new()),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -536,7 +536,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            Registry::new(),
+            Box::new(Registry::new()),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -584,7 +584,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            Registry::new(),
+            Box::new(Registry::new()),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -618,7 +618,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            Registry::new(),
+            Box::new(Registry::new()),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -640,7 +640,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            Registry::new(),
+            Box::new(Registry::new()),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -664,7 +664,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let chat_session = ChatSession::new(
             openai_client,
-            Registry::new(),
+            Box::new(Registry::new()),
             event_handler,
             SystemPromptConfig::None,
         );
@@ -752,7 +752,7 @@ mod tests {
         let event_handler = Box::new(MockEventHandler::new());
         let mut chat_session = ChatSession::new(
             openai_client,
-            Registry::new(),
+            Box::new(Registry::new()),
             event_handler,
             SystemPromptConfig::None,
         );
