@@ -19,7 +19,7 @@ use std::collections::HashMap;
 ///         Self { tools: vec![] }
 ///     }
 /// 
-///     fn from(tools: Vec<Box<dyn Tool>>) -> Self {
+///     fn from_tools(tools: Vec<Box<dyn Tool>>) -> Self {
 ///         Self { tools }
 ///     }
 /// 
@@ -52,7 +52,7 @@ pub trait ToolRegistry {
     /// 
     /// # Returns
     /// A tool registry with the provided tools.
-    fn from(tools: Vec<Box<dyn Tool>>) -> Self;
+    fn from_tools(tools: Vec<Box<dyn Tool>>) -> Self;
 
     /// Returns a read-only tool registry.
     /// 

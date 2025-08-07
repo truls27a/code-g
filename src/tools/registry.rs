@@ -3,7 +3,7 @@ use crate::tools::edit_file::EditFile;
 use crate::tools::execute_command::ExecuteCommand;
 use crate::tools::read_file::ReadFile;
 use crate::tools::search_files::SearchFiles;
-use crate::tools::traits::Tool;
+use crate::tools::traits::{Tool, ToolRegistry};
 use crate::tools::write_file::WriteFile;
 use std::collections::HashMap;
 
@@ -34,7 +34,7 @@ pub struct Registry {
     tools: Vec<Box<dyn Tool>>,
 }
 
-impl Registry {
+impl ToolRegistry for Registry {
     /// Creates a new empty registry with no tools.
     ///
     /// # Examples
@@ -46,7 +46,7 @@ impl Registry {
     ///
     /// assert_eq!(registry.len(), 0);
     /// ```
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self { tools: vec![] }
     }
 
@@ -68,7 +68,7 @@ impl Registry {
     ///
     /// assert_eq!(registry.len(), 1);
     /// ```
-    pub fn from(tools: Vec<Box<dyn Tool>>) -> Self {
+    fn from_tools(tools: Vec<Box<dyn Tool>>) -> Self {
         Self { tools }
     }
 
@@ -86,7 +86,7 @@ impl Registry {
     ///
     /// assert_eq!(registry.len(), 2);
     /// ```
-    pub fn read_only_tools() -> Self {
+    fn read_only_tools() -> Self {
         let tools: Vec<Box<dyn Tool>> = vec![Box::new(ReadFile), Box::new(SearchFiles)];
         Self { tools }
     }
@@ -105,7 +105,7 @@ impl Registry {
     ///
     /// assert_eq!(registry.len(), 5);
     /// ```
-    pub fn all_tools() -> Self {
+    fn all_tools() -> Self {
         let tools: Vec<Box<dyn Tool>> = vec![
             Box::new(ReadFile),
             Box::new(SearchFiles),
@@ -147,7 +147,7 @@ impl Registry {
     ///
     /// let result = registry.call_tool("read_file", args);
     /// ```
-    pub fn call_tool(
+    fn call_tool(
         &self,
         tool_name: &str,
         args: HashMap<String, String>,
@@ -160,6 +160,10 @@ impl Registry {
         }
     }
 
+}
+
+
+impl Registry {
     /// Returns a reference to all tools in the registry.
     ///
     /// # Returns
@@ -265,7 +269,7 @@ mod tests {
     #[test]
     fn from_creates_a_tool_registry_with_the_given_tools() {
         let tools: Vec<Box<dyn Tool>> = vec![Box::new(ReadFile), Box::new(WriteFile)];
-        let registry = Registry::from(tools);
+        let registry = Registry::from_tools(tools);
         assert_eq!(registry.len(), 2);
         assert_eq!(registry.get_tools().len(), 2);
 
