@@ -1,11 +1,11 @@
-use crate::session::error::{ChatSessionError, ChatSessionErrorHandling};
-use crate::session::event::{Action, Event, EventHandler};
-use crate::session::memory::ChatMemory;
-use crate::session::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use crate::client::error::{ChatClientError, ErrorRetryStrategy};
 use crate::client::model::{AssistantMessage, ChatMessage, ChatResult, Model};
 use crate::client::providers::openai::schema::Model as OpenAiModel;
 use crate::client::traits::ChatClient;
+use crate::session::error::{ChatSessionError, ChatSessionErrorHandling};
+use crate::session::event::{Action, Event, EventHandler};
+use crate::session::memory::ChatMemory;
+use crate::session::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use crate::tools::traits::ToolRegistry;
 use std::collections::HashMap;
 
@@ -21,14 +21,14 @@ const MAX_ITERATIONS: usize = 10;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat::session::ChatSession;
-/// use code_g::chat_client::providers::openai::client::OpenAIClient;
+/// use code_g::session::session::ChatSession;
+/// use code_g::client::providers::openai::client::OpenAIClient;
 /// use code_g::tools::registry::Registry;
-/// use code_g::chat::system_prompt::SystemPromptConfig;
+/// use code_g::session::system_prompt::SystemPromptConfig;
 /// use code_g::tui::tui::Tui;
 ///
 /// let client = Box::new(OpenAIClient::new("api_key".to_string()));
-/// let tools = Registry::new();
+/// let tools = Box::new(Registry::new());
 /// let event_handler = Box::new(Tui::new());
 /// let session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::Default);
 /// ```
@@ -95,23 +95,27 @@ impl ChatSession {
     /// # Errors
     ///
     /// Returns [`ChatSessionError`] if an error occurs during conversation.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```rust
     /// use code_g::session::session::ChatSession;
     /// use code_g::client::providers::openai::client::OpenAIClient;
     /// use code_g::tools::registry::Registry;
     /// use code_g::session::system_prompt::SystemPromptConfig;
     /// use code_g::tui::tui::Tui;
-    /// 
+    /// use tokio::runtime::Runtime;
+    ///
     /// let client = Box::new(OpenAIClient::new("api_key".to_string()));
-    /// let tools = Registry::new();
+    /// let tools = Box::new(Registry::new());
     /// let event_handler = Box::new(Tui::new());
-    /// 
+    ///
     /// let mut session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::Default);
-    /// 
-    /// session.run().await;
+    ///
+    /// // Run the session in a tokio runtime
+    /// let rt = Runtime::new().unwrap();
+    ///
+    /// rt.block_on(session.run());
     /// ```
     pub async fn run(&mut self) -> Result<(), ChatSessionError> {
         // Clear the terminal

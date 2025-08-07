@@ -1,40 +1,61 @@
 use crate::client::model::{Function, Parameters, Tool as OpenAiTool, ToolType};
 use std::collections::HashMap;
 
-
 /// A trait defining the interface for tool registries.
-/// 
+///
 /// The `ToolRegistry` trait provides a standardized interface for implementing
 /// tool registries that can be used to manage and execute tools.
-/// 
+///
 /// # Examples
 /// ```rust
 /// use code_g::tools::traits::ToolRegistry;
-/// use code_g::tools::tool::Tool;
-/// 
+/// use code_g::tools::traits::Tool;
+/// use code_g::client::model::Tool as OpenAiTool;
+/// use std::collections::HashMap;
+///
 /// struct MyToolRegistry;
-/// 
+///
 /// impl ToolRegistry for MyToolRegistry {
 ///     fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String> {
 ///         // Implement the tool execution logic here
 ///         Ok("Tool executed successfully".to_string())
 ///     }
+///
+///     fn to_openai_tools(&self) -> Vec<OpenAiTool> {
+///         // Implement the conversion logic here
+///         vec![]
+///     }
+///
+///     fn len(&self) -> usize {
+///         // Implement the logic to return the number of tools
+///         0
+///     }
+///
+///     fn get_tool(&self, tool_name: &str) -> Option<&Box<dyn Tool>> {
+///         // Implement the logic to return a tool by name
+///         None
+///     }
+///
+///     fn get_tools(&self) -> &[Box<dyn Tool>] {
+///         // Implement the logic to return all tools  
+///         &[]
+///     }
 /// }
 /// ```
 pub trait ToolRegistry {
     /// Executes a tool by name with the provided arguments.
-    /// 
+    ///
     /// Searches for a tool with the given name in the registry and executes it
     /// with the provided arguments. If the tool is not found, returns an error.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `tool_name` - The name of the tool to execute.
     /// * `args` - A HashMap containing the arguments to pass to the tool.
-    /// 
+    ///
     /// # Returns
     /// The output from the tool execution as a String.
-    /// 
+    ///
     /// # Errors
     /// Returns an error if the tool is not found in the registry or if the tool
     /// execution fails.
@@ -71,7 +92,6 @@ pub trait ToolRegistry {
     fn get_tools(&self) -> &[Box<dyn Tool>];
 }
 
-
 /// A trait defining the interface for tools that can be called with arguments.
 ///
 /// The `Tool` trait provides a standardized interface for implementing various tools
@@ -81,8 +101,8 @@ pub trait ToolRegistry {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::tools::tool::Tool;
-/// use code_g::chat_client::model::Parameters;
+/// use code_g::tools::traits::Tool;
+/// use code_g::client::model::Parameters;
 /// use std::collections::HashMap;
 ///
 /// struct MyTool;

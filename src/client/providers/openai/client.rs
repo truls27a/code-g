@@ -25,10 +25,10 @@ use std::collections::HashMap;
 /// # Examples
 ///
 /// ```rust,no_run
-/// use code_g::chat_client::providers::openai::client::OpenAIClient;
-/// use code_g::chat_client::model::{ChatMessage, Model};
-/// use code_g::chat_client::providers::openai::schema::Model as OpenAiModel;
-/// use code_g::chat_client::traits::ChatClient;
+/// use code_g::client::providers::openai::client::OpenAIClient;
+/// use code_g::client::model::{ChatMessage, Model};
+/// use code_g::client::providers::openai::schema::Model as OpenAiModel;
+/// use code_g::client::traits::ChatClient;
 /// use tokio::runtime::Runtime;
 ///
 /// let client = OpenAIClient::new("your-api-key".to_string());
@@ -66,7 +66,7 @@ impl OpenAIClient {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::chat_client::providers::openai::client::OpenAIClient;
+    /// use code_g::client::providers::openai::client::OpenAIClient;
     ///
     /// let client = OpenAIClient::new("sk-your-api-key-here".to_string());
     /// ```
@@ -114,10 +114,10 @@ impl ChatClient for OpenAIClient {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use code_g::chat_client::providers::openai::client::OpenAIClient;
-    /// use code_g::chat_client::model::{ChatMessage, ChatResult, Model};
-    /// use code_g::chat_client::providers::openai::schema::Model as OpenAiModel;
-    /// use code_g::chat_client::traits::ChatClient;
+    /// use code_g::client::providers::openai::client::OpenAIClient;
+    /// use code_g::client::model::{ChatMessage, ChatResult, Model};
+    /// use code_g::client::providers::openai::schema::Model as OpenAiModel;
+    /// use code_g::client::traits::ChatClient;
     /// use tokio::runtime::Runtime;
     ///
     /// let client = OpenAIClient::new("your-api-key".to_string());

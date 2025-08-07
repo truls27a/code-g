@@ -11,9 +11,9 @@ use async_trait::async_trait;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat_client::traits::ChatClient;
-/// use code_g::chat_client::model::{ChatMessage, ChatResult, Model, Tool};
-/// use code_g::chat_client::error::ChatClientError;
+/// use code_g::client::traits::ChatClient;
+/// use code_g::client::model::{ChatMessage, ChatResult, Model, Tool};
+/// use code_g::client::error::ChatClientError;
 /// use async_trait::async_trait;
 /// 
 /// struct MockClient;

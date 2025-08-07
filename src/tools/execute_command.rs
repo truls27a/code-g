@@ -14,7 +14,7 @@ use std::process::Command;
 ///
 /// ```rust,no_run
 /// use code_g::tools::execute_command::ExecuteCommand;
-/// use code_g::tools::tool::Tool;
+/// use code_g::tools::traits::Tool;
 /// use std::collections::HashMap;
 ///
 /// let tool = ExecuteCommand;

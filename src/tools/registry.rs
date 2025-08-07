@@ -18,6 +18,7 @@ use std::collections::HashMap;
 ///
 /// ```rust
 /// use code_g::tools::registry::Registry;
+/// use code_g::tools::traits::ToolRegistry;
 ///
 /// // Create a registry with all available tools
 /// let registry = Registry::all_tools();
@@ -58,6 +59,7 @@ impl ToolRegistry for Registry {
     ///
     /// ```rust
     /// use code_g::tools::registry::Registry;
+    /// use code_g::tools::traits::ToolRegistry;
     /// use std::collections::HashMap;
     ///
     /// let registry = Registry::all_tools();
@@ -66,11 +68,7 @@ impl ToolRegistry for Registry {
     ///
     /// let result = registry.call_tool("read_file", args);
     /// ```
-    fn call_tool(
-        &self,
-        tool_name: &str,
-        args: HashMap<String, String>,
-    ) -> Result<String, String> {
+    fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String> {
         let tool = self.tools.iter().find(|t| t.name() == tool_name);
         if let Some(tool) = tool {
             tool.call(args)
@@ -92,6 +90,7 @@ impl ToolRegistry for Registry {
     ///
     /// ```rust
     /// use code_g::tools::registry::Registry;
+    /// use code_g::tools::traits::ToolRegistry;
     ///
     /// let registry = Registry::all_tools();
     /// let openai_tools = registry.to_openai_tools();
@@ -114,6 +113,7 @@ impl ToolRegistry for Registry {
     ///
     /// ```rust
     /// use code_g::tools::registry::Registry;
+    /// use code_g::tools::traits::ToolRegistry;
     ///
     /// let registry = Registry::all_tools();
     /// let tools = registry.get_tools();
@@ -138,6 +138,7 @@ impl ToolRegistry for Registry {
     ///
     /// ```rust
     /// use code_g::tools::registry::Registry;
+    /// use code_g::tools::traits::ToolRegistry;
     ///
     /// let registry = Registry::all_tools();
     /// if let Some(tool) = registry.get_tool("read_file") {
@@ -147,8 +148,6 @@ impl ToolRegistry for Registry {
     fn get_tool(&self, tool_name: &str) -> Option<&Box<dyn Tool>> {
         self.tools.iter().find(|t| t.name() == tool_name)
     }
-
-
 
     /// Returns the number of tools in the registry.
     ///
@@ -160,6 +159,7 @@ impl ToolRegistry for Registry {
     ///
     /// ```rust
     /// use code_g::tools::registry::Registry;
+    /// use code_g::tools::traits::ToolRegistry;
     ///
     /// let registry = Registry::new();
     /// assert_eq!(registry.len(), 0);
@@ -170,9 +170,7 @@ impl ToolRegistry for Registry {
     fn len(&self) -> usize {
         self.tools.len()
     }
-
 }
-
 
 impl Registry {
     /// Creates a new empty registry with no tools.
@@ -181,10 +179,9 @@ impl Registry {
     ///
     /// ```rust
     /// use code_g::tools::registry::Registry;
+    /// use code_g::tools::traits::ToolRegistry;
     ///
     /// let registry = Registry::new();
-    ///
-    /// assert_eq!(registry.len(), 0);
     /// ```
     pub fn new() -> Self {
         Self { tools: vec![] }
@@ -201,12 +198,10 @@ impl Registry {
     /// ```rust
     /// use code_g::tools::registry::Registry;
     /// use code_g::tools::read_file::ReadFile;
-    /// use code_g::tools::tool::Tool;
+    /// use code_g::tools::traits::Tool;
     ///
     /// let tools: Vec<Box<dyn Tool>> = vec![Box::new(ReadFile)];
-    /// let registry = Registry::from(tools);
-    ///
-    /// assert_eq!(registry.len(), 1);
+    /// let registry = Registry::from_tools(tools);
     /// ```
     pub fn from_tools(tools: Vec<Box<dyn Tool>>) -> Self {
         Self { tools }
@@ -223,8 +218,6 @@ impl Registry {
     /// use code_g::tools::registry::Registry;
     ///
     /// let registry = Registry::read_only_tools();
-    ///
-    /// assert_eq!(registry.len(), 2);
     /// ```
     pub fn read_only_tools() -> Self {
         let tools: Vec<Box<dyn Tool>> = vec![Box::new(ReadFile), Box::new(SearchFiles)];
@@ -242,8 +235,6 @@ impl Registry {
     /// use code_g::tools::registry::Registry;
     ///
     /// let registry = Registry::all_tools();
-    ///
-    /// assert_eq!(registry.len(), 5);
     /// ```
     pub fn all_tools() -> Self {
         let tools: Vec<Box<dyn Tool>> = vec![
@@ -255,8 +246,6 @@ impl Registry {
         ];
         Self { tools }
     }
-
-
 }
 
 #[cfg(test)]

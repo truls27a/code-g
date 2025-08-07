@@ -10,8 +10,8 @@ use crate::client::model::ChatMessage;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat::memory::ChatMemory;
-/// use code_g::chat_client::model::ChatMessage;
+/// use code_g::session::memory::ChatMemory;
+/// use code_g::client::model::ChatMessage;
 ///
 /// let mut memory = ChatMemory::new();
 /// memory.add_message(ChatMessage::User {
@@ -34,7 +34,7 @@ impl ChatMemory {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::chat::memory::ChatMemory;
+    /// use code_g::session::memory::ChatMemory;
     ///
     /// let memory = ChatMemory::new();
     /// assert_eq!(memory.get_memory().len(), 0);
@@ -56,8 +56,8 @@ impl ChatMemory {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::chat::memory::ChatMemory;
-    /// use code_g::chat_client::model::ChatMessage;
+    /// use code_g::session::memory::ChatMemory;
+    /// use code_g::client::model::ChatMessage;
     ///
     /// let messages = vec![
     ///     ChatMessage::User { content: "Hello".to_string() }
@@ -82,8 +82,8 @@ impl ChatMemory {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::chat::memory::ChatMemory;
-    /// use code_g::chat_client::model::ChatMessage;
+    /// use code_g::session::memory::ChatMemory;
+    /// use code_g::client::model::ChatMessage;
     ///
     /// let mut memory = ChatMemory::new();
     /// memory.add_message(ChatMessage::User {
@@ -106,7 +106,7 @@ impl ChatMemory {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::chat::memory::ChatMemory;
+    /// use code_g::session::memory::ChatMemory;
     ///
     /// let memory = ChatMemory::new();
     /// let messages = memory.get_memory();
@@ -125,8 +125,8 @@ impl ChatMemory {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::chat::memory::ChatMemory;
-    /// use code_g::chat_client::model::ChatMessage;
+    /// use code_g::session::memory::ChatMemory;
+    /// use code_g::client::model::ChatMessage;
     ///
     /// let mut memory = ChatMemory::new();
     /// memory.add_message(ChatMessage::User {

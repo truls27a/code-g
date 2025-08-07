@@ -9,7 +9,7 @@ use thiserror::Error;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat_client::providers::openai::error::OpenAIError;
+/// use code_g::client::providers::openai::error::OpenAIError;
 ///
 /// // Handle different types of errors
 /// fn handle_openai_error(error: OpenAIError) {
@@ -70,8 +70,8 @@ impl OpenAIError {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::chat_client::providers::openai::error::OpenAIError;
-    /// use code_g::chat_client::error::ErrorRetryStrategy;
+    /// use code_g::client::providers::openai::error::OpenAIError;
+    /// use code_g::client::error::ErrorRetryStrategy;
     ///
     /// let error = OpenAIError::NoCompletionFound;
     /// assert_eq!(error.retry_strategy(), ErrorRetryStrategy::AddToMemoryAndRetry);

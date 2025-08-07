@@ -13,7 +13,7 @@ use std::fs;
 ///
 /// ```rust,no_run
 /// use code_g::tools::read_file::ReadFile;
-/// use code_g::tools::tool::Tool;
+/// use code_g::tools::traits::Tool;
 /// use std::collections::HashMap;
 ///
 /// let tool = ReadFile;

@@ -14,10 +14,10 @@ use code_g::client::traits::ChatClient;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat_client::mock::MockChatClient;
-/// use code_g::chat_client::model::{ChatResult, ChatMessage};
-/// use code_g::chat_client::providers::openai::schema::Model as OpenAiModel;
-/// use code_g::chat_client::traits::ChatClient;
+/// use code_g::client::mock::MockChatClient;
+/// use code_g::client::model::{ChatResult, ChatMessage};
+/// use code_g::client::providers::openai::schema::Model as OpenAiModel;
+/// use code_g::client::traits::ChatClient;
 /// use tokio::runtime::Runtime;
 ///
 /// // Create a mock that returns a simple message
@@ -67,7 +67,7 @@ impl MockChatClient {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::chat_client::mock::MockChatClient;
+    /// use code_g::client::mock::MockChatClient;
     ///
     /// let mock = MockChatClient::new_with_message("Test response".to_string(), true);
     /// ```
@@ -91,8 +91,8 @@ impl MockChatClient {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::chat_client::mock::MockChatClient;
-    /// use code_g::chat_client::model::ToolCall;
+    /// use code_g::client::mock::MockChatClient;
+    /// use code_g::client::model::ToolCall;
     /// use std::collections::HashMap;
     ///
     /// let mut args = HashMap::new();
@@ -126,7 +126,7 @@ impl MockChatClient {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::chat_client::mock::MockChatClient;
+    /// use code_g::client::mock::MockChatClient;
     ///
     /// let mock = MockChatClient::new_with_error("Invalid API key".to_string());
     /// ```
@@ -153,7 +153,7 @@ impl MockChatClient {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::chat_client::mock::{MockChatClient, MockResponse};
+    /// use code_g::client::mock::{MockChatClient, MockResponse};
     ///
     /// let responses = vec![
     ///     MockResponse::ToolCalls(vec![/* tool calls */]),
@@ -170,7 +170,6 @@ impl MockChatClient {
             call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
         }
     }
-
 }
 
 #[async_trait]
@@ -359,5 +358,4 @@ mod tests {
             _ => panic!("Expected Other error"),
         }
     }
-
 }

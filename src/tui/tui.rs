@@ -14,7 +14,7 @@ use std::io::{self, BufRead, Write};
 ///
 /// ```rust
 /// use code_g::tui::tui::Tui;
-/// use code_g::chat::event::{Event, EventHandler};
+/// use code_g::session::event::{Event, EventHandler};
 ///
 /// let mut tui = Tui::new();
 ///
@@ -56,7 +56,7 @@ impl EventHandler for Tui {
     ///
     /// ```rust
     /// use code_g::tui::tui::Tui;
-    /// use code_g::chat::event::{Event, EventHandler};
+    /// use code_g::session::event::{Event, EventHandler};
     ///
     /// let mut tui = Tui::new();
     ///
@@ -122,7 +122,7 @@ impl EventHandler for Tui {
     ///
     /// ```rust, no_run
     /// use code_g::tui::tui::Tui;
-    /// use code_g::chat::event::{Action, EventHandler};
+    /// use code_g::session::event::{Action, EventHandler};
     ///
     /// let mut tui = Tui::new();
     ///

@@ -12,7 +12,7 @@ use thiserror::Error;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat::error::ChatSessionError;
+/// use code_g::session::error::ChatSessionError;
 ///
 /// let error = ChatSessionError::ToolError("Failed to execute command".to_string());
 /// ```
@@ -42,7 +42,7 @@ pub enum ChatSessionError {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat::error::ChatSessionErrorHandling;
+/// use code_g::session::error::ChatSessionErrorHandling;
 ///
 /// let handling = ChatSessionErrorHandling::Retry;
 /// ```

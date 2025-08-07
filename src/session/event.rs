@@ -10,7 +10,7 @@ use std::io;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat::event::Event;
+/// use code_g::session::event::Event;
 ///
 /// let event = Event::ReceivedUserMessage { message: "Hello".to_string() };
 /// ```
@@ -50,7 +50,7 @@ pub enum Event {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat::event::Action;
+/// use code_g::session::event::Action;
 ///
 /// let action = Action::RequestUserInput;
 /// ```
@@ -75,7 +75,7 @@ pub enum Action {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat::event::{Event, Action, EventHandler};
+/// use code_g::session::event::{Event, Action, EventHandler};
 /// use std::io;
 ///
 /// struct MyHandler;

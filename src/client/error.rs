@@ -10,7 +10,7 @@ use thiserror::Error;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat_client::error::ErrorRetryStrategy;
+/// use code_g::client::error::ErrorRetryStrategy;
 ///
 /// let strategy = ErrorRetryStrategy::Retryable;
 /// match strategy {
@@ -40,7 +40,7 @@ pub enum ErrorRetryStrategy {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat_client::error::ChatClientError;
+/// use code_g::client::error::ChatClientError;
 ///
 /// // Handle different types of errors
 /// fn handle_chat_error(error: ChatClientError) {
@@ -144,7 +144,7 @@ impl ChatClientError {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::chat_client::error::{ChatClientError, ErrorRetryStrategy};
+    /// use code_g::client::error::{ChatClientError, ErrorRetryStrategy};
     ///
     /// let error = ChatClientError::InvalidApiKey;
     /// assert_eq!(error.retry_strategy(), ErrorRetryStrategy::Fatal);
