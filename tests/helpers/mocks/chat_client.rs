@@ -1,8 +1,8 @@
+use async_trait::async_trait;
 use code_g::client::error::ChatClientError;
 use code_g::client::model::{ChatMessage, ChatResult, Model, Tool, ToolCall};
 use code_g::client::providers::openai::error::OpenAIError;
 use code_g::client::traits::ChatClient;
-use async_trait::async_trait;
 
 /// Mock implementation of ChatClient for testing purposes.
 ///
@@ -176,9 +176,9 @@ impl MockChatClient {
     ///
     /// let responses = vec![
     ///     MockResponse::ToolCalls(vec![/* tool calls */]),
-    ///     MockResponse::Message { 
-    ///         content: "Final response".to_string(), 
-    ///         turn_over: true 
+    ///     MockResponse::Message {
+    ///         content: "Final response".to_string(),
+    ///         turn_over: true
     ///     },
     /// ];
     /// let mock = MockChatClient::new_with_sequence(responses);
@@ -212,14 +212,16 @@ impl ChatClient for MockChatClient {
                 let mut count = self.call_count.lock().unwrap();
                 let index = *count;
                 *count += 1;
-                
+
                 if index < responses.len() {
                     match &responses[index] {
                         MockResponse::Message { content, turn_over } => Ok(ChatResult::Message {
                             content: content.clone(),
                             turn_over: *turn_over,
                         }),
-                        MockResponse::ToolCalls(tool_calls) => Ok(ChatResult::ToolCalls(tool_calls.clone())),
+                        MockResponse::ToolCalls(tool_calls) => {
+                            Ok(ChatResult::ToolCalls(tool_calls.clone()))
+                        }
                         MockResponse::Error(error_message) => Err(ChatClientError::OpenAIError(
                             OpenAIError::Other(error_message.clone()),
                         )),
@@ -227,14 +229,20 @@ impl ChatClient for MockChatClient {
                             // Nested sequences not supported, fall back to last response
                             if let Some(last) = responses.last() {
                                 match last {
-                                    MockResponse::Message { content, turn_over } => Ok(ChatResult::Message {
-                                        content: content.clone(),
-                                        turn_over: *turn_over,
-                                    }),
-                                    MockResponse::ToolCalls(tool_calls) => Ok(ChatResult::ToolCalls(tool_calls.clone())),
-                                    MockResponse::Error(error_message) => Err(ChatClientError::OpenAIError(
-                                        OpenAIError::Other(error_message.clone()),
-                                    )),
+                                    MockResponse::Message { content, turn_over } => {
+                                        Ok(ChatResult::Message {
+                                            content: content.clone(),
+                                            turn_over: *turn_over,
+                                        })
+                                    }
+                                    MockResponse::ToolCalls(tool_calls) => {
+                                        Ok(ChatResult::ToolCalls(tool_calls.clone()))
+                                    }
+                                    MockResponse::Error(error_message) => {
+                                        Err(ChatClientError::OpenAIError(OpenAIError::Other(
+                                            error_message.clone(),
+                                        )))
+                                    }
                                     MockResponse::Sequence(_) => Ok(ChatResult::Message {
                                         content: "Default response".to_string(),
                                         turn_over: true,
@@ -252,14 +260,20 @@ impl ChatClient for MockChatClient {
                     // Repeat the last response
                     if let Some(last) = responses.last() {
                         match last {
-                            MockResponse::Message { content, turn_over } => Ok(ChatResult::Message {
-                                content: content.clone(),
-                                turn_over: *turn_over,
-                            }),
-                            MockResponse::ToolCalls(tool_calls) => Ok(ChatResult::ToolCalls(tool_calls.clone())),
-                            MockResponse::Error(error_message) => Err(ChatClientError::OpenAIError(
-                                OpenAIError::Other(error_message.clone()),
-                            )),
+                            MockResponse::Message { content, turn_over } => {
+                                Ok(ChatResult::Message {
+                                    content: content.clone(),
+                                    turn_over: *turn_over,
+                                })
+                            }
+                            MockResponse::ToolCalls(tool_calls) => {
+                                Ok(ChatResult::ToolCalls(tool_calls.clone()))
+                            }
+                            MockResponse::Error(error_message) => {
+                                Err(ChatClientError::OpenAIError(OpenAIError::Other(
+                                    error_message.clone(),
+                                )))
+                            }
                             MockResponse::Sequence(_) => Ok(ChatResult::Message {
                                 content: "Default response".to_string(),
                                 turn_over: true,

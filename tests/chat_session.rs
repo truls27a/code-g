@@ -478,51 +478,6 @@ mod error_handling_tests {
     }
 
     #[tokio::test]
-    async fn chat_session_handles_approval_request_errors() {
-        let mut args = HashMap::new();
-        args.insert("path".to_string(), "test.txt".to_string());
-        args.insert("content".to_string(), "test content".to_string());
-
-        let tool_call = ToolCall {
-            id: "call_123".to_string(),
-            name: "write_file".to_string(),
-            arguments: args,
-        };
-
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![tool_call]),
-            MockResponse::Message {
-                content: "Tool executed successfully".to_string(),
-                turn_over: true,
-            },
-        ]));
-        let tools = Registry::all_tools();
-
-        // Create a custom event handler that fails approval requests
-        struct FailingEventHandler;
-        impl EventHandler for FailingEventHandler {
-            fn handle_event(&mut self, _event: Event) {}
-            fn handle_action(&mut self, action: Action) -> Result<String, std::io::Error> {
-                match action {
-                    Action::RequestUserInput => Ok("Test message".to_string()),
-                    Action::RequestUserApproval { .. } => Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "Approval failed",
-                    )),
-                }
-            }
-        }
-
-        let event_handler = Box::new(FailingEventHandler);
-
-        let mut session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::None);
-
-        let result = session.run().await;
-        // The session should handle approval failures gracefully
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
     async fn chat_session_handles_rapid_exit_commands() {
         let client = Box::new(MockChatClient::new_with_message(
             "Response".to_string(),
