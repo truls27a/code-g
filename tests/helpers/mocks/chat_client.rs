@@ -137,25 +137,6 @@ impl MockChatClient {
         }
     }
 
-    /// Creates a simple mock client that returns "Mock response" with turn_over = true.
-    ///
-    /// This is a convenience method for quickly creating a basic mock for testing.
-    ///
-    /// # Returns
-    ///
-    /// A new `MockChatClient` with a default response.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use code_g::chat_client::mock::MockChatClient;
-    ///
-    /// let mock = MockChatClient::default();
-    /// ```
-    pub fn default() -> Self {
-        Self::new_with_message("Mock response".to_string(), true)
-    }
-
     /// Creates a new mock client that returns a sequence of responses.
     ///
     /// The client will return responses in the order they are provided.
@@ -189,82 +170,6 @@ impl MockChatClient {
             call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
         }
     }
-
-    /// Creates a mock client for tool calls that automatically includes a final message.
-    ///
-    /// This is a convenience method that creates a sequence with tool calls followed
-    /// by a completion message, which is the typical flow in chat sessions.
-    ///
-    /// # Arguments
-    ///
-    /// * `tool_calls` - The tool calls to execute
-    /// * `final_message` - Optional final message (defaults to "Tool executed successfully")
-    ///
-    /// # Returns
-    ///
-    /// A new `MockChatClient` configured for the tool call flow.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use code_g::chat_client::mock::MockChatClient;
-    /// use code_g::chat_client::model::ToolCall;
-    ///
-    /// let tool_call = ToolCall { /* ... */ };
-    /// let mock = MockChatClient::new_with_tool_call_flow(vec![tool_call], None);
-    /// ```
-    pub fn new_with_tool_call_flow(
-        tool_calls: Vec<ToolCall>,
-        final_message: Option<String>,
-    ) -> Self {
-        let message = final_message.unwrap_or_else(|| "Tool executed successfully".to_string());
-
-        Self::new_with_sequence(vec![
-            MockResponse::ToolCalls(tool_calls),
-            MockResponse::Message {
-                content: message,
-                turn_over: true,
-            },
-        ])
-    }
-
-    /// Creates a mock client for multi-turn conversations.
-    ///
-    /// This creates a sequence where the first response continues the conversation
-    /// (turn_over = false) and the second response ends it (turn_over = true).
-    ///
-    /// # Arguments
-    ///
-    /// * `first_message` - The first message that continues the conversation
-    /// * `final_message` - The final message that ends the conversation
-    ///
-    /// # Returns
-    ///
-    /// A new `MockChatClient` configured for multi-turn conversation.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use code_g::chat_client::mock::MockChatClient;
-    ///
-    /// let mock = MockChatClient::new_with_multi_turn(
-    ///     "First response".to_string(),
-    ///     "Final response".to_string()
-    /// );
-    /// ```
-    pub fn new_with_multi_turn(first_message: String, final_message: String) -> Self {
-        Self::new_with_sequence(vec![
-            MockResponse::Message {
-                content: first_message,
-                turn_over: false,
-            },
-            MockResponse::Message {
-                content: final_message,
-                turn_over: true,
-            },
-        ])
-    }
-
 
 }
 
@@ -455,27 +360,4 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn default_mock_returns_default_message() {
-        let mock = MockChatClient::default();
-
-        let result = mock
-            .create_chat_completion(
-                &Model::OpenAi(OpenAiModel::Gpt4oMini),
-                &[ChatMessage::User {
-                    content: "Hello".to_string(),
-                }],
-                &[],
-            )
-            .await;
-
-        assert!(result.is_ok());
-        match result.unwrap() {
-            ChatResult::Message { content, turn_over } => {
-                assert_eq!(content, "Mock response");
-                assert_eq!(turn_over, true);
-            }
-            _ => panic!("Expected message result"),
-        }
-    }
 }
