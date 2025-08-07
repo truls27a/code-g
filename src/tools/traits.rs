@@ -1,6 +1,92 @@
 use crate::client::model::{Function, Parameters, Tool as OpenAiTool, ToolType};
 use std::collections::HashMap;
 
+
+/// A trait defining the interface for tool registries.
+/// 
+/// The `ToolRegistry` trait provides a standardized interface for implementing
+/// tool registries that can be used to manage and execute tools.
+/// 
+/// # Examples
+/// ```rust
+/// use code_g::tools::traits::ToolRegistry;
+/// use code_g::tools::tool::Tool;
+/// 
+/// struct MyToolRegistry;
+/// 
+/// impl ToolRegistry for MyToolRegistry {
+///     fn new() -> Self {
+///         Self { tools: vec![] }
+///     }
+/// 
+///     fn from(tools: Vec<Box<dyn Tool>>) -> Self {
+///         Self { tools }
+///     }
+/// 
+///     fn read_only_tools() -> Self {
+///         Self { tools: vec![Box::new(ReadFile), Box::new(SearchFiles)] }
+///     }
+/// 
+///     fn all_tools() -> Self {
+///         Self { tools: vec![Box::new(ReadFile), Box::new(SearchFiles)] }
+///     }
+/// 
+///     fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String> {
+///         // Implement the tool execution logic here
+///         Ok("Tool executed successfully".to_string())
+///     }
+/// }
+/// ```
+pub trait ToolRegistry {
+    /// Creates a new tool registry.
+    /// 
+    /// # Returns
+    /// A new `ToolRegistry` instance.
+    fn new() -> Self;
+    
+    /// Returns a tool registry with the provided tools.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `tools` - A vector of tools to include in the registry.
+    /// 
+    /// # Returns
+    /// A tool registry with the provided tools.
+    fn from(tools: Vec<Box<dyn Tool>>) -> Self;
+
+    /// Returns a read-only tool registry.
+    /// 
+    /// # Returns
+    /// A read-only `ToolRegistry` instance.
+    fn read_only_tools() -> Self;
+    
+    /// Returns a tool registry with all available tools.
+    /// 
+    /// # Returns
+    /// A tool registry with all available tools.
+    fn all_tools() -> Self;
+
+
+    /// Executes a tool by name with the provided arguments.
+    /// 
+    /// Searches for a tool with the given name in the registry and executes it
+    /// with the provided arguments. If the tool is not found, returns an error.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `tool_name` - The name of the tool to execute.
+    /// * `args` - A HashMap containing the arguments to pass to the tool.
+    /// 
+    /// # Returns
+    /// The output from the tool execution as a String.
+    /// 
+    /// # Errors
+    /// Returns an error if the tool is not found in the registry or if the tool
+    /// execution fails.
+    fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String>;
+}
+
+
 /// A trait defining the interface for tools that can be called with arguments.
 ///
 /// The `Tool` trait provides a standardized interface for implementing various tools

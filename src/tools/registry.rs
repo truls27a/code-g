@@ -3,7 +3,7 @@ use crate::tools::edit_file::EditFile;
 use crate::tools::execute_command::ExecuteCommand;
 use crate::tools::read_file::ReadFile;
 use crate::tools::search_files::SearchFiles;
-use crate::tools::tool::Tool;
+use crate::tools::traits::Tool;
 use crate::tools::write_file::WriteFile;
 use std::collections::HashMap;
 
