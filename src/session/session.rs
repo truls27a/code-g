@@ -395,6 +395,7 @@ impl ChatSession {
 mod tests {
     use super::*;
     use crate::client::providers::openai::client::OpenAIClient;
+    use crate::tools::registry::Registry;
     use std::collections::HashMap;
     use std::io;
 

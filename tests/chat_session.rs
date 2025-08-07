@@ -196,6 +196,9 @@ mod integration_tests {
 
         let result = session.run().await;
         assert!(result.is_ok());
+        assert_eq!(mock_tools.get_actual_calls().len(), 1);
+        assert_eq!(mock_tools.get_actual_calls()[0].0, "read_file");
+        assert_eq!(mock_tools.get_actual_calls()[0].1, args);
     }
 
     #[tokio::test]
