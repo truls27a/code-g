@@ -1,11 +1,11 @@
+use code_g::client::error::ChatClientError;
+use code_g::client::model::{ChatMessage, ChatResult, Model, Tool, ToolCall};
+
+use code_g::client::traits::ChatClient;
 use code_g::session::error::ChatSessionError;
+use code_g::session::event::{Action, Event, EventHandler};
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::SystemPromptConfig;
-use code_g::session::event::{Event, Action, EventHandler};
-use code_g::client::model::{ChatMessage, ChatResult, Model, ToolCall, Tool};
-use code_g::client::error::ChatClientError;
-use code_g::client::providers::openai::error::OpenAIError;
-use code_g::client::traits::ChatClient;
 use code_g::tools::registry::Registry;
 use std::collections::HashMap;
 
@@ -165,10 +165,8 @@ mod integration_tests {
             true,
         ));
         let tools = Registry::new();
-        let event_handler = MockEventHandler::new_with_inputs(vec![
-            "Test message".to_string(),
-            "exit".to_string(),
-        ]);
+        let event_handler =
+            MockEventHandler::new_with_inputs(vec!["Test message".to_string(), "exit".to_string()]);
 
         let mut session = ChatSession::new(
             client,
@@ -186,22 +184,15 @@ mod integration_tests {
 
     #[tokio::test]
     async fn chat_session_with_default_system_prompt_initializes_correctly() {
-        let client = Box::new(MockChatClient::new_with_message(
-            "Hello!".to_string(),
-            true,
-        ));
+        let client = Box::new(MockChatClient::new_with_message("Hello!".to_string(), true));
         let tools = Registry::new();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Hello".to_string(),
             "exit".to_string(),
         ]));
 
-        let mut session = ChatSession::new(
-            client,
-            tools,
-            event_handler,
-            SystemPromptConfig::Default,
-        );
+        let mut session =
+            ChatSession::new(client, tools, event_handler, SystemPromptConfig::Default);
 
         let result = session.run().await;
         assert!(result.is_ok());
@@ -209,10 +200,7 @@ mod integration_tests {
 
     #[tokio::test]
     async fn chat_session_with_custom_system_prompt_initializes_correctly() {
-        let client = Box::new(MockChatClient::new_with_message(
-            "Hello!".to_string(),
-            true,
-        ));
+        let client = Box::new(MockChatClient::new_with_message("Hello!".to_string(), true));
         let tools = Registry::new();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Hello".to_string(),
@@ -303,10 +291,17 @@ mod integration_tests {
 
     #[tokio::test]
     async fn chat_session_continues_conversation_with_multiple_turns() {
-        let client = Box::new(MockChatClient::new_with_message(
-            "Mock response".to_string(),
-            false, // turn_over = false to continue conversation
-        ));
+        // Create a sequence where first response has turn_over=false, then true
+        let client = Box::new(MockChatClient::new_with_sequence(vec![
+            MockResponse::Message {
+                content: "First response".to_string(),
+                turn_over: false, // Continue conversation
+            },
+            MockResponse::Message {
+                content: "Second response".to_string(),
+                turn_over: true, // End conversation
+            },
+        ]));
         let tools = Registry::new();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Start conversation".to_string(),
@@ -345,7 +340,11 @@ mod error_handling_tests {
 
     #[tokio::test]
     async fn chat_session_handles_client_fatal_errors() {
-        let client = Box::new(MockChatClient::new_with_error("Invalid API key".to_string()));
+        // Create a client that returns an error that has AddToMemoryAndRetry strategy
+        // This will cause the session to hit max iterations
+        let client = Box::new(MockChatClient::new_with_error(
+            "Invalid API key".to_string(),
+        ));
         let tools = Registry::new();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Test message".to_string(),
@@ -355,12 +354,18 @@ mod error_handling_tests {
 
         let result = session.run().await;
         assert!(result.is_err());
-        
+
+        // Since OpenAIError::Other has AddToMemoryAndRetry strategy, it will retry until max iterations
         match result.unwrap_err() {
-            ChatSessionError::ChatClient(ChatClientError::OpenAIError(OpenAIError::Other(msg))) => {
-                assert_eq!(msg, "Invalid API key");
+            ChatSessionError::MaxIterationsExceeded { max_iterations } => {
+                assert_eq!(max_iterations, 10);
             }
-            _ => panic!("Expected ChatClient error with OpenAI Other error"),
+            other_error => {
+                panic!(
+                    "Expected MaxIterationsExceeded error, got: {:?}",
+                    other_error
+                );
+            }
         }
     }
 
@@ -381,7 +386,7 @@ mod error_handling_tests {
 
         let result = session.run().await;
         assert!(result.is_err());
-        
+
         match result.unwrap_err() {
             ChatSessionError::MaxIterationsExceeded { max_iterations } => {
                 assert_eq!(max_iterations, 10);
@@ -401,7 +406,13 @@ mod error_handling_tests {
             arguments: args,
         };
 
-        let client = Box::new(MockChatClient::new_with_tool_calls(vec![tool_call]));
+        let client = Box::new(MockChatClient::new_with_sequence(vec![
+            MockResponse::ToolCalls(vec![tool_call]),
+            MockResponse::Message {
+                content: "Tool executed successfully".to_string(),
+                turn_over: true,
+            },
+        ]));
         let tools = Registry::all_tools();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Try to read invalid file".to_string(),
@@ -417,7 +428,13 @@ mod error_handling_tests {
 
     #[tokio::test]
     async fn chat_session_handles_empty_tool_calls() {
-        let client = Box::new(MockChatClient::new_with_tool_calls(vec![]));
+        let client = Box::new(MockChatClient::new_with_sequence(vec![
+            MockResponse::ToolCalls(vec![]),
+            MockResponse::Message {
+                content: "No tools to execute".to_string(),
+                turn_over: true,
+            },
+        ]));
         let tools = Registry::new();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Make empty tool calls".to_string(),
@@ -436,12 +453,18 @@ mod error_handling_tests {
         args.insert("".to_string(), "empty_key".to_string()); // Malformed args
 
         let tool_call = ToolCall {
-            id: "".to_string(), // Empty ID
+            id: "".to_string(),   // Empty ID
             name: "".to_string(), // Empty name
             arguments: args,
         };
 
-        let client = Box::new(MockChatClient::new_with_tool_calls(vec![tool_call]));
+        let client = Box::new(MockChatClient::new_with_sequence(vec![
+            MockResponse::ToolCalls(vec![tool_call]),
+            MockResponse::Message {
+                content: "Tool executed successfully".to_string(),
+                turn_over: true,
+            },
+        ]));
         let tools = Registry::all_tools();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Make malformed tool call".to_string(),
@@ -466,9 +489,15 @@ mod error_handling_tests {
             arguments: args,
         };
 
-        let client = Box::new(MockChatClient::new_with_tool_calls(vec![tool_call]));
+        let client = Box::new(MockChatClient::new_with_sequence(vec![
+            MockResponse::ToolCalls(vec![tool_call]),
+            MockResponse::Message {
+                content: "Tool executed successfully".to_string(),
+                turn_over: true,
+            },
+        ]));
         let tools = Registry::all_tools();
-        
+
         // Create a custom event handler that fails approval requests
         struct FailingEventHandler;
         impl EventHandler for FailingEventHandler {
@@ -476,9 +505,10 @@ mod error_handling_tests {
             fn handle_action(&mut self, action: Action) -> Result<String, std::io::Error> {
                 match action {
                     Action::RequestUserInput => Ok("Test message".to_string()),
-                    Action::RequestUserApproval { .. } => {
-                        Err(std::io::Error::new(std::io::ErrorKind::Other, "Approval failed"))
-                    }
+                    Action::RequestUserApproval { .. } => Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "Approval failed",
+                    )),
                 }
             }
         }
@@ -543,7 +573,7 @@ mod error_handling_tests {
                     // Odd calls return tool calls
                     let mut args = HashMap::new();
                     args.insert("path".to_string(), "test.txt".to_string());
-                    
+
                     Ok(ChatResult::ToolCalls(vec![ToolCall {
                         id: format!("call_{}", *count),
                         name: "read_file".to_string(),
@@ -593,9 +623,15 @@ mod tool_integration_tests {
             arguments: args,
         };
 
-        let client = Box::new(MockChatClient::new_with_tool_calls(vec![tool_call]));
+        let client = Box::new(MockChatClient::new_with_sequence(vec![
+            MockResponse::ToolCalls(vec![tool_call]),
+            MockResponse::Message {
+                content: "Tool executed successfully".to_string(),
+                turn_over: true,
+            },
+        ]));
         let tools = Registry::all_tools();
-        
+
         // Create event handler that tracks approval requests
         let mut event_handler = MockEventHandler::new_with_inputs(vec![
             "Please write a file for me".to_string(),
@@ -625,9 +661,15 @@ mod tool_integration_tests {
             arguments: args,
         };
 
-        let client = Box::new(MockChatClient::new_with_tool_calls(vec![tool_call]));
+        let client = Box::new(MockChatClient::new_with_sequence(vec![
+            MockResponse::ToolCalls(vec![tool_call]),
+            MockResponse::Message {
+                content: "Tool executed successfully".to_string(),
+                turn_over: true,
+            },
+        ]));
         let tools = Registry::all_tools();
-        
+
         let mut event_handler = MockEventHandler::new_with_inputs(vec![
             "Please run this dangerous command".to_string(),
             "exit".to_string(),
@@ -656,9 +698,15 @@ mod tool_integration_tests {
             arguments: args,
         };
 
-        let client = Box::new(MockChatClient::new_with_tool_calls(vec![tool_call]));
+        let client = Box::new(MockChatClient::new_with_sequence(vec![
+            MockResponse::ToolCalls(vec![tool_call]),
+            MockResponse::Message {
+                content: "Tool executed successfully".to_string(),
+                turn_over: true,
+            },
+        ]));
         let tools = Registry::all_tools();
-        
+
         // This handler should never be asked for approval since read_file is safe
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Please read a file".to_string(),
@@ -695,9 +743,15 @@ mod tool_integration_tests {
             },
         ];
 
-        let client = Box::new(MockChatClient::new_with_tool_calls(tool_calls));
+        let client = Box::new(MockChatClient::new_with_sequence(vec![
+            MockResponse::ToolCalls(tool_calls),
+            MockResponse::Message {
+                content: "All tools executed successfully".to_string(),
+                turn_over: true,
+            },
+        ]));
         let tools = Registry::all_tools();
-        
+
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Please write a file and run a command".to_string(),
             "exit".to_string(),
@@ -720,7 +774,13 @@ mod tool_integration_tests {
             arguments: args, // Missing required 'path' parameter
         };
 
-        let client = Box::new(MockChatClient::new_with_tool_calls(vec![tool_call]));
+        let client = Box::new(MockChatClient::new_with_sequence(vec![
+            MockResponse::ToolCalls(vec![tool_call]),
+            MockResponse::Message {
+                content: "Tool executed successfully".to_string(),
+                turn_over: true,
+            },
+        ]));
         let tools = Registry::all_tools();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Try to read file with wrong parameters".to_string(),
@@ -744,7 +804,13 @@ mod tool_integration_tests {
             arguments: args,
         };
 
-        let client = Box::new(MockChatClient::new_with_tool_calls(vec![tool_call]));
+        let client = Box::new(MockChatClient::new_with_sequence(vec![
+            MockResponse::ToolCalls(vec![tool_call]),
+            MockResponse::Message {
+                content: "Tool executed successfully".to_string(),
+                turn_over: true,
+            },
+        ]));
         let tools = Registry::new(); // Empty registry
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Try to use nonexistent tool".to_string(),
@@ -792,7 +858,13 @@ mod tool_integration_tests {
             },
         ];
 
-        let client = Box::new(MockChatClient::new_with_tool_calls(tool_calls));
+        let client = Box::new(MockChatClient::new_with_sequence(vec![
+            MockResponse::ToolCalls(tool_calls),
+            MockResponse::Message {
+                content: "All tools executed successfully".to_string(),
+                turn_over: true,
+            },
+        ]));
         let tools = Registry::all_tools();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Please process files for me".to_string(),

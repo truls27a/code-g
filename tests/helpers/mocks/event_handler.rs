@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn handle_event_records_events() {
         let mut mock = MockEventHandler::new();
-        
+
         mock.handle_event(Event::SessionStarted);
         mock.handle_event(Event::ReceivedUserMessage {
             message: "Test".to_string(),
@@ -245,9 +245,12 @@ mod tests {
         let events = mock.get_events();
         assert_eq!(events.len(), 2);
         assert_eq!(events[0], Event::SessionStarted);
-        assert_eq!(events[1], Event::ReceivedUserMessage {
-            message: "Test".to_string(),
-        });
+        assert_eq!(
+            events[1],
+            Event::ReceivedUserMessage {
+                message: "Test".to_string(),
+            }
+        );
     }
 
     #[test]
@@ -269,26 +272,30 @@ mod tests {
     #[test]
     fn handle_action_request_user_approval_returns_configured_response() {
         let mut mock = MockEventHandler::new();
-        
-        let result = mock.handle_action(Action::RequestUserApproval {
-            operation: "Test Operation".to_string(),
-            details: "Test Details".to_string(),
-            tool_name: "test_tool".to_string(),
-        }).unwrap();
-        
+
+        let result = mock
+            .handle_action(Action::RequestUserApproval {
+                operation: "Test Operation".to_string(),
+                details: "Test Details".to_string(),
+                tool_name: "test_tool".to_string(),
+            })
+            .unwrap();
+
         assert_eq!(result, "approved");
     }
 
     #[test]
     fn handle_action_request_user_approval_returns_declined_when_configured() {
         let mut mock = MockEventHandler::new_declining_approval();
-        
-        let result = mock.handle_action(Action::RequestUserApproval {
-            operation: "Test Operation".to_string(),
-            details: "Test Details".to_string(),
-            tool_name: "test_tool".to_string(),
-        }).unwrap();
-        
+
+        let result = mock
+            .handle_action(Action::RequestUserApproval {
+                operation: "Test Operation".to_string(),
+                details: "Test Details".to_string(),
+                tool_name: "test_tool".to_string(),
+            })
+            .unwrap();
+
         assert_eq!(result, "declined");
     }
 
@@ -297,9 +304,9 @@ mod tests {
         let mut mock = MockEventHandler::new();
         mock.handle_event(Event::SessionStarted);
         mock.handle_event(Event::SessionEnded);
-        
+
         assert_eq!(mock.get_events().len(), 2);
-        
+
         mock.clear_events();
         assert_eq!(mock.get_events().len(), 0);
     }
@@ -308,13 +315,15 @@ mod tests {
     fn set_approval_response_changes_approval_behavior() {
         let mut mock = MockEventHandler::new();
         mock.set_approval_response("custom_response".to_string());
-        
-        let result = mock.handle_action(Action::RequestUserApproval {
-            operation: "Test".to_string(),
-            details: "Test".to_string(),
-            tool_name: "test".to_string(),
-        }).unwrap();
-        
+
+        let result = mock
+            .handle_action(Action::RequestUserApproval {
+                operation: "Test".to_string(),
+                details: "Test".to_string(),
+                tool_name: "test".to_string(),
+            })
+            .unwrap();
+
         assert_eq!(result, "custom_response");
     }
 
@@ -322,18 +331,27 @@ mod tests {
     fn add_input_responses_extends_response_queue() {
         let mut mock = MockEventHandler::new_with_inputs(vec!["First".to_string()]);
         mock.add_input_responses(vec!["Second".to_string(), "Third".to_string()]);
-        
+
         assert_eq!(mock.input_responses.len(), 3);
-        assert_eq!(mock.handle_action(Action::RequestUserInput).unwrap(), "First");
-        assert_eq!(mock.handle_action(Action::RequestUserInput).unwrap(), "Second");
-        assert_eq!(mock.handle_action(Action::RequestUserInput).unwrap(), "Third");
+        assert_eq!(
+            mock.handle_action(Action::RequestUserInput).unwrap(),
+            "First"
+        );
+        assert_eq!(
+            mock.handle_action(Action::RequestUserInput).unwrap(),
+            "Second"
+        );
+        assert_eq!(
+            mock.handle_action(Action::RequestUserInput).unwrap(),
+            "Third"
+        );
     }
 
     #[test]
     fn default_creates_same_as_new() {
         let mock1 = MockEventHandler::new();
         let mock2 = MockEventHandler::default();
-        
+
         assert_eq!(mock1.get_events().len(), mock2.get_events().len());
         assert_eq!(mock1.input_responses.len(), mock2.input_responses.len());
         assert_eq!(mock1.approval_response, mock2.approval_response);
