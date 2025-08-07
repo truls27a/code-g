@@ -36,6 +36,7 @@ use async_trait::async_trait;
 #[derive(Debug, Clone)]
 pub struct MockChatClient {
     response: MockResponse,
+    call_count: std::sync::Arc<std::sync::Mutex<usize>>,
 }
 
 /// Represents the different types of responses the mock client can return.
@@ -47,6 +48,8 @@ pub enum MockResponse {
     ToolCalls(Vec<ToolCall>),
     /// Return an error with error message
     Error(String),
+    /// Return a sequence of responses in order
+    Sequence(Vec<MockResponse>),
 }
 
 impl MockChatClient {
@@ -71,6 +74,7 @@ impl MockChatClient {
     pub fn new_with_message(content: String, turn_over: bool) -> Self {
         Self {
             response: MockResponse::Message { content, turn_over },
+            call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
         }
     }
 
@@ -105,6 +109,7 @@ impl MockChatClient {
     pub fn new_with_tool_calls(tool_calls: Vec<ToolCall>) -> Self {
         Self {
             response: MockResponse::ToolCalls(tool_calls),
+            call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
         }
     }
 
@@ -128,6 +133,7 @@ impl MockChatClient {
     pub fn new_with_error(error_message: String) -> Self {
         Self {
             response: MockResponse::Error(error_message),
+            call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
         }
     }
 
@@ -149,6 +155,40 @@ impl MockChatClient {
     pub fn default() -> Self {
         Self::new_with_message("Mock response".to_string(), true)
     }
+
+    /// Creates a new mock client that returns a sequence of responses.
+    ///
+    /// The client will return responses in the order they are provided.
+    /// After all responses are exhausted, it will repeat the last response.
+    ///
+    /// # Arguments
+    ///
+    /// * `responses` - The sequence of responses to return
+    ///
+    /// # Returns
+    ///
+    /// A new `MockChatClient` configured to return the sequence of responses.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::chat_client::mock::{MockChatClient, MockResponse};
+    ///
+    /// let responses = vec![
+    ///     MockResponse::ToolCalls(vec![/* tool calls */]),
+    ///     MockResponse::Message { 
+    ///         content: "Final response".to_string(), 
+    ///         turn_over: true 
+    ///     },
+    /// ];
+    /// let mock = MockChatClient::new_with_sequence(responses);
+    /// ```
+    pub fn new_with_sequence(responses: Vec<MockResponse>) -> Self {
+        Self {
+            response: MockResponse::Sequence(responses),
+            call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
+        }
+    }
 }
 
 #[async_trait]
@@ -168,6 +208,71 @@ impl ChatClient for MockChatClient {
             MockResponse::Error(error_message) => Err(ChatClientError::OpenAIError(
                 OpenAIError::Other(error_message.clone()),
             )),
+            MockResponse::Sequence(responses) => {
+                let mut count = self.call_count.lock().unwrap();
+                let index = *count;
+                *count += 1;
+                
+                if index < responses.len() {
+                    match &responses[index] {
+                        MockResponse::Message { content, turn_over } => Ok(ChatResult::Message {
+                            content: content.clone(),
+                            turn_over: *turn_over,
+                        }),
+                        MockResponse::ToolCalls(tool_calls) => Ok(ChatResult::ToolCalls(tool_calls.clone())),
+                        MockResponse::Error(error_message) => Err(ChatClientError::OpenAIError(
+                            OpenAIError::Other(error_message.clone()),
+                        )),
+                        MockResponse::Sequence(_) => {
+                            // Nested sequences not supported, fall back to last response
+                            if let Some(last) = responses.last() {
+                                match last {
+                                    MockResponse::Message { content, turn_over } => Ok(ChatResult::Message {
+                                        content: content.clone(),
+                                        turn_over: *turn_over,
+                                    }),
+                                    MockResponse::ToolCalls(tool_calls) => Ok(ChatResult::ToolCalls(tool_calls.clone())),
+                                    MockResponse::Error(error_message) => Err(ChatClientError::OpenAIError(
+                                        OpenAIError::Other(error_message.clone()),
+                                    )),
+                                    MockResponse::Sequence(_) => Ok(ChatResult::Message {
+                                        content: "Default response".to_string(),
+                                        turn_over: true,
+                                    }),
+                                }
+                            } else {
+                                Ok(ChatResult::Message {
+                                    content: "Default response".to_string(),
+                                    turn_over: true,
+                                })
+                            }
+                        }
+                    }
+                } else {
+                    // Repeat the last response
+                    if let Some(last) = responses.last() {
+                        match last {
+                            MockResponse::Message { content, turn_over } => Ok(ChatResult::Message {
+                                content: content.clone(),
+                                turn_over: *turn_over,
+                            }),
+                            MockResponse::ToolCalls(tool_calls) => Ok(ChatResult::ToolCalls(tool_calls.clone())),
+                            MockResponse::Error(error_message) => Err(ChatClientError::OpenAIError(
+                                OpenAIError::Other(error_message.clone()),
+                            )),
+                            MockResponse::Sequence(_) => Ok(ChatResult::Message {
+                                content: "Default response".to_string(),
+                                turn_over: true,
+                            }),
+                        }
+                    } else {
+                        Ok(ChatResult::Message {
+                            content: "Default response".to_string(),
+                            turn_over: true,
+                        })
+                    }
+                }
+            }
         }
     }
 }
