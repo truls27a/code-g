@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut chat_session = ChatSession::new(
         Box::new(openai_client),
-        tools,
+        Box::new(tools),
         Box::new(tui),
         SystemPromptConfig::Default,
     );
