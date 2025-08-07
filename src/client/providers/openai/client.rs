@@ -160,7 +160,8 @@ impl ChatClient for OpenAIClient {
         let request_body = ChatCompletionRequest {
             model: match model {
                 Model::OpenAi(model) => model.clone(),
-                // Unreachable for now, but we should handle other models in the future
+                // TODO: Handle other model providers when they are added
+                #[allow(unreachable_patterns)]
                 _ => return Err(ChatClientError::InvalidModel),
             },
             messages: chat_history
