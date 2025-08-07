@@ -1,14 +1,13 @@
 use code_g::client::model::ToolCall;
-
 use code_g::session::error::ChatSessionError;
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::SystemPromptConfig;
-use code_g::tools::registry::Registry;
 use std::collections::HashMap;
 
 mod helpers;
 use helpers::mocks::chat_client::{MockChatClient, MockResponse};
 use helpers::mocks::event_handler::MockEventHandler;
+use helpers::mocks::tool_registry::MockToolRegistry;
 
 /// Integration tests for ChatSession.
 ///
@@ -24,7 +23,7 @@ mod integration_tests {
             "Hello! How can I help you?".to_string(),
             true,
         ));
-        let tools = Registry::new();
+        let tools = Box::new(MockToolRegistry::new());
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Hello, assistant!".to_string(),
             "exit".to_string(),
@@ -42,7 +41,7 @@ mod integration_tests {
             "Mock response".to_string(),
             true,
         ));
-        let tools = Registry::new();
+        let tools = Box::new(MockToolRegistry::new());
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "First message".to_string(),
             "Second message".to_string(),
@@ -55,7 +54,7 @@ mod integration_tests {
         let result = session.run().await;
         assert!(result.is_ok());
     }
-    
+
     #[tokio::test]
     async fn chat_session_tool_registry_with_no_tools() {
         let mut args = HashMap::new();
@@ -74,7 +73,9 @@ mod integration_tests {
                 turn_over: true,
             },
         ]));
-        let tools = Registry::new(); // Empty registry
+
+        // Configure mock to not expect any tool calls - will return error for unexpected calls
+        let tools = Box::new(MockToolRegistry::new()); // Empty registry, no expectations set
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Try to use nonexistent tool".to_string(),
             "exit".to_string(),
@@ -95,7 +96,7 @@ mod integration_tests {
         let tool_call = ToolCall {
             id: "call_123".to_string(),
             name: "write_file".to_string(),
-            arguments: args,
+            arguments: args.clone(),
         };
 
         let client = Box::new(MockChatClient::new_with_sequence(vec![
@@ -105,7 +106,12 @@ mod integration_tests {
                 turn_over: true,
             },
         ]));
-        let tools = Registry::all_tools();
+
+        // Configure mock to expect the write_file tool call and return success
+        let mut mock_tools = MockToolRegistry::new();
+        mock_tools.expect_call_tool("write_file", Ok("File written to test.txt".to_string()));
+        let tools = Box::new(mock_tools);
+
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Please write a file".to_string(),
             "exit".to_string(),
@@ -136,7 +142,10 @@ mod integration_tests {
                 turn_over: true,
             },
         ]));
-        let tools = Registry::all_tools();
+
+        // When approval is declined, the tool should not be called
+        let tools = Box::new(MockToolRegistry::new()); // No expectations set
+
         let mut event_handler = MockEventHandler::new_with_inputs(vec![
             "Please write a file".to_string(),
             "exit".to_string(),
@@ -162,7 +171,7 @@ mod integration_tests {
         let tool_call = ToolCall {
             id: "call_123".to_string(),
             name: "read_file".to_string(),
-            arguments: args,
+            arguments: args.clone(),
         };
 
         let client = Box::new(MockChatClient::new_with_sequence(vec![
@@ -172,7 +181,12 @@ mod integration_tests {
                 turn_over: true,
             },
         ]));
-        let tools = Registry::all_tools();
+
+        // Configure mock to expect the read_file tool call and return file content
+        let mut mock_tools = MockToolRegistry::new();
+        mock_tools.expect_call_tool("read_file", Ok("File content from test.txt".to_string()));
+        let tools = Box::new(mock_tools);
+
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Please read a file".to_string(),
             "exit".to_string(),
@@ -190,7 +204,7 @@ mod integration_tests {
             "Test response".to_string(),
             true,
         ));
-        let tools = Registry::new();
+        let tools = Box::new(MockToolRegistry::new());
         let event_handler =
             MockEventHandler::new_with_inputs(vec!["Test message".to_string(), "exit".to_string()]);
 
@@ -211,7 +225,7 @@ mod integration_tests {
     #[tokio::test]
     async fn chat_session_with_default_system_prompt_initializes_correctly() {
         let client = Box::new(MockChatClient::new_with_message("Hello!".to_string(), true));
-        let tools = Registry::new();
+        let tools = Box::new(MockToolRegistry::new());
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Hello".to_string(),
             "exit".to_string(),
@@ -227,7 +241,7 @@ mod integration_tests {
     #[tokio::test]
     async fn chat_session_with_custom_system_prompt_initializes_correctly() {
         let client = Box::new(MockChatClient::new_with_message("Hello!".to_string(), true));
-        let tools = Registry::new();
+        let tools = Box::new(MockToolRegistry::new());
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Hello".to_string(),
             "exit".to_string(),
@@ -273,7 +287,12 @@ mod integration_tests {
                 turn_over: true,
             },
         ]));
-        let tools = Registry::all_tools();
+
+        // Configure mock to expect multiple read_file calls
+        let mut mock_tools = MockToolRegistry::new();
+        mock_tools.expect_call_tool("read_file", Ok("Content from file1.txt".to_string()));
+        let tools = Box::new(mock_tools);
+
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Read some files".to_string(),
             "exit".to_string(),
@@ -303,7 +322,10 @@ mod integration_tests {
                 turn_over: true,
             },
         ]));
-        let tools = Registry::new();
+
+        // Mock should return error for unknown tool (no expectations set for "unknown_tool")
+        let tools = Box::new(MockToolRegistry::new());
+
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Use unknown tool".to_string(),
             "exit".to_string(),
@@ -327,7 +349,7 @@ mod integration_tests {
                 turn_over: true,
             },
         ]));
-        let tools = Registry::new();
+        let tools = Box::new(MockToolRegistry::new());
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Start conversation".to_string(),
             "exit".to_string(),
@@ -345,7 +367,7 @@ mod integration_tests {
             "Should not see this".to_string(),
             true,
         ));
-        let tools = Registry::new();
+        let tools = Box::new(MockToolRegistry::new());
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec!["exit".to_string()]));
 
         let mut session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::None);
@@ -370,7 +392,7 @@ mod error_handling_tests {
         let client = Box::new(MockChatClient::new_with_error(
             "Invalid API key".to_string(),
         ));
-        let tools = Registry::new();
+        let tools = Box::new(MockToolRegistry::new());
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Test message".to_string(),
         ]));
@@ -401,7 +423,7 @@ mod error_handling_tests {
             "Continuing response".to_string(),
             false, // Never ends turn
         ));
-        let tools = Registry::new();
+        let tools = Box::new(MockToolRegistry::new());
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Start infinite loop".to_string(),
             "exit".to_string(),
@@ -438,7 +460,15 @@ mod error_handling_tests {
                 turn_over: true,
             },
         ]));
-        let tools = Registry::all_tools();
+
+        // Configure mock to simulate a tool execution error
+        let mut mock_tools = MockToolRegistry::new();
+        mock_tools.expect_call_tool(
+            "read_file",
+            Err("Invalid parameters: missing 'path' argument".to_string()),
+        );
+        let tools = Box::new(mock_tools);
+
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Try to read invalid file".to_string(),
             "exit".to_string(),
@@ -460,7 +490,7 @@ mod error_handling_tests {
                 turn_over: true,
             },
         ]));
-        let tools = Registry::new();
+        let tools = Box::new(MockToolRegistry::new());
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Make empty tool calls".to_string(),
             "exit".to_string(),
@@ -490,7 +520,7 @@ mod error_handling_tests {
                 turn_over: true,
             },
         ]));
-        let tools = Registry::all_tools();
+        let tools = Box::new(MockToolRegistry::new());
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Make malformed tool call".to_string(),
             "exit".to_string(),
@@ -508,7 +538,7 @@ mod error_handling_tests {
             "Response".to_string(),
             true,
         ));
-        let tools = Registry::new();
+        let tools = Box::new(MockToolRegistry::new());
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "exit".to_string(),
             "exit".to_string(),
@@ -520,5 +550,4 @@ mod error_handling_tests {
         let result = session.run().await;
         assert!(result.is_ok());
     }
-
 }
