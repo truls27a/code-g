@@ -1,16 +1,13 @@
-use code_g::client::error::ChatClientError;
-use code_g::client::model::{ChatMessage, ChatResult, Model, Tool, ToolCall};
+use code_g::client::model::ToolCall;
 
-use code_g::client::traits::ChatClient;
 use code_g::session::error::ChatSessionError;
-use code_g::session::event::{Action, Event, EventHandler};
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::SystemPromptConfig;
 use code_g::tools::registry::Registry;
 use std::collections::HashMap;
 
 mod helpers;
-use helpers::mocks::chat_client::{MockChatClient, MockResponse};
+use helpers::mocks::chat_client::MockChatClient;
 use helpers::mocks::event_handler::MockEventHandler;
 
 /// Integration tests for ChatSession.
@@ -58,6 +55,33 @@ mod integration_tests {
         let result = session.run().await;
         assert!(result.is_ok());
     }
+    
+    #[tokio::test]
+    async fn chat_session_tool_registry_with_no_tools() {
+        let mut args = HashMap::new();
+        args.insert("param".to_string(), "value".to_string());
+
+        let tool_call = ToolCall {
+            id: "call_none".to_string(),
+            name: "nonexistent_tool".to_string(),
+            arguments: args,
+        };
+
+        let client = Box::new(MockChatClient::new_with_tool_call_flow(
+            vec![tool_call],
+            None, // Use default message
+        ));
+        let tools = Registry::new(); // Empty registry
+        let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
+            "Try to use nonexistent tool".to_string(),
+            "exit".to_string(),
+        ]));
+
+        let mut session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::None);
+
+        let result = session.run().await;
+        assert!(result.is_ok());
+    }
 
     #[tokio::test]
     async fn chat_session_handles_tool_calls_with_approval() {
@@ -71,14 +95,10 @@ mod integration_tests {
             arguments: args,
         };
 
-        // First response: tool call, second response: final message
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![tool_call]),
-            MockResponse::Message {
-                content: "File written successfully!".to_string(),
-                turn_over: true,
-            },
-        ]));
+        let client = Box::new(MockChatClient::new_with_tool_call_flow(
+            vec![tool_call],
+            Some("File written successfully!".to_string()),
+        ));
         let tools = Registry::all_tools();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Please write a file".to_string(),
@@ -103,13 +123,10 @@ mod integration_tests {
             arguments: args,
         };
 
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![tool_call]),
-            MockResponse::Message {
-                content: "Operation declined by user".to_string(),
-                turn_over: true,
-            },
-        ]));
+        let client = Box::new(MockChatClient::new_with_tool_call_flow(
+            vec![tool_call],
+            Some("Operation declined by user".to_string()),
+        ));
         let tools = Registry::all_tools();
         let mut event_handler = MockEventHandler::new_with_inputs(vec![
             "Please write a file".to_string(),
@@ -139,13 +156,10 @@ mod integration_tests {
             arguments: args,
         };
 
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![tool_call]),
-            MockResponse::Message {
-                content: "File read successfully".to_string(),
-                turn_over: true,
-            },
-        ]));
+        let client = Box::new(MockChatClient::new_with_tool_call_flow(
+            vec![tool_call],
+            Some("File read successfully".to_string()),
+        ));
         let tools = Registry::all_tools();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Please read a file".to_string(),
@@ -240,13 +254,10 @@ mod integration_tests {
             },
         ];
 
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(tool_calls),
-            MockResponse::Message {
-                content: "Files processed successfully".to_string(),
-                turn_over: true,
-            },
-        ]));
+        let client = Box::new(MockChatClient::new_with_tool_call_flow(
+            tool_calls,
+            Some("Files processed successfully".to_string()),
+        ));
         let tools = Registry::all_tools();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Read some files".to_string(),
@@ -270,13 +281,10 @@ mod integration_tests {
             arguments: args,
         };
 
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![tool_call]),
-            MockResponse::Message {
-                content: "Tool not found".to_string(),
-                turn_over: true,
-            },
-        ]));
+        let client = Box::new(MockChatClient::new_with_tool_call_flow(
+            vec![tool_call],
+            Some("Tool not found".to_string()),
+        ));
         let tools = Registry::new();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Use unknown tool".to_string(),
@@ -291,17 +299,10 @@ mod integration_tests {
 
     #[tokio::test]
     async fn chat_session_continues_conversation_with_multiple_turns() {
-        // Create a sequence where first response has turn_over=false, then true
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::Message {
-                content: "First response".to_string(),
-                turn_over: false, // Continue conversation
-            },
-            MockResponse::Message {
-                content: "Second response".to_string(),
-                turn_over: true, // End conversation
-            },
-        ]));
+        let client = Box::new(MockChatClient::new_with_multi_turn(
+            "First response".to_string(),
+            "Second response".to_string(),
+        ));
         let tools = Registry::new();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Start conversation".to_string(),
@@ -406,13 +407,10 @@ mod error_handling_tests {
             arguments: args,
         };
 
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![tool_call]),
-            MockResponse::Message {
-                content: "Tool executed successfully".to_string(),
-                turn_over: true,
-            },
-        ]));
+        let client = Box::new(MockChatClient::new_with_tool_call_flow(
+            vec![tool_call],
+            None, // Use default message
+        ));
         let tools = Registry::all_tools();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Try to read invalid file".to_string(),
@@ -428,13 +426,10 @@ mod error_handling_tests {
 
     #[tokio::test]
     async fn chat_session_handles_empty_tool_calls() {
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![]),
-            MockResponse::Message {
-                content: "No tools to execute".to_string(),
-                turn_over: true,
-            },
-        ]));
+        let client = Box::new(MockChatClient::new_with_tool_call_flow(
+            vec![],
+            Some("No tools to execute".to_string()),
+        ));
         let tools = Registry::new();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Make empty tool calls".to_string(),
@@ -458,13 +453,10 @@ mod error_handling_tests {
             arguments: args,
         };
 
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![tool_call]),
-            MockResponse::Message {
-                content: "Tool executed successfully".to_string(),
-                turn_over: true,
-            },
-        ]));
+        let client = Box::new(MockChatClient::new_with_tool_call_flow(
+            vec![tool_call],
+            None, // Use default message
+        ));
         let tools = Registry::all_tools();
         let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
             "Make malformed tool call".to_string(),
@@ -496,339 +488,4 @@ mod error_handling_tests {
         assert!(result.is_ok());
     }
 
-    #[tokio::test]
-    async fn chat_session_handles_mixed_content_and_tool_responses() {
-        // This tests a complex scenario where we have interleaved content and tool calls
-
-        // Create a custom client that alternates between message and tool calls
-        struct AlternatingClient {
-            call_count: std::sync::Mutex<usize>,
-        }
-
-        impl AlternatingClient {
-            fn new() -> Self {
-                Self {
-                    call_count: std::sync::Mutex::new(0),
-                }
-            }
-        }
-
-        #[async_trait::async_trait]
-        impl ChatClient for AlternatingClient {
-            async fn create_chat_completion(
-                &self,
-                _model: &Model,
-                _chat_history: &[ChatMessage],
-                _tools: &[Tool],
-            ) -> Result<ChatResult, ChatClientError> {
-                let mut count = self.call_count.lock().unwrap();
-                *count += 1;
-
-                if *count % 2 == 1 {
-                    // Odd calls return tool calls
-                    let mut args = HashMap::new();
-                    args.insert("path".to_string(), "test.txt".to_string());
-
-                    Ok(ChatResult::ToolCalls(vec![ToolCall {
-                        id: format!("call_{}", *count),
-                        name: "read_file".to_string(),
-                        arguments: args,
-                    }]))
-                } else {
-                    // Even calls return messages
-                    Ok(ChatResult::Message {
-                        content: format!("Response {}", *count),
-                        turn_over: true,
-                    })
-                }
-            }
-        }
-
-        let client = Box::new(AlternatingClient::new());
-        let tools = Registry::all_tools();
-        let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
-            "Complex interaction".to_string(),
-            "exit".to_string(),
-        ]));
-
-        let mut session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::None);
-
-        let result = session.run().await;
-        assert!(result.is_ok());
-    }
-}
-
-/// Tool integration and approval workflow tests.
-///
-/// These tests verify the correct integration between ChatSession and the tool system,
-/// including approval workflows, tool execution, and error handling.
-#[cfg(test)]
-mod tool_integration_tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn chat_session_tool_approval_workflow_complete() {
-        let mut args = HashMap::new();
-        args.insert("path".to_string(), "test.txt".to_string());
-        args.insert("content".to_string(), "Hello, World!".to_string());
-
-        let tool_call = ToolCall {
-            id: "call_write".to_string(),
-            name: "write_file".to_string(),
-            arguments: args,
-        };
-
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![tool_call]),
-            MockResponse::Message {
-                content: "Tool executed successfully".to_string(),
-                turn_over: true,
-            },
-        ]));
-        let tools = Registry::all_tools();
-
-        // Create event handler that tracks approval requests
-        let mut event_handler = MockEventHandler::new_with_inputs(vec![
-            "Please write a file for me".to_string(),
-            "exit".to_string(),
-        ]);
-        event_handler.set_approval_response("approved".to_string());
-
-        let mut session = ChatSession::new(
-            client,
-            tools,
-            Box::new(event_handler),
-            SystemPromptConfig::None,
-        );
-
-        let result = session.run().await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn chat_session_tool_approval_declined_workflow() {
-        let mut args = HashMap::new();
-        args.insert("command".to_string(), "rm -rf /".to_string());
-
-        let tool_call = ToolCall {
-            id: "call_execute".to_string(),
-            name: "execute_command".to_string(),
-            arguments: args,
-        };
-
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![tool_call]),
-            MockResponse::Message {
-                content: "Tool executed successfully".to_string(),
-                turn_over: true,
-            },
-        ]));
-        let tools = Registry::all_tools();
-
-        let mut event_handler = MockEventHandler::new_with_inputs(vec![
-            "Please run this dangerous command".to_string(),
-            "exit".to_string(),
-        ]);
-        event_handler.set_approval_response("declined".to_string());
-
-        let mut session = ChatSession::new(
-            client,
-            tools,
-            Box::new(event_handler),
-            SystemPromptConfig::None,
-        );
-
-        let result = session.run().await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn chat_session_safe_tools_bypass_approval() {
-        let mut args = HashMap::new();
-        args.insert("path".to_string(), "test.txt".to_string());
-
-        let tool_call = ToolCall {
-            id: "call_read".to_string(),
-            name: "read_file".to_string(),
-            arguments: args,
-        };
-
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![tool_call]),
-            MockResponse::Message {
-                content: "Tool executed successfully".to_string(),
-                turn_over: true,
-            },
-        ]));
-        let tools = Registry::all_tools();
-
-        // This handler should never be asked for approval since read_file is safe
-        let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
-            "Please read a file".to_string(),
-            "exit".to_string(),
-        ]));
-
-        let mut session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::None);
-
-        let result = session.run().await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn chat_session_multiple_dangerous_tools_require_approval() {
-        let tool_calls = vec![
-            ToolCall {
-                id: "call_1".to_string(),
-                name: "write_file".to_string(),
-                arguments: {
-                    let mut args = HashMap::new();
-                    args.insert("path".to_string(), "file1.txt".to_string());
-                    args.insert("content".to_string(), "Content 1".to_string());
-                    args
-                },
-            },
-            ToolCall {
-                id: "call_2".to_string(),
-                name: "execute_command".to_string(),
-                arguments: {
-                    let mut args = HashMap::new();
-                    args.insert("command".to_string(), "echo hello".to_string());
-                    args
-                },
-            },
-        ];
-
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(tool_calls),
-            MockResponse::Message {
-                content: "All tools executed successfully".to_string(),
-                turn_over: true,
-            },
-        ]));
-        let tools = Registry::all_tools();
-
-        let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
-            "Please write a file and run a command".to_string(),
-            "exit".to_string(),
-        ]));
-
-        let mut session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::None);
-
-        let result = session.run().await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn chat_session_tool_with_invalid_parameters_handles_gracefully() {
-        let mut args = HashMap::new();
-        args.insert("wrong_param".to_string(), "value".to_string());
-
-        let tool_call = ToolCall {
-            id: "call_invalid".to_string(),
-            name: "read_file".to_string(),
-            arguments: args, // Missing required 'path' parameter
-        };
-
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![tool_call]),
-            MockResponse::Message {
-                content: "Tool executed successfully".to_string(),
-                turn_over: true,
-            },
-        ]));
-        let tools = Registry::all_tools();
-        let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
-            "Try to read file with wrong parameters".to_string(),
-            "exit".to_string(),
-        ]));
-
-        let mut session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::None);
-
-        let result = session.run().await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn chat_session_tool_registry_with_no_tools() {
-        let mut args = HashMap::new();
-        args.insert("param".to_string(), "value".to_string());
-
-        let tool_call = ToolCall {
-            id: "call_none".to_string(),
-            name: "nonexistent_tool".to_string(),
-            arguments: args,
-        };
-
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(vec![tool_call]),
-            MockResponse::Message {
-                content: "Tool executed successfully".to_string(),
-                turn_over: true,
-            },
-        ]));
-        let tools = Registry::new(); // Empty registry
-        let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
-            "Try to use nonexistent tool".to_string(),
-            "exit".to_string(),
-        ]));
-
-        let mut session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::None);
-
-        let result = session.run().await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn chat_session_complex_tool_sequence() {
-        // Test a complex sequence: read file -> search files -> write file
-        let tool_calls = vec![
-            ToolCall {
-                id: "call_1".to_string(),
-                name: "read_file".to_string(),
-                arguments: {
-                    let mut args = HashMap::new();
-                    args.insert("path".to_string(), "input.txt".to_string());
-                    args
-                },
-            },
-            ToolCall {
-                id: "call_2".to_string(),
-                name: "search_files".to_string(),
-                arguments: {
-                    let mut args = HashMap::new();
-                    args.insert("query".to_string(), "test".to_string());
-                    args.insert("path".to_string(), ".".to_string());
-                    args
-                },
-            },
-            ToolCall {
-                id: "call_3".to_string(),
-                name: "write_file".to_string(),
-                arguments: {
-                    let mut args = HashMap::new();
-                    args.insert("path".to_string(), "output.txt".to_string());
-                    args.insert("content".to_string(), "Processed content".to_string());
-                    args
-                },
-            },
-        ];
-
-        let client = Box::new(MockChatClient::new_with_sequence(vec![
-            MockResponse::ToolCalls(tool_calls),
-            MockResponse::Message {
-                content: "All tools executed successfully".to_string(),
-                turn_over: true,
-            },
-        ]));
-        let tools = Registry::all_tools();
-        let event_handler = Box::new(MockEventHandler::new_with_inputs(vec![
-            "Please process files for me".to_string(),
-            "exit".to_string(),
-        ]));
-
-        let mut session = ChatSession::new(client, tools, event_handler, SystemPromptConfig::None);
-
-        let result = session.run().await;
-        assert!(result.is_ok());
-    }
 }
