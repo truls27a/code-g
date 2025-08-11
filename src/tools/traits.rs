@@ -10,7 +10,7 @@ use std::collections::HashMap;
 /// ```rust
 /// use code_g::tools::traits::ToolRegistry;
 /// use code_g::tools::traits::Tool;
-/// use code_g::client::model::Tool;
+/// use code_g::client::model::Tool as ToolModel;
 /// use std::collections::HashMap;
 ///
 /// struct MyToolRegistry;
@@ -21,7 +21,7 @@ use std::collections::HashMap;
 ///         Ok("Tool executed successfully".to_string())
 ///     }
 ///
-///     fn to_tools(&self) -> Vec<Tool> {
+///     fn to_tools(&self) -> Vec<ToolModel> {
 ///         // Implement the conversion logic here
 ///         vec![]
 ///     }
