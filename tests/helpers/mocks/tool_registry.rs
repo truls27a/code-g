@@ -15,6 +15,15 @@ pub struct MockTool {
 }
 
 impl MockTool {
+    /// Create a new MockTool.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `return_value` - The value to return when the tool is called.
+    /// 
+    /// # Returns
+    /// 
+    /// A new `MockTool` instance.
     pub fn new(return_value: String) -> Self {
         Self {
             calls: Arc::new(Mutex::new(vec![])),
@@ -22,10 +31,20 @@ impl MockTool {
         }
     }
 
+    /// Get the calls made to the tool.
+    /// 
+    /// # Returns
+    /// 
+    /// A vector of `HashMap`s, each containing the arguments passed to the tool.
     pub fn calls(&self) -> Vec<HashMap<String, String>> {
         self.calls.lock().unwrap().clone()
     }
 
+    /// Get the return value of the tool.
+    /// 
+    /// # Returns
+    /// 
+    /// The return value of the tool.
     pub fn return_value(&self) -> String {
         self.return_value.lock().unwrap().clone()
     }
@@ -91,6 +110,15 @@ pub struct MockToolRegistry {
 }
 
 impl MockToolRegistry {
+    /// Create a new MockToolRegistry.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `tools` - A vector of tools that are available in the registry.
+    /// 
+    /// # Returns
+    /// 
+    /// A new `MockToolRegistry` instance.
     pub fn new(tools: Vec<Box<dyn Tool>>) -> Self {
         Self {
             tools,
@@ -98,6 +126,11 @@ impl MockToolRegistry {
         }
     }
 
+    /// Get the calls made to the registry.
+    /// 
+    /// # Returns
+    /// 
+    /// A vector of tuples, each containing the tool name and the arguments passed to the tool.
     pub fn calls(&self) -> Vec<(String, HashMap<String, String>)> {
         self.calls.lock().unwrap().clone()
     }

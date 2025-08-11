@@ -22,21 +22,6 @@ impl MockChatClient {
     /// # Returns
     ///
     /// A new mock chat client with the given queue and calls.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use code_g::client::{ChatClient, ChatResult, ChatMessage, Model, Tool};
-    /// use std::sync::{Arc, Mutex};
-    ///
-    /// let queue = vec![Ok(ChatResult::Message {
-    ///     content: "Mock response".to_string(),
-    ///     turn_over: true,
-    /// })];
-    /// let calls = vec![(Model::OpenAi(OpenAiModel::Gpt4o), vec![ChatMessage::User { content: "Hello, how are you?".to_string() }], vec![])];
-    ///
-    /// let mock_client = MockChatClient::new(queue, calls);
-    /// ```
     pub fn new(queue: Vec<Result<ChatResult, ChatClientError>>, calls: Vec<(Model, Vec<ChatMessage>, Vec<Tool>)>) -> Self {
         Self {
             queue: Arc::new(Mutex::new(queue)),
@@ -49,19 +34,6 @@ impl MockChatClient {
     /// # Arguments
     ///
     /// * `result` - The result to push to the queue.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use code_g::client::{ChatClient, ChatResult, ChatMessage, Model, Tool};
-    /// use std::sync::{Arc, Mutex};
-    ///
-    /// let mock_client = MockChatClient::new(vec![], vec![]);
-    /// mock_client.push(Ok(ChatResult::Message {
-    ///     content: "Mock response".to_string(),
-    ///     turn_over: true,
-    /// }));
-    /// ```
     pub fn push(&self, result: Result<ChatResult, ChatClientError>) {
         self.queue.lock().unwrap().push(result);
     }
@@ -71,26 +43,6 @@ impl MockChatClient {
     /// # Returns
     ///
     /// A vector of tuples that contain the model, chat messages, and tools that the chat client has made.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use code_g::client::{ChatClient, ChatResult, ChatMessage, Model, Tool};
-    /// use std::sync::{Arc, Mutex};
-    ///
-    /// let mock_client = MockChatClient::new(vec![], vec![]);
-    /// mock_client.push(Ok(ChatResult::Message {
-    ///     content: "Mock response".to_string(),
-    ///     turn_over: true,
-    /// }));
-    /// 
-    /// let calls = mock_client.calls();
-    ///
-    /// assert_eq!(calls.len(), 1);
-    /// assert_eq!(calls[0].0, Model::OpenAi(OpenAiModel::Gpt4o));
-    /// assert_eq!(calls[0].1, vec![ChatMessage::User { content: "Hello, how are you?".to_string() }]);
-    /// assert_eq!(calls[0].2, vec![]);
-    /// ```
     pub fn calls(&self) -> Vec<(Model, Vec<ChatMessage>, Vec<Tool>)> {
         self.calls.lock().unwrap().clone()
     }
