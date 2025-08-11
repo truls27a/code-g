@@ -194,7 +194,7 @@ impl ChatSession {
                 .create_chat_completion(
                     &Model::OpenAi(OpenAiModel::Gpt4oMini), // TODO: Make this configurable
                     &self.memory.get_memory(),
-                    &self.tools.to_openai_tools(),
+                    &self.tools.to_tools(),
                 )
                 .await
             {

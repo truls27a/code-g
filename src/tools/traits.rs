@@ -1,4 +1,4 @@
-use crate::client::model::{Function, Parameters, Tool as OpenAiTool, ToolType};
+use crate::client::model::{Function, Parameters, Tool as ToolModel, ToolType};
 use std::collections::HashMap;
 
 /// A trait defining the interface for tool registries.
@@ -10,7 +10,7 @@ use std::collections::HashMap;
 /// ```rust
 /// use code_g::tools::traits::ToolRegistry;
 /// use code_g::tools::traits::Tool;
-/// use code_g::client::model::Tool as OpenAiTool;
+/// use code_g::client::model::Tool;
 /// use std::collections::HashMap;
 ///
 /// struct MyToolRegistry;
@@ -21,7 +21,7 @@ use std::collections::HashMap;
 ///         Ok("Tool executed successfully".to_string())
 ///     }
 ///
-///     fn to_openai_tools(&self) -> Vec<OpenAiTool> {
+///     fn to_tools(&self) -> Vec<Tool> {
 ///         // Implement the conversion logic here
 ///         vec![]
 ///     }
@@ -61,14 +61,13 @@ pub trait ToolRegistry {
     /// execution fails.
     fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String>;
 
-    /// Converts all tools in the registry to OpenAI-compatible tool format.
-    ///
-    /// This is useful when integrating with OpenAI's function calling capabilities,
-    /// as it provides the tool definitions in the expected format.
+    /// Converts all tools in the registry to tool format.
+    /// 
+    /// This is useful when integrating with AI models that support tool calling.
     ///
     /// # Returns
-    /// A vector of OpenAI tool definitions.
-    fn to_openai_tools(&self) -> Vec<OpenAiTool>;
+    /// A vector of tool definitions.
+    fn to_tools(&self) -> Vec<ToolModel>;
 
     /// Returns the number of tools in the registry.
     ///
@@ -231,18 +230,15 @@ pub trait Tool {
     /// such as invalid arguments, I/O errors, or internal processing errors.
     fn call(&self, args: HashMap<String, String>) -> Result<String, String>;
 
-    // TODO: Remove openai specific stuff from here
-    /// Converts the tool to OpenAI tool format.
-    ///
-    /// Creates an OpenAI-compatible tool representation that can be used
-    /// with OpenAI's function calling API. This method provides a default
-    /// implementation that constructs the tool using the other trait methods.
+    /// Converts the tool to tool format.
+    /// 
+    /// This is useful when integrating with AI models that support tool calling.
     ///
     /// # Returns
     ///
-    /// An `OpenAiTool` object representing this tool in OpenAI's format.
-    fn to_openai_tool(&self) -> OpenAiTool {
-        OpenAiTool {
+    /// A `Tool` object representing this tool.
+    fn to_tool(&self) -> ToolModel {
+        ToolModel {
             tool_type: ToolType::Function,
             function: Function {
                 name: self.name(),

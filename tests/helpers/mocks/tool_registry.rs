@@ -1,5 +1,5 @@
 use code_g::tools::traits::{Tool, ToolRegistry};
-use code_g::client::model::{Tool as OpenAiTool, Parameters, Property};
+use code_g::client::model::{Tool as ToolModel, Parameters, Property};
 use std::{collections::HashMap, sync::{Arc, Mutex}};
 
 /// A mock tool for testing purposes.
@@ -89,8 +89,8 @@ impl ToolRegistry for MockToolRegistry {
         }
     }
 
-    fn to_openai_tools(&self) -> Vec<OpenAiTool> {
-        self.tools.iter().map(|t| t.to_openai_tool()).collect()
+    fn to_tools(&self) -> Vec<ToolModel> {
+        self.tools.iter().map(|t| t.to_tool()).collect()
     }
 
     fn len(&self) -> usize {

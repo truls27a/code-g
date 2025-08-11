@@ -1,4 +1,4 @@
-use crate::client::model::Tool as OpenAiTool;
+use crate::client::model::Tool as ToolModel;
 use crate::tools::edit_file::EditFile;
 use crate::tools::execute_command::ExecuteCommand;
 use crate::tools::read_file::ReadFile;
@@ -77,14 +77,11 @@ impl ToolRegistry for Registry {
         }
     }
 
-    /// Converts all tools in the registry to OpenAI-compatible tool format.
-    ///
-    /// This is useful when integrating with OpenAI's function calling capabilities,
-    /// as it provides the tool definitions in the expected format.
+    /// Converts all tools in the registry to tool format.
     ///
     /// # Returns
     ///
-    /// A vector of OpenAI tool definitions.
+    /// A vector of tool definitions.
     ///
     /// # Examples
     ///
@@ -93,13 +90,13 @@ impl ToolRegistry for Registry {
     /// use code_g::tools::traits::ToolRegistry;
     ///
     /// let registry = Registry::all_tools();
-    /// let openai_tools = registry.to_openai_tools();
-    /// // Use openai_tools with OpenAI API
+    /// let tools = registry.to_tools();
+    /// // Use tools with AI model
     /// ```
-    fn to_openai_tools(&self) -> Vec<OpenAiTool> {
+    fn to_tools(&self) -> Vec<ToolModel> {
         self.tools
             .iter()
-            .map(|tool| tool.to_openai_tool())
+            .map(|tool| tool.to_tool())
             .collect()
     }
 
