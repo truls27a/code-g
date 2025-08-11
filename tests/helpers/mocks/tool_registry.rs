@@ -1,9 +1,12 @@
+use code_g::client::model::{Parameters, Property, Tool as ToolModel};
 use code_g::tools::traits::{Tool, ToolRegistry};
-use code_g::client::model::{Tool as ToolModel, Parameters, Property};
-use std::{collections::HashMap, sync::{Arc, Mutex}};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 /// A mock tool for testing purposes.
-/// 
+///
 /// This tool is used to test the tool registry and tool execution.
 /// It is not intended to be used in production.
 pub struct MockTool {
@@ -13,7 +16,10 @@ pub struct MockTool {
 
 impl MockTool {
     pub fn new(return_value: String) -> Self {
-        Self { calls: Arc::new(Mutex::new(vec![])), return_value: Arc::new(Mutex::new(return_value)) }
+        Self {
+            calls: Arc::new(Mutex::new(vec![])),
+            return_value: Arc::new(Mutex::new(return_value)),
+        }
     }
 
     pub fn calls(&self) -> Vec<HashMap<String, String>> {
@@ -71,12 +77,12 @@ impl Tool for MockTool {
 }
 
 /// A mock tool registry for testing purposes.
-/// 
+///
 /// This tool registry is used to test the tool registry and tool execution.
 /// It is not intended to be used in production.
-/// 
+///
 /// # Fields
-/// 
+///
 /// * `tools` - A vector of tools that are available in the registry.
 /// * `calls` - A vector of calls to the registry.
 pub struct MockToolRegistry {
@@ -86,7 +92,10 @@ pub struct MockToolRegistry {
 
 impl MockToolRegistry {
     pub fn new(tools: Vec<Box<dyn Tool>>) -> Self {
-        Self { tools, calls: Arc::new(Mutex::new(vec![])) }
+        Self {
+            tools,
+            calls: Arc::new(Mutex::new(vec![])),
+        }
     }
 
     pub fn calls(&self) -> Vec<(String, HashMap<String, String>)> {
@@ -97,7 +106,10 @@ impl MockToolRegistry {
 impl ToolRegistry for MockToolRegistry {
     fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String> {
         // Record the call
-        self.calls.lock().unwrap().push((tool_name.to_string(), args.clone()));
+        self.calls
+            .lock()
+            .unwrap()
+            .push((tool_name.to_string(), args.clone()));
 
         // Find the tool
         let tool = self.tools.iter().find(|t| t.name() == tool_name);
@@ -125,5 +137,4 @@ impl ToolRegistry for MockToolRegistry {
     fn get_tools(&self) -> &[Box<dyn Tool>] {
         &self.tools
     }
-
 }
