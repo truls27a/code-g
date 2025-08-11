@@ -57,12 +57,15 @@ impl Tool for MockTool {
         false
     }
 
-    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+    fn approval_message(&self, _args: &HashMap<String, String>) -> (String, String) {
         ("Mock Tool".to_string(), "Mock approval message".to_string())
     }
 
     fn call(&self, args: HashMap<String, String>) -> Result<String, String> {
+        // Record the call
         self.calls.lock().unwrap().push(args);
+
+        // Return the return value
         Ok(self.return_value.lock().unwrap().clone())
     }
 }
@@ -75,16 +78,34 @@ impl Tool for MockTool {
 /// # Fields
 /// 
 /// * `tools` - A vector of tools that are available in the registry.
+/// * `calls` - A vector of calls to the registry.
 pub struct MockToolRegistry {
     tools: Vec<Box<dyn Tool>>,
+    calls: Arc<Mutex<Vec<(String, HashMap<String, String>)>>>,
+}
+
+impl MockToolRegistry {
+    pub fn new(tools: Vec<Box<dyn Tool>>) -> Self {
+        Self { tools, calls: Arc::new(Mutex::new(vec![])) }
+    }
+
+    pub fn calls(&self) -> Vec<(String, HashMap<String, String>)> {
+        self.calls.lock().unwrap().clone()
+    }
 }
 
 impl ToolRegistry for MockToolRegistry {
     fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String> {
+        // Record the call
+        self.calls.lock().unwrap().push((tool_name.to_string(), args.clone()));
+
+        // Find the tool
         let tool = self.tools.iter().find(|t| t.name() == tool_name);
         if let Some(tool) = tool {
+            // Call the tool
             tool.call(args)
         } else {
+            // Return an error if the tool is not found
             Err(format!("Tool {} not found", tool_name))
         }
     }
