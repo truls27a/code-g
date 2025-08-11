@@ -1,31 +1,35 @@
+use async_trait::async_trait;
 use code_g::client::{
     error::ChatClientError,
     model::{ChatMessage, ChatResult, Model, Tool},
     traits::ChatClient,
 };
-use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
 
+#[derive(Clone)]
 pub struct MockChatClient {
     queue: Arc<Mutex<Vec<Result<ChatResult, ChatClientError>>>>,
     calls: Arc<Mutex<Vec<(Model, Vec<ChatMessage>, Vec<Tool>)>>>,
 }
 
 impl MockChatClient {
-    /// Creates a new mock chat client with the given queue and calls.
+    /// Creates a new mock chat client with the given queue.
     ///
     /// # Arguments
     ///
     /// * `queue` - A vector of results that will be returned when the chat client is called.
-    /// * `calls` - A vector of calls that the chat client has made.
+    /// * `calls` - A vector of calls that will be returned when the chat client is called.
     ///
     /// # Returns
     ///
-    /// A new mock chat client with the given queue and calls.
-    pub fn new(queue: Vec<Result<ChatResult, ChatClientError>>, calls: Vec<(Model, Vec<ChatMessage>, Vec<Tool>)>) -> Self {
+    /// A new mock chat client with the given queue.
+    pub fn new(
+        queue: Vec<Result<ChatResult, ChatClientError>>,
+        calls: Arc<Mutex<Vec<(Model, Vec<ChatMessage>, Vec<Tool>)>>>,
+    ) -> Self {
         Self {
             queue: Arc::new(Mutex::new(queue)),
-            calls: Arc::new(Mutex::new(calls)),
+            calls,
         }
     }
 
@@ -57,9 +61,18 @@ impl ChatClient for MockChatClient {
         tools: &[Tool],
     ) -> Result<ChatResult, ChatClientError> {
         // Record the call
-        self.calls.lock().unwrap().push((model.clone(), chat_history.to_vec(), tools.to_vec()));
+        self.calls
+            .lock()
+            .unwrap()
+            .push((model.clone(), chat_history.to_vec(), tools.to_vec()));
 
         // Return the next result from the queue
-        self.queue.lock().unwrap().pop().unwrap_or(Err(ChatClientError::Other("No more results in queue".to_string())))
+        self.queue
+            .lock()
+            .unwrap()
+            .pop()
+            .unwrap_or(Err(ChatClientError::Other(
+                "No more results in queue".to_string(),
+            )))
     }
 }

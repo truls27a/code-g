@@ -14,7 +14,7 @@ use std::io;
 ///
 /// let event = Event::ReceivedUserMessage { message: "Hello".to_string() };
 /// ```
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Event {
     /// The chat session has been started
     SessionStarted,
