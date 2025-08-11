@@ -1,174 +1,98 @@
+use code_g::client::{
+    error::ChatClientError,
+    model::{ChatMessage, ChatResult, Model, Tool},
+    traits::ChatClient,
+};
 use async_trait::async_trait;
-use code_g::client::error::ChatClientError;
-use code_g::client::model::{ChatMessage, ChatResult, Model, Tool, ToolCall};
-use code_g::client::providers::openai::error::OpenAIError;
-use code_g::client::traits::ChatClient;
+use std::sync::{Arc, Mutex};
 
-/// Mock implementation of ChatClient for testing purposes.
-///
-/// This mock client allows you to configure predefined responses for testing
-/// without making actual API calls to OpenAI. It supports both message responses
-/// and tool call responses, and can be configured to return errors for testing
-/// error handling scenarios.
-///
-/// # Examples
-///
-/// ```rust
-/// use code_g::client::mock::MockChatClient;
-/// use code_g::client::model::{ChatResult, ChatMessage};
-/// use code_g::client::providers::openai::schema::Model as OpenAiModel;
-/// use code_g::client::traits::ChatClient;
-/// use tokio::runtime::Runtime;
-///
-/// // Create a mock that returns a simple message
-/// let mock = MockChatClient::new_with_message("Hello from mock!".to_string(), true);
-///
-/// // Use it like any other ChatClient
-/// let rt = Runtime::new().unwrap();
-/// rt.block_on(async {
-///     let result = mock.create_chat_completion(
-///         &Model::OpenAi(OpenAiModel::Gpt4oMini),
-///         &[ChatMessage::User { content: "Hi".to_string() }],
-///         &[],
-///     ).await.unwrap();
-/// });
-/// ```
-#[derive(Debug, Clone)]
 pub struct MockChatClient {
-    response: MockResponse,
-    call_count: std::sync::Arc<std::sync::Mutex<usize>>,
-}
-
-/// Represents the different types of responses the mock client can return.
-#[derive(Debug, Clone)]
-pub enum MockResponse {
-    /// Return a message response
-    Message { content: String, turn_over: bool },
-    /// Return tool calls
-    ToolCalls(Vec<ToolCall>),
-    /// Return an error with error message
-    Error(String),
-    /// Return a sequence of responses in order
-    Sequence(Vec<MockResponse>),
+    queue: Arc<Mutex<Vec<Result<ChatResult, ChatClientError>>>>,
+    calls: Arc<Mutex<Vec<(Model, Vec<ChatMessage>, Vec<Tool>)>>>,
 }
 
 impl MockChatClient {
-    /// Creates a new mock client that returns a message response.
+    /// Creates a new mock chat client with the given queue and calls.
     ///
     /// # Arguments
     ///
-    /// * `content` - The message content to return
-    /// * `turn_over` - Whether the turn should be marked as over
+    /// * `queue` - A vector of results that will be returned when the chat client is called.
+    /// * `calls` - A vector of calls that the chat client has made.
     ///
     /// # Returns
     ///
-    /// A new `MockChatClient` configured to return the specified message.
+    /// A new mock chat client with the given queue and calls.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::client::mock::MockChatClient;
+    /// use code_g::client::{ChatClient, ChatResult, ChatMessage, Model, Tool};
+    /// use std::sync::{Arc, Mutex};
     ///
-    /// let mock = MockChatClient::new_with_message("Test response".to_string(), true);
+    /// let queue = vec![Ok(ChatResult::Message {
+    ///     content: "Mock response".to_string(),
+    ///     turn_over: true,
+    /// })];
+    /// let calls = vec![(Model::OpenAi(OpenAiModel::Gpt4o), vec![ChatMessage::User { content: "Hello, how are you?".to_string() }], vec![])];
+    ///
+    /// let mock_client = MockChatClient::new(queue, calls);
     /// ```
-    pub fn new_with_message(content: String, turn_over: bool) -> Self {
+    pub fn new(queue: Vec<Result<ChatResult, ChatClientError>>, calls: Vec<(Model, Vec<ChatMessage>, Vec<Tool>)>) -> Self {
         Self {
-            response: MockResponse::Message { content, turn_over },
-            call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
+            queue: Arc::new(Mutex::new(queue)),
+            calls: Arc::new(Mutex::new(calls)),
         }
     }
 
-    /// Creates a new mock client that returns tool calls.
+    /// Pushes a result to the queue.
     ///
     /// # Arguments
     ///
-    /// * `tool_calls` - The tool calls to return
-    ///
-    /// # Returns
-    ///
-    /// A new `MockChatClient` configured to return the specified tool calls.
+    /// * `result` - The result to push to the queue.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::client::mock::MockChatClient;
-    /// use code_g::client::model::ToolCall;
-    /// use std::collections::HashMap;
+    /// use code_g::client::{ChatClient, ChatResult, ChatMessage, Model, Tool};
+    /// use std::sync::{Arc, Mutex};
     ///
-    /// let mut args = HashMap::new();
-    /// args.insert("file".to_string(), "test.txt".to_string());
-    ///
-    /// let tool_call = ToolCall {
-    ///     id: "call_123".to_string(),
-    ///     name: "read_file".to_string(),
-    ///     arguments: args,
-    /// };
-    ///
-    /// let mock = MockChatClient::new_with_tool_calls(vec![tool_call]);
+    /// let mock_client = MockChatClient::new(vec![], vec![]);
+    /// mock_client.push(Ok(ChatResult::Message {
+    ///     content: "Mock response".to_string(),
+    ///     turn_over: true,
+    /// }));
     /// ```
-    pub fn new_with_tool_calls(tool_calls: Vec<ToolCall>) -> Self {
-        Self {
-            response: MockResponse::ToolCalls(tool_calls),
-            call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
-        }
+    pub fn push(&self, result: Result<ChatResult, ChatClientError>) {
+        self.queue.lock().unwrap().push(result);
     }
 
-    /// Creates a new mock client that returns an error.
-    ///
-    /// # Arguments
-    ///
-    /// * `error_message` - The error message to return
+    /// Returns the calls that the chat client has made.
     ///
     /// # Returns
     ///
-    /// A new `MockChatClient` configured to return the specified error.
+    /// A vector of tuples that contain the model, chat messages, and tools that the chat client has made.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::client::mock::MockChatClient;
+    /// use code_g::client::{ChatClient, ChatResult, ChatMessage, Model, Tool};
+    /// use std::sync::{Arc, Mutex};
     ///
-    /// let mock = MockChatClient::new_with_error("Invalid API key".to_string());
+    /// let mock_client = MockChatClient::new(vec![], vec![]);
+    /// mock_client.push(Ok(ChatResult::Message {
+    ///     content: "Mock response".to_string(),
+    ///     turn_over: true,
+    /// }));
+    /// 
+    /// let calls = mock_client.calls();
+    ///
+    /// assert_eq!(calls.len(), 1);
+    /// assert_eq!(calls[0].0, Model::OpenAi(OpenAiModel::Gpt4o));
+    /// assert_eq!(calls[0].1, vec![ChatMessage::User { content: "Hello, how are you?".to_string() }]);
+    /// assert_eq!(calls[0].2, vec![]);
     /// ```
-    pub fn new_with_error(error_message: String) -> Self {
-        Self {
-            response: MockResponse::Error(error_message),
-            call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
-        }
-    }
-
-    /// Creates a new mock client that returns a sequence of responses.
-    ///
-    /// The client will return responses in the order they are provided.
-    /// After all responses are exhausted, it will repeat the last response.
-    ///
-    /// # Arguments
-    ///
-    /// * `responses` - The sequence of responses to return
-    ///
-    /// # Returns
-    ///
-    /// A new `MockChatClient` configured to return the sequence of responses.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use code_g::client::mock::{MockChatClient, MockResponse};
-    ///
-    /// let responses = vec![
-    ///     MockResponse::ToolCalls(vec![/* tool calls */]),
-    ///     MockResponse::Message {
-    ///         content: "Final response".to_string(),
-    ///         turn_over: true
-    ///     },
-    /// ];
-    /// let mock = MockChatClient::new_with_sequence(responses);
-    /// ```
-    pub fn new_with_sequence(responses: Vec<MockResponse>) -> Self {
-        Self {
-            response: MockResponse::Sequence(responses),
-            call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
-        }
+    pub fn calls(&self) -> Vec<(Model, Vec<ChatMessage>, Vec<Tool>)> {
+        self.calls.lock().unwrap().clone()
     }
 }
 
@@ -176,186 +100,14 @@ impl MockChatClient {
 impl ChatClient for MockChatClient {
     async fn create_chat_completion(
         &self,
-        _model: &Model,
-        _chat_history: &[ChatMessage],
-        _tools: &[Tool],
+        model: &Model,
+        chat_history: &[ChatMessage],
+        tools: &[Tool],
     ) -> Result<ChatResult, ChatClientError> {
-        match &self.response {
-            MockResponse::Message { content, turn_over } => Ok(ChatResult::Message {
-                content: content.clone(),
-                turn_over: *turn_over,
-            }),
-            MockResponse::ToolCalls(tool_calls) => Ok(ChatResult::ToolCalls(tool_calls.clone())),
-            MockResponse::Error(error_message) => Err(ChatClientError::OpenAIError(
-                OpenAIError::Other(error_message.clone()),
-            )),
-            MockResponse::Sequence(responses) => {
-                let mut count = self.call_count.lock().unwrap();
-                let index = *count;
-                *count += 1;
+        // Record the call
+        self.calls.lock().unwrap().push((model.clone(), chat_history.to_vec(), tools.to_vec()));
 
-                if index < responses.len() {
-                    match &responses[index] {
-                        MockResponse::Message { content, turn_over } => Ok(ChatResult::Message {
-                            content: content.clone(),
-                            turn_over: *turn_over,
-                        }),
-                        MockResponse::ToolCalls(tool_calls) => {
-                            Ok(ChatResult::ToolCalls(tool_calls.clone()))
-                        }
-                        MockResponse::Error(error_message) => Err(ChatClientError::OpenAIError(
-                            OpenAIError::Other(error_message.clone()),
-                        )),
-                        MockResponse::Sequence(_) => {
-                            // Nested sequences not supported, fall back to last response
-                            if let Some(last) = responses.last() {
-                                match last {
-                                    MockResponse::Message { content, turn_over } => {
-                                        Ok(ChatResult::Message {
-                                            content: content.clone(),
-                                            turn_over: *turn_over,
-                                        })
-                                    }
-                                    MockResponse::ToolCalls(tool_calls) => {
-                                        Ok(ChatResult::ToolCalls(tool_calls.clone()))
-                                    }
-                                    MockResponse::Error(error_message) => {
-                                        Err(ChatClientError::OpenAIError(OpenAIError::Other(
-                                            error_message.clone(),
-                                        )))
-                                    }
-                                    MockResponse::Sequence(_) => Ok(ChatResult::Message {
-                                        content: "Default response".to_string(),
-                                        turn_over: true,
-                                    }),
-                                }
-                            } else {
-                                Ok(ChatResult::Message {
-                                    content: "Default response".to_string(),
-                                    turn_over: true,
-                                })
-                            }
-                        }
-                    }
-                } else {
-                    // Repeat the last response
-                    if let Some(last) = responses.last() {
-                        match last {
-                            MockResponse::Message { content, turn_over } => {
-                                Ok(ChatResult::Message {
-                                    content: content.clone(),
-                                    turn_over: *turn_over,
-                                })
-                            }
-                            MockResponse::ToolCalls(tool_calls) => {
-                                Ok(ChatResult::ToolCalls(tool_calls.clone()))
-                            }
-                            MockResponse::Error(error_message) => {
-                                Err(ChatClientError::OpenAIError(OpenAIError::Other(
-                                    error_message.clone(),
-                                )))
-                            }
-                            MockResponse::Sequence(_) => Ok(ChatResult::Message {
-                                content: "Default response".to_string(),
-                                turn_over: true,
-                            }),
-                        }
-                    } else {
-                        Ok(ChatResult::Message {
-                            content: "Default response".to_string(),
-                            turn_over: true,
-                        })
-                    }
-                }
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use code_g::client::model::{ChatMessage, Model};
-    use code_g::client::providers::openai::schema::Model as OpenAiModel;
-    use std::collections::HashMap;
-
-    #[tokio::test]
-    async fn mock_returns_configured_message() {
-        let mock = MockChatClient::new_with_message("Test message".to_string(), true);
-
-        let result = mock
-            .create_chat_completion(
-                &Model::OpenAi(OpenAiModel::Gpt4oMini),
-                &[ChatMessage::User {
-                    content: "Hello".to_string(),
-                }],
-                &[],
-            )
-            .await;
-
-        assert!(result.is_ok());
-        match result.unwrap() {
-            ChatResult::Message { content, turn_over } => {
-                assert_eq!(content, "Test message");
-                assert_eq!(turn_over, true);
-            }
-            _ => panic!("Expected message result"),
-        }
-    }
-
-    #[tokio::test]
-    async fn mock_returns_configured_tool_calls() {
-        let mut args = HashMap::new();
-        args.insert("param".to_string(), "value".to_string());
-
-        let tool_call = ToolCall {
-            id: "call_test".to_string(),
-            name: "test_tool".to_string(),
-            arguments: args,
-        };
-
-        let mock = MockChatClient::new_with_tool_calls(vec![tool_call.clone()]);
-
-        let result = mock
-            .create_chat_completion(
-                &Model::OpenAi(OpenAiModel::Gpt4oMini),
-                &[ChatMessage::User {
-                    content: "Hello".to_string(),
-                }],
-                &[],
-            )
-            .await;
-
-        assert!(result.is_ok());
-        match result.unwrap() {
-            ChatResult::ToolCalls(calls) => {
-                assert_eq!(calls.len(), 1);
-                assert_eq!(calls[0], tool_call);
-            }
-            _ => panic!("Expected tool calls result"),
-        }
-    }
-
-    #[tokio::test]
-    async fn mock_returns_configured_error() {
-        let mock = MockChatClient::new_with_error("Test error".to_string());
-
-        let result = mock
-            .create_chat_completion(
-                &Model::OpenAi(OpenAiModel::Gpt4oMini),
-                &[ChatMessage::User {
-                    content: "Hello".to_string(),
-                }],
-                &[],
-            )
-            .await;
-
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            ChatClientError::OpenAIError(OpenAIError::Other(message)) => {
-                assert_eq!(message, "Test error");
-            }
-            _ => panic!("Expected Other error"),
-        }
+        // Return the next result from the queue
+        self.queue.lock().unwrap().pop().unwrap_or(Err(ChatClientError::Other("No more results in queue".to_string())))
     }
 }
