@@ -231,6 +231,7 @@ pub trait Tool {
     /// such as invalid arguments, I/O errors, or internal processing errors.
     fn call(&self, args: HashMap<String, String>) -> Result<String, String>;
 
+    // TODO: Remove openai specific stuff from here
     /// Converts the tool to OpenAI tool format.
     ///
     /// Creates an OpenAI-compatible tool representation that can be used
