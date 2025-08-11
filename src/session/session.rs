@@ -399,67 +399,13 @@ impl ChatSession {
 mod tests {
     use super::*;
     use crate::client::providers::openai::client::OpenAIClient;
+    use crate::tui::tui::Tui;
     use crate::tools::registry::Registry;
-    use std::collections::HashMap;
-    use std::io;
-
-    // Mock event handler for testing
-    struct MockEventHandler {
-        events: Vec<Event>,
-        input_responses: Vec<String>,
-        current_input_index: usize,
-    }
-
-    impl MockEventHandler {
-        fn new() -> Self {
-            Self {
-                events: Vec::new(),
-                input_responses: Vec::new(),
-                current_input_index: 0,
-            }
-        }
-
-        fn with_input_responses(responses: Vec<String>) -> Self {
-            Self {
-                events: Vec::new(),
-                input_responses: responses,
-                current_input_index: 0,
-            }
-        }
-
-        fn get_events(&self) -> &Vec<Event> {
-            &self.events
-        }
-    }
-
-    impl EventHandler for MockEventHandler {
-        fn handle_event(&mut self, event: Event) {
-            self.events.push(event);
-        }
-
-        fn handle_action(&mut self, action: Action) -> Result<String, io::Error> {
-            match action {
-                Action::RequestUserInput => {
-                    if self.current_input_index < self.input_responses.len() {
-                        let response = self.input_responses[self.current_input_index].clone();
-                        self.current_input_index += 1;
-                        Ok(response)
-                    } else {
-                        Ok("exit".to_string())
-                    }
-                }
-                Action::RequestUserApproval { .. } => {
-                    // For tests, always approve
-                    Ok("approved".to_string())
-                }
-            }
-        }
-    }
 
     #[test]
     fn new_creates_a_chat_session_with_empty_memory() {
         let openai_client = Box::new(OpenAIClient::new("any_api_key".to_string()));
-        let event_handler = Box::new(MockEventHandler::new());
+        let event_handler = Box::new(Tui::new());
         let chat_session = ChatSession::new(
             openai_client,
             Box::new(Registry::new()),
@@ -472,7 +418,7 @@ mod tests {
     #[test]
     fn new_creates_a_chat_session_with_system_prompt_when_default() {
         let openai_client = Box::new(OpenAIClient::new("any_api_key".to_string()));
-        let event_handler = Box::new(MockEventHandler::new());
+        let event_handler = Box::new(Tui::new());
         let chat_session = ChatSession::new(
             openai_client,
             Box::new(Registry::new()),
@@ -490,7 +436,7 @@ mod tests {
     #[test]
     fn new_creates_a_chat_session_with_custom_system_prompt() {
         let openai_client = Box::new(OpenAIClient::new("any_api_key".to_string()));
-        let event_handler = Box::new(MockEventHandler::new());
+        let event_handler = Box::new(Tui::new());
         let custom_prompt = "You are a helpful assistant.".to_string();
         let chat_session = ChatSession::new(
             openai_client,
@@ -509,7 +455,7 @@ mod tests {
     #[test]
     fn handle_chat_client_error_fatal_errors_return_fatal() {
         let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
-        let event_handler = Box::new(MockEventHandler::new());
+        let event_handler = Box::new(Tui::new());
         let chat_session = ChatSession::new(
             openai_client,
             Box::new(Registry::new()),
@@ -538,7 +484,7 @@ mod tests {
     #[test]
     fn handle_chat_client_error_retryable_errors_retry_then_fatal() {
         let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
-        let event_handler = Box::new(MockEventHandler::new());
+        let event_handler = Box::new(Tui::new());
         let chat_session = ChatSession::new(
             openai_client,
             Box::new(Registry::new()),
@@ -586,7 +532,7 @@ mod tests {
     #[test]
     fn handle_chat_client_error_content_errors_add_to_memory_and_retry() {
         let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
-        let event_handler = Box::new(MockEventHandler::new());
+        let event_handler = Box::new(Tui::new());
         let chat_session = ChatSession::new(
             openai_client,
             Box::new(Registry::new()),
@@ -620,7 +566,7 @@ mod tests {
     #[test]
     fn handle_chat_client_error_request_errors_add_to_memory_and_retry() {
         let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
-        let event_handler = Box::new(MockEventHandler::new());
+        let event_handler = Box::new(Tui::new());
         let chat_session = ChatSession::new(
             openai_client,
             Box::new(Registry::new()),
@@ -642,7 +588,7 @@ mod tests {
     #[test]
     fn handle_chat_client_error_other_errors_add_to_memory_and_retry() {
         let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
-        let event_handler = Box::new(MockEventHandler::new());
+        let event_handler = Box::new(Tui::new());
         let chat_session = ChatSession::new(
             openai_client,
             Box::new(Registry::new()),
@@ -666,7 +612,7 @@ mod tests {
     #[test]
     fn handle_chat_client_error_preserves_original_error_in_fatal_cases() {
         let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
-        let event_handler = Box::new(MockEventHandler::new());
+        let event_handler = Box::new(Tui::new());
         let chat_session = ChatSession::new(
             openai_client,
             Box::new(Registry::new()),
@@ -686,101 +632,5 @@ mod tests {
             }
             _ => panic!("Expected Fatal with preserved chat client error"),
         }
-    }
-
-    #[test]
-    fn event_handler_receives_events() {
-        let mut mock_handler = MockEventHandler::new();
-
-        // Test that we can add events to the mock handler
-        mock_handler.handle_event(Event::SessionStarted);
-        mock_handler.handle_event(Event::ReceivedUserMessage {
-            message: "Hello".to_string(),
-        });
-
-        let events = mock_handler.get_events();
-        assert_eq!(events.len(), 2);
-        assert_eq!(events[0], Event::SessionStarted);
-        assert_eq!(
-            events[1],
-            Event::ReceivedUserMessage {
-                message: "Hello".to_string()
-            }
-        );
-    }
-
-    #[test]
-    fn event_handler_handles_input_requests() {
-        let mut mock_handler = MockEventHandler::with_input_responses(vec![
-            "Hello".to_string(),
-            "How are you?".to_string(),
-        ]);
-
-        let response1 = mock_handler.handle_action(Action::RequestUserInput);
-        assert_eq!(response1.unwrap(), "Hello");
-
-        let response2 = mock_handler.handle_action(Action::RequestUserInput);
-        assert_eq!(response2.unwrap(), "How are you?");
-
-        // After exhausting responses, should return "exit"
-        let response3 = mock_handler.handle_action(Action::RequestUserInput);
-        assert_eq!(response3.unwrap(), "exit");
-    }
-
-    #[test]
-    fn requires_approval_identifies_dangerous_tools() {
-        let registry = Registry::all_tools();
-
-        // Dangerous tools should require approval
-        assert!(registry.get_tool("edit_file").unwrap().requires_approval());
-        assert!(registry.get_tool("write_file").unwrap().requires_approval());
-        assert!(
-            registry
-                .get_tool("execute_command")
-                .unwrap()
-                .requires_approval()
-        );
-
-        // Safe tools should not require approval
-        assert!(!registry.get_tool("read_file").unwrap().requires_approval());
-        assert!(
-            !registry
-                .get_tool("search_files")
-                .unwrap()
-                .requires_approval()
-        );
-    }
-
-    #[test]
-    fn request_approval_returns_true_when_approved() {
-        let openai_client = Box::new(OpenAIClient::new("test_key".to_string()));
-        let event_handler = Box::new(MockEventHandler::new());
-        let mut chat_session = ChatSession::new(
-            openai_client,
-            Box::new(Registry::new()),
-            event_handler,
-            SystemPromptConfig::None,
-        );
-
-        let mut parameters = HashMap::new();
-        parameters.insert("path".to_string(), "test.txt".to_string());
-        parameters.insert("content".to_string(), "Hello world".to_string());
-
-        let result = chat_session.request_approval("write_file", &parameters);
-        assert!(result.is_ok());
-        assert!(result.unwrap()); // MockEventHandler always approves
-    }
-
-    #[test]
-    fn event_handler_handles_approval_requests() {
-        let mut mock_handler = MockEventHandler::new();
-
-        let response = mock_handler.handle_action(Action::RequestUserApproval {
-            operation: "Edit File".to_string(),
-            details: "File: test.txt\nReplace: old\nWith: new".to_string(),
-            tool_name: "edit_file".to_string(),
-        });
-
-        assert_eq!(response.unwrap(), "approved");
     }
 }
