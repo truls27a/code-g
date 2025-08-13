@@ -24,13 +24,13 @@ impl MockEventHandler {
     /// # Returns
     ///
     /// A new `MockEventHandler` instance.
-    pub fn new(inputs: Vec<String>, approvals: Vec<String>) -> Self {
+    pub fn new(events: Arc<Mutex<Vec<Event>>>, inputs: Vec<String>, approvals: Vec<String>) -> Self {
         // Add "exit" to the inputs to simulate the user exiting the chat.
         let mut inputs_with_exit = inputs;
         inputs_with_exit.push("exit".to_string());
 
         Self {
-            events: Arc::new(Mutex::new(vec![])),
+            events,
             inputs: Arc::new(Mutex::new(inputs_with_exit)),
             approvals: Arc::new(Mutex::new(approvals)),
         }
