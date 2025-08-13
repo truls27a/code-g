@@ -60,6 +60,11 @@ impl ChatClient for MockChatClient {
         chat_history: &[ChatMessage],
         tools: &[Tool],
     ) -> Result<ChatResult, ChatClientError> {
+        // Debug print the input parameters
+        println!("Debug: Model: {:?}", model);
+        println!("Debug: Chat History: {:?}", chat_history);
+        println!("Debug: Tools: {:?}", tools);
+
         // Record the call
         self.calls
             .lock()
@@ -67,12 +72,9 @@ impl ChatClient for MockChatClient {
             .push((model.clone(), chat_history.to_vec(), tools.to_vec()));
 
         // Return the next result from the queue
-        self.queue
-            .lock()
-            .unwrap()
-            .pop()
-            .unwrap_or(Err(ChatClientError::Other(
-                "No more results in queue".to_string(),
-            )))
+        match self.queue.lock().unwrap().remove(0) {
+            Ok(result) => Ok(result),
+            Err(e) => Err(e),
+        }
     }
 }

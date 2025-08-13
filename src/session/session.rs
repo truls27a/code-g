@@ -161,11 +161,13 @@ impl ChatSession {
     /// or tool execution failures.
     async fn send_message(&mut self, message: &str) -> Result<String, ChatSessionError> {
         // Add user message to memory
+        println!("Debug: Adding user message to memory: {}", message);
         self.memory.add_message(ChatMessage::User {
             content: message.to_string(),
         });
 
         // Notify event handler about the user message
+        println!("Debug: Notifying event handler about user message: {}", message);
         self.event_handler.handle_event(Event::ReceivedUserMessage {
             message: message.to_string(),
         });
@@ -176,19 +178,23 @@ impl ChatSession {
         // Loop until the client returns a message or max iterations reached
         loop {
             iterations += 1;
+            println!("Debug: Iteration {}", iterations);
 
             // 1. Check if we've exceeded the maximum number of iterations
             if iterations > MAX_ITERATIONS {
+                println!("Debug: Exceeded maximum iterations: {}", MAX_ITERATIONS);
                 return Err(ChatSessionError::MaxIterationsExceeded {
                     max_iterations: MAX_ITERATIONS,
                 });
             }
 
             // 2. Set the status message to thinking
+            println!("Debug: Setting status to AwaitingAssistantResponse");
             self.event_handler
                 .handle_event(Event::AwaitingAssistantResponse);
 
             // 3. Get a response from the client
+            println!("Debug: Requesting chat completion from client");
             let response = match self
                 .client
                 .create_chat_completion(
@@ -198,22 +204,36 @@ impl ChatSession {
                 )
                 .await
             {
-                Ok(response) => response,
-                Err(e) => match self.handle_chat_client_error(e, iterations) {
-                    ChatSessionErrorHandling::Fatal(err) => return Err(err),
-                    ChatSessionErrorHandling::Retry => continue,
-                    ChatSessionErrorHandling::AddToMemoryAndRetry(message) => {
-                        self.memory
-                            .add_message(ChatMessage::System { content: message });
-                        continue;
+                Ok(response) => {
+                    println!("Debug: Received response from client");
+                    response
+                }
+                Err(e) => {
+                    println!("Debug: Error from client: {:?}", e);
+                    match self.handle_chat_client_error(e, iterations) {
+                        ChatSessionErrorHandling::Fatal(err) => {
+                            println!("Debug: Fatal error encountered: {:?}", err);
+                            return Err(err);
+                        }
+                        ChatSessionErrorHandling::Retry => {
+                            println!("Debug: Retrying after error");
+                            continue;
+                        }
+                        ChatSessionErrorHandling::AddToMemoryAndRetry(message) => {
+                            println!("Debug: Adding error message to memory and retrying: {}", message);
+                            self.memory
+                                .add_message(ChatMessage::System { content: message });
+                            continue;
+                        }
                     }
-                },
+                }
             };
 
             // 4. Handle the response from the client
             match response {
                 // 5. If the response is a message, add it to the memory and return it
                 ChatResult::Message { content, turn_over } => {
+                    println!("Debug: Received message from assistant: {}", content);
                     // 5.1 Add assistant message with content
                     self.memory.add_message(ChatMessage::Assistant {
                         message: AssistantMessage::Content(content.clone()),
@@ -227,12 +247,14 @@ impl ChatSession {
 
                     // 5.3 Return the content only if turn is over, otherwise continue
                     if turn_over {
+                        println!("Debug: Turn over, returning content");
                         return Ok(content);
                     }
                     // If turn is not over, continue the loop to get more responses
                 }
                 // 6. If the response is tool calls, add them to the memory and process them, add the tool responses to the memory, and then finally start over to get the assistants response
                 ChatResult::ToolCalls(tool_calls) => {
+                    println!("Debug: Received tool calls from assistant");
                     // 6.1 Add assistant message with tool_calls
                     self.memory.add_message(ChatMessage::Assistant {
                         message: AssistantMessage::ToolCalls(tool_calls.clone()),
@@ -240,6 +262,7 @@ impl ChatSession {
 
                     // 6.2 Call each tool and collect responses
                     for tool_call in &tool_calls {
+                        println!("Debug: Processing tool call: {}", tool_call.name);
                         // 6.2.1 Set the status message to the tool call name
                         self.event_handler.handle_event(Event::ReceivedToolCall {
                             tool_name: tool_call.name.clone(),
@@ -253,8 +276,10 @@ impl ChatSession {
                             .map(|tool| tool.requires_approval())
                             .unwrap_or(false)
                         {
+                            println!("Debug: Tool requires approval: {}", tool_call.name);
                             match self.request_approval(&tool_call.name, &tool_call.arguments) {
                                 Ok(true) => {
+                                    println!("Debug: User approved tool execution: {}", tool_call.name);
                                     // User approved, proceed with tool execution
                                     self.tools
                                         .call_tool(
@@ -264,6 +289,7 @@ impl ChatSession {
                                         .unwrap_or_else(|e| e)
                                 }
                                 Ok(false) => {
+                                    println!("Debug: User declined tool execution: {}", tool_call.name);
                                     // User declined, return cancellation message
                                     format!(
                                         "Operation cancelled by user: {} with parameters {:?}",
@@ -271,6 +297,7 @@ impl ChatSession {
                                     )
                                 }
                                 Err(e) => {
+                                    println!("Debug: Error requesting approval for tool: {}", tool_call.name);
                                     // Error requesting approval
                                     format!(
                                         "Failed to request approval for {}: {}",
@@ -279,6 +306,7 @@ impl ChatSession {
                                 }
                             }
                         } else {
+                            println!("Debug: Tool does not require approval: {}", tool_call.name);
                             // Tool doesn't require approval, execute directly
                             self.tools
                                 .call_tool(tool_call.name.as_str(), tool_call.arguments.clone())
@@ -286,6 +314,7 @@ impl ChatSession {
                         };
 
                         // 6.2.3 Add tool response to memory
+                        println!("Debug: Adding tool response to memory for tool: {}", tool_call.name);
                         self.memory.add_message(ChatMessage::Tool {
                             content: tool_response.clone(),
                             tool_call_id: tool_call.id.clone(),
@@ -293,6 +322,7 @@ impl ChatSession {
                         });
 
                         // 6.2.4 Send tool response event to the event handler
+                        println!("Debug: Sending tool response event for tool: {}", tool_call.name);
                         self.event_handler
                             .handle_event(Event::ReceivedToolResponse {
                                 tool_name: tool_call.name.clone(),
@@ -302,6 +332,7 @@ impl ChatSession {
                     }
 
                     // 6.3 Continue the loop to get the assistants response
+                    println!("Debug: Continuing loop to get assistant's response");
                     continue;
                 }
             }
