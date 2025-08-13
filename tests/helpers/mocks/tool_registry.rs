@@ -10,40 +10,60 @@ use std::{
 /// This tool is used to test the tool registry and tool execution.
 /// It is not intended to be used in production.
 pub struct MockTool {
+    name: String,
+    description: String,
+    parameters: Parameters,
+    strict: bool,
+    requires_approval: bool,
+    approval_message: String,
     calls: Arc<Mutex<Vec<HashMap<String, String>>>>,
     return_value: Arc<Mutex<String>>,
 }
 
 impl MockTool {
     /// Create a new MockTool.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `return_value` - The value to return when the tool is called.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A new `MockTool` instance.
-    pub fn new(return_value: String) -> Self {
+    pub fn new(
+        name: String,
+        description: String,
+        parameters: Parameters,
+        strict: bool,
+        requires_approval: bool,
+        approval_message: String,
+        return_value: String,
+    ) -> Self {
         Self {
+            name,
+            description,
+            parameters,
+            strict,
+            requires_approval,
+            approval_message,
             calls: Arc::new(Mutex::new(vec![])),
             return_value: Arc::new(Mutex::new(return_value)),
         }
     }
 
     /// Get the calls made to the tool.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A vector of `HashMap`s, each containing the arguments passed to the tool.
     pub fn calls(&self) -> Vec<HashMap<String, String>> {
         self.calls.lock().unwrap().clone()
     }
 
     /// Get the return value of the tool.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The return value of the tool.
     pub fn return_value(&self) -> String {
         self.return_value.lock().unwrap().clone()
@@ -52,38 +72,27 @@ impl MockTool {
 
 impl Tool for MockTool {
     fn name(&self) -> String {
-        "mock_tool".to_string()
+        self.name.clone()
     }
 
     fn description(&self) -> String {
-        "Mock tool".to_string()
+        self.description.clone()
     }
 
     fn parameters(&self) -> Parameters {
-        Parameters {
-            param_type: "object".to_string(),
-            properties: HashMap::from([(
-                "mock_param".to_string(),
-                Property {
-                    prop_type: "string".to_string(),
-                    description: "Mock parameter".to_string(),
-                },
-            )]),
-            required: vec!["mock_param".to_string()],
-            additional_properties: false,
-        }
+        self.parameters.clone()
     }
 
     fn strict(&self) -> bool {
-        true
+        self.strict
     }
 
     fn requires_approval(&self) -> bool {
-        false
+        self.requires_approval
     }
 
     fn approval_message(&self, _args: &HashMap<String, String>) -> (String, String) {
-        ("Mock Tool".to_string(), "Mock approval message".to_string())
+        (self.name.clone(), self.approval_message.clone())
     }
 
     fn call(&self, args: HashMap<String, String>) -> Result<String, String> {
@@ -111,25 +120,28 @@ pub struct MockToolRegistry {
 
 impl MockToolRegistry {
     /// Create a new MockToolRegistry.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `tools` - A vector of tools that are available in the registry.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A new `MockToolRegistry` instance.
-    pub fn new(tools: Vec<Box<dyn Tool>>) -> Self {
+    pub fn new(
+        tools: Vec<Box<dyn Tool>>,
+        calls: Arc<Mutex<Vec<(String, HashMap<String, String>)>>>,
+    ) -> Self {
         Self {
             tools,
-            calls: Arc::new(Mutex::new(vec![])),
+            calls,
         }
     }
 
     /// Get the calls made to the registry.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A vector of tuples, each containing the tool name and the arguments passed to the tool.
     pub fn calls(&self) -> Vec<(String, HashMap<String, String>)> {
         self.calls.lock().unwrap().clone()
