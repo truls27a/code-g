@@ -42,20 +42,23 @@ async fn chat_session_handles_message() {
 
     assert_eq!(tool_calls.lock().unwrap().len(), 0);
 
+    let events = events.lock().unwrap().clone();
+    assert_eq!(events.len(), 5);
+    assert_eq!(events[0], Event::SessionStarted);
     assert_eq!(
-        events.lock().unwrap().clone(),
-        vec![
-            Event::SessionStarted,
-            Event::ReceivedUserMessage {
-                message: "Hello".to_string(),
-            },
-            Event::AwaitingAssistantResponse,
-            Event::ReceivedAssistantMessage {
-                message: "Hello human".to_string(),
-            },
-            Event::SessionEnded,
-        ]
+        events[1],
+        Event::ReceivedUserMessage {
+            message: "Hello".to_string()
+        }
     );
+    assert_eq!(events[2], Event::AwaitingAssistantResponse);
+    assert_eq!(
+        events[3],
+        Event::ReceivedAssistantMessage {
+            message: "Hello human".to_string()
+        }
+    );
+    assert_eq!(events[4], Event::SessionEnded);
 
     let client_calls = client_calls.lock().unwrap().clone();
     assert_eq!(client_calls.len(), 1);
@@ -121,34 +124,49 @@ async fn chat_session_handles_multiple_messages() {
 
     assert_eq!(tool_calls.lock().unwrap().len(), 0);
 
+    let events = events.lock().unwrap().clone();
+    assert_eq!(events.len(), 11);
+    assert_eq!(events[0], Event::SessionStarted);
     assert_eq!(
-        events.lock().unwrap().clone(),
-        vec![
-            Event::SessionStarted,
-            Event::ReceivedUserMessage {
-                message: "Hello".to_string(),
-            },
-            Event::AwaitingAssistantResponse,
-            Event::ReceivedAssistantMessage {
-                message: "Hello human".to_string(),
-            },
-            Event::ReceivedUserMessage {
-                message: "How are you?".to_string(),
-            },
-            Event::AwaitingAssistantResponse,
-            Event::ReceivedAssistantMessage {
-                message: "Oh, I feel great. What about you?".to_string(),
-            },
-            Event::ReceivedUserMessage {
-                message: "I'm good, thank you!".to_string(),
-            },
-            Event::AwaitingAssistantResponse,
-            Event::ReceivedAssistantMessage {
-                message: "Thats nice to hear!".to_string(),
-            },
-            Event::SessionEnded,
-        ]
+        events[1],
+        Event::ReceivedUserMessage {
+            message: "Hello".to_string()
+        }
     );
+    assert_eq!(events[2], Event::AwaitingAssistantResponse);
+    assert_eq!(
+        events[3],
+        Event::ReceivedAssistantMessage {
+            message: "Hello human".to_string()
+        }
+    );
+    assert_eq!(
+        events[4],
+        Event::ReceivedUserMessage {
+            message: "How are you?".to_string()
+        }
+    );
+    assert_eq!(events[5], Event::AwaitingAssistantResponse);
+    assert_eq!(
+        events[6],
+        Event::ReceivedAssistantMessage {
+            message: "Oh, I feel great. What about you?".to_string()
+        }
+    );
+    assert_eq!(
+        events[7],
+        Event::ReceivedUserMessage {
+            message: "I'm good, thank you!".to_string()
+        }
+    );
+    assert_eq!(events[8], Event::AwaitingAssistantResponse);
+    assert_eq!(
+        events[9],
+        Event::ReceivedAssistantMessage {
+            message: "Thats nice to hear!".to_string()
+        }
+    );
+    assert_eq!(events[10], Event::SessionEnded);
 
     let client_calls = client_calls.lock().unwrap().clone();
     assert_eq!(client_calls.len(), 3);
@@ -246,24 +264,34 @@ async fn chat_session_handles_multiple_assistant_messages_per_turn() {
 
     assert_eq!(tool_calls.lock().unwrap().len(), 0);
 
+    let events = events.lock().unwrap().clone();
+    assert_eq!(events.len(), 11);
+    assert_eq!(events[0], Event::SessionStarted);
     assert_eq!(
-        events.lock().unwrap().clone(),
-        vec![
-            Event::SessionStarted,
-            Event::ReceivedUserMessage {
-                message: "What is 1+1? Think about it real hard".to_string(),
-            },
-            Event::AwaitingAssistantResponse,
-            Event::ReceivedAssistantMessage { message: "Okay lets see. The user is asking me what 1+1 is. I need to think about it real hard".to_string() },
-            Event::AwaitingAssistantResponse,
-            Event::ReceivedAssistantMessage { message: "I think the answer is 2. I'm not sure if I'm right, as one sand pile plus one sand pile is one big sand pile".to_string() },
-            Event::AwaitingAssistantResponse,
-            Event::ReceivedAssistantMessage { message: "I'm going to return the answer 2".to_string() },
-            Event::AwaitingAssistantResponse,
-            Event::ReceivedAssistantMessage { message: "1+1 is 2".to_string() },
-            Event::SessionEnded,
-        ]
+        events[1],
+        Event::ReceivedUserMessage {
+            message: "What is 1+1? Think about it real hard".to_string()
+        }
     );
+    assert_eq!(events[2], Event::AwaitingAssistantResponse);
+    assert_eq!(events[3], Event::ReceivedAssistantMessage { message: "Okay lets see. The user is asking me what 1+1 is. I need to think about it real hard".to_string() });
+    assert_eq!(events[4], Event::AwaitingAssistantResponse);
+    assert_eq!(events[5], Event::ReceivedAssistantMessage { message: "I think the answer is 2. I'm not sure if I'm right, as one sand pile plus one sand pile is one big sand pile".to_string() });
+    assert_eq!(events[6], Event::AwaitingAssistantResponse);
+    assert_eq!(
+        events[7],
+        Event::ReceivedAssistantMessage {
+            message: "I'm going to return the answer 2".to_string()
+        }
+    );
+    assert_eq!(events[8], Event::AwaitingAssistantResponse);
+    assert_eq!(
+        events[9],
+        Event::ReceivedAssistantMessage {
+            message: "1+1 is 2".to_string()
+        }
+    );
+    assert_eq!(events[10], Event::SessionEnded);
 
     let client_calls = client_calls.lock().unwrap().clone();
     assert_eq!(client_calls.len(), 4);
@@ -383,30 +411,39 @@ async fn chat_session_handles_tool_call() {
         )
     );
 
+    let events = events.lock().unwrap().clone();
+    assert_eq!(events.len(), 8);
+    assert_eq!(events[0], Event::SessionStarted);
     assert_eq!(
-        events.lock().unwrap().clone(),
-        vec![
-            Event::SessionStarted,
-            Event::ReceivedUserMessage {
-                message: "What is the weather in Tokyo?".to_string(),
-            },
-            Event::AwaitingAssistantResponse,
-            Event::ReceivedToolCall {
-                tool_name: "get_weather".to_string(),
-                parameters: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
-            },
-            Event::ReceivedToolResponse {
-                tool_name: "get_weather".to_string(),
-                response: "The weather in Tokyo is sunny".to_string(),
-                parameters: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
-            },
-            Event::AwaitingAssistantResponse,
-            Event::ReceivedAssistantMessage {
-                message: "The weather in Tokyo is sunny".to_string(),
-            },
-            Event::SessionEnded,
-        ]
+        events[1],
+        Event::ReceivedUserMessage {
+            message: "What is the weather in Tokyo?".to_string()
+        }
     );
+    assert_eq!(events[2], Event::AwaitingAssistantResponse);
+    assert_eq!(
+        events[3],
+        Event::ReceivedToolCall {
+            tool_name: "get_weather".to_string(),
+            parameters: HashMap::from([("city".to_string(), "Tokyo".to_string())])
+        }
+    );
+    assert_eq!(
+        events[4],
+        Event::ReceivedToolResponse {
+            tool_name: "get_weather".to_string(),
+            response: "The weather in Tokyo is sunny".to_string(),
+            parameters: HashMap::from([("city".to_string(), "Tokyo".to_string())])
+        }
+    );
+    assert_eq!(events[5], Event::AwaitingAssistantResponse);
+    assert_eq!(
+        events[6],
+        Event::ReceivedAssistantMessage {
+            message: "The weather in Tokyo is sunny".to_string()
+        }
+    );
+    assert_eq!(events[7], Event::SessionEnded);
 
     let client_calls = client_calls.lock().unwrap().clone();
     assert_eq!(client_calls.len(), 2);
@@ -456,7 +493,7 @@ async fn chat_session_handles_tool_call_with_approval() {
     let events = Arc::new(Mutex::new(vec![]));
     let event_handler = MockEventHandler::new(
         events.clone(),
-        vec!["Execute a command in my terminal".to_string()],
+        vec!["Execute a command in my terminal: echo 'Hello, world!'".to_string()],
         vec![],
     );
 
@@ -482,18 +519,18 @@ async fn chat_session_handles_tool_call_with_approval() {
     let tool_calls = Arc::new(Mutex::new(vec![]));
     let tool_registry = MockToolRegistry::new(
         vec![Box::new(MockTool::new(
-            "get_weather".to_string(),
-            "Get the weather in a city".to_string(),
+            "execute_command".to_string(),
+            "Execute a command in the terminal".to_string(),
             Parameters {
                 param_type: "object".to_string(),
                 properties: HashMap::new(),
-                required: vec!["city".to_string()],
+                required: vec!["command".to_string()],
                 additional_properties: false,
             },
             true,
             false,
-            "AI wants to check the weather in Tokyo. Do you approve?".to_string(),
-            "The weather in Tokyo is sunny".to_string(),
+            "AI wants to execute a command in the terminal. Do you approve?".to_string(),
+            "Hello, world!".to_string(),
         ))],
         tool_calls.clone(),
     );
@@ -507,4 +544,94 @@ async fn chat_session_handles_tool_call_with_approval() {
 
     chat_session.run().await.unwrap();
 
+    let tool_calls = tool_calls.lock().unwrap().clone();
+    assert_eq!(tool_calls.len(), 1);
+    assert_eq!(
+        tool_calls[0].clone(),
+        (
+            "execute_command".to_string(),
+            HashMap::from([("command".to_string(), "echo 'Hello, world!'".to_string())]),
+        )
+    );
+
+    let events = events.lock().unwrap().clone();
+    assert_eq!(events.len(), 8);
+    assert_eq!(events[0], Event::SessionStarted);
+    assert_eq!(
+        events[1],
+        Event::ReceivedUserMessage {
+            message: "Execute a command in my terminal: echo 'Hello, world!'".to_string()
+        }
+    );
+    assert_eq!(events[2], Event::AwaitingAssistantResponse);
+    assert_eq!(
+        events[3],
+        Event::ReceivedToolCall {
+            tool_name: "execute_command".to_string(),
+            parameters: HashMap::from([(
+                "command".to_string(),
+                "echo 'Hello, world!'".to_string()
+            )])
+        }
+    );
+    assert_eq!(
+        events[4],
+        Event::ReceivedToolResponse {
+            tool_name: "execute_command".to_string(),
+            response: "Hello, world!".to_string(),
+            parameters: HashMap::from([(
+                "command".to_string(),
+                "echo 'Hello, world!'".to_string()
+            )])
+        }
+    );
+    assert_eq!(events[5], Event::AwaitingAssistantResponse);
+    assert_eq!(
+        events[6],
+        Event::ReceivedAssistantMessage {
+            message: "The command was executed successfully".to_string()
+        }
+    );
+    assert_eq!(events[7], Event::SessionEnded);
+
+    let client_calls = client_calls.lock().unwrap().clone();
+    assert_eq!(client_calls.len(), 2);
+    // Call 1
+    let (model, chat_history, tools) = &client_calls[0];
+    assert_eq!(model, &Model::OpenAi(OpenAiModel::Gpt4oMini));
+    assert_eq!(tools.len(), 1);
+    assert_eq!(chat_history.len(), 2);
+    if let ChatMessage::User { content } = &chat_history[1] {
+        assert_eq!(
+            content,
+            "Execute a command in my terminal: echo 'Hello, world!'"
+        );
+    } else {
+        panic!("expected user message");
+    }
+    // Call 2
+    let (model, chat_history, tools) = &client_calls[1];
+    assert_eq!(model, &Model::OpenAi(OpenAiModel::Gpt4oMini));
+    assert_eq!(tools.len(), 1);
+    assert_eq!(chat_history.len(), 4);
+    if let ChatMessage::Assistant {
+        message: AssistantMessage::ToolCalls(tool_calls),
+    } = &chat_history[2]
+    {
+        assert_eq!(tool_calls.len(), 1);
+    } else {
+        panic!("expected assistant tool calls");
+    }
+    if let ChatMessage::Tool {
+        content,
+        tool_call_id,
+        tool_name,
+    } = &chat_history[3]
+    {
+        assert_eq!(content, "Hello, world!");
+        assert_eq!(tool_call_id, "1");
+        assert_eq!(tool_name, "execute_command");
+    } else {
+        panic!("expected tool message");
+    }
 }
