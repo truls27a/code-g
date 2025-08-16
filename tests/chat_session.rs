@@ -7,76 +7,48 @@ use code_g::client::providers::openai::schema::Model as OpenAiModel;
 use code_g::session::event::Event;
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
+use helpers::assertions::{
+    assert_chat_history_at, assert_client_calls_len, assert_events_transcript, assistant_content_at,
+};
 use helpers::mocks::{
     chat_client::MockChatClient, event_handler::MockEventHandler, tool_registry::MockTool,
     tool_registry::MockToolRegistry,
 };
+use helpers::scenario::ScenarioBuilder;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 #[tokio::test]
 async fn chat_session_handles_message() {
-    let events = Arc::new(Mutex::new(vec![]));
-    let event_handler = MockEventHandler::new(events.clone(), vec!["Hello".to_string()], vec![]);
+    let scenario = ScenarioBuilder::new()
+        .inputs(["Hello"])
+        .then_message("Hello human", true)
+        .run()
+        .await;
 
-    let client_calls = Arc::new(Mutex::new(vec![]));
-    let chat_client = MockChatClient::new(
-        vec![Ok(ChatResult::Message {
-            content: "Hello human".to_string(),
-            turn_over: true,
-        })],
-        client_calls.clone(),
+    assert_events_transcript(
+        &scenario.events,
+        &[
+            "SessionStarted",
+            "User: Hello",
+            "AwaitingAssistantResponse",
+            "Assistant: Hello human",
+            "SessionEnded",
+        ],
     );
 
-    let tool_calls = Arc::new(Mutex::new(vec![]));
-    let tool_registry = MockToolRegistry::new(vec![], tool_calls.clone());
-
-    let mut chat_session = ChatSession::new(
-        Box::new(chat_client),
-        Box::new(tool_registry),
-        Box::new(event_handler),
-        SystemPromptConfig::Default,
-    );
-
-    chat_session.run().await.unwrap();
-
-    assert_eq!(tool_calls.lock().unwrap().len(), 0);
-
-    let events = events.lock().unwrap().clone();
-    assert_eq!(events.len(), 5);
-    assert_eq!(events[0], Event::SessionStarted);
-    assert_eq!(
-        events[1],
-        Event::ReceivedUserMessage {
-            message: "Hello".to_string()
+    assert_client_calls_len(&scenario.client_calls, 1);
+    assert_chat_history_at(&scenario.client_calls, 0, |history| {
+        assert_eq!(history.len(), 2);
+        match &history[0] {
+            ChatMessage::System { content } => assert_eq!(content, SYSTEM_PROMPT),
+            _ => panic!("expected system message"),
         }
-    );
-    assert_eq!(events[2], Event::AwaitingAssistantResponse);
-    assert_eq!(
-        events[3],
-        Event::ReceivedAssistantMessage {
-            message: "Hello human".to_string()
+        match &history[1] {
+            ChatMessage::User { content } => assert_eq!(content, "Hello"),
+            _ => panic!("expected user message"),
         }
-    );
-    assert_eq!(events[4], Event::SessionEnded);
-
-    let client_calls = client_calls.lock().unwrap().clone();
-    assert_eq!(client_calls.len(), 1);
-
-    let (model, chat_history, tools) = &client_calls[0];
-    assert_eq!(model, &Model::OpenAi(OpenAiModel::Gpt4oMini));
-    assert_eq!(tools.len(), 0);
-    assert_eq!(chat_history.len(), 2);
-    if let ChatMessage::System { content } = &chat_history[0] {
-        assert_eq!(content, SYSTEM_PROMPT);
-    } else {
-        panic!("expected system message");
-    }
-    if let ChatMessage::User { content } = &chat_history[1] {
-        assert_eq!(content, "Hello");
-    } else {
-        panic!("expected user message");
-    }
+    });
 }
 
 #[tokio::test]
@@ -769,7 +741,10 @@ async fn chat_session_handles_tool_call_with_approval_and_denied() {
         tool_name,
     } = &chat_history[3]
     {
-        assert_eq!(content, "Operation cancelled by user: execute_command with parameters {\"command\": \"echo 'Hello, world!'\"}");
+        assert_eq!(
+            content,
+            "Operation cancelled by user: execute_command with parameters {\"command\": \"echo 'Hello, world!'\"}"
+        );
         assert_eq!(tool_call_id, "1");
         assert_eq!(tool_name, "execute_command");
     } else {
