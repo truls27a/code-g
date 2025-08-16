@@ -13,12 +13,8 @@ pub fn assert_chat_history(chat_history: &[ChatMessage], expected_chat_history: 
 
 pub fn assert_tool_calls(
     tool_calls: &Arc<Mutex<Vec<(String, HashMap<String, String>)>>>,
-    expected_tool_call: &(String, HashMap<String, String>),
+    expected_tool_calls: &[(String, HashMap<String, String>)],
 ) {
     let calls = tool_calls.lock().unwrap().clone();
-    assert_eq!(
-        calls.last(),
-        Some(expected_tool_call),
-        "tool calls mismatch"
-    );
+    assert_eq!(calls, expected_tool_calls, "tool calls mismatch");
 }
