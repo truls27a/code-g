@@ -8,7 +8,7 @@ use code_g::session::event::Event;
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use helpers::assertions::{
-    assert_chat_history_at, assert_client_calls_len, assert_events_transcript, assistant_content_at,
+    assert_chat_history_at, assert_client_calls_len, assert_events_transcript,
 };
 use helpers::mocks::{
     chat_client::MockChatClient, event_handler::MockEventHandler, tool_registry::MockTool,
@@ -29,14 +29,17 @@ async fn chat_session_handles_message() {
     assert_events_transcript(
         &scenario.events,
         &[
-            "SessionStarted",
-            "User: Hello",
-            "AwaitingAssistantResponse",
-            "Assistant: Hello human",
-            "SessionEnded",
+            Event::SessionStarted,
+            Event::ReceivedUserMessage {
+                message: "Hello".to_string(),
+            },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedAssistantMessage {
+                message: "Hello human".to_string(),
+            },
+            Event::SessionEnded,
         ],
     );
-
     assert_client_calls_len(&scenario.client_calls, 1);
     assert_chat_history_at(&scenario.client_calls, 0, |history| {
         assert_eq!(history.len(), 2);

@@ -4,7 +4,7 @@ use crate::helpers::mocks::{
     tool_registry::{MockTool, MockToolRegistry},
 };
 use code_g::client::error::ChatClientError;
-use code_g::client::model::{AssistantMessage, ChatMessage, ChatResult, Parameters, ToolCall};
+use code_g::client::model::{ChatMessage, ChatResult, Parameters, ToolCall};
 use code_g::session::event::Event;
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::SystemPromptConfig;
@@ -108,16 +108,6 @@ impl ScenarioBuilder {
         ));
         self.tools.push(tool);
         self
-    }
-
-    /// Convenience: parameters for a simple object schema with required fields.
-    pub fn object_parameters(required_fields: &[&str]) -> Parameters {
-        Parameters {
-            param_type: "object".to_string(),
-            properties: HashMap::new(),
-            required: required_fields.iter().map(|s| s.to_string()).collect(),
-            additional_properties: false,
-        }
     }
 
     /// Runs the scenario end-to-end and returns artifacts for assertions.
