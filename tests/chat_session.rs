@@ -162,131 +162,57 @@ async fn chat_session_handles_multiple_messages() {
 
 #[tokio::test]
 async fn chat_session_handles_multiple_assistant_messages_per_turn() {
-    let events = Arc::new(Mutex::new(vec![]));
-    let event_handler = MockEventHandler::new(
-        events.clone(),
-        vec!["What is 1+1? Think about it real hard".to_string()],
-        vec![],
-    );
+    let scenario = ScenarioBuilder::new()
+        .inputs(["What is 1+1? Think about it real hard"])
+        .then_message("Okay lets see. The user is asking me what 1+1 is. I need to think about it real hard", false)
+        .then_message("I think the answer is 2. I'm not sure if I'm right, as one sand pile plus one sand pile is one big sand pile", false)
+        .then_message("I'm going to return the answer 2", false)
+        .then_message("1+1 is 2", true)
+        .run()
+        .await;
 
-    let client_calls = Arc::new(Mutex::new(vec![]));
-    let chat_client = MockChatClient::new(
-        vec![
-            Ok(ChatResult::Message {
-                content: "Okay lets see. The user is asking me what 1+1 is. I need to think about it real hard".to_string(),
-                turn_over: false,
-            }),
-            Ok(ChatResult::Message {
-                content: "I think the answer is 2. I'm not sure if I'm right, as one sand pile plus one sand pile is one big sand pile".to_string(),
-                turn_over: false,
-            }),
-            Ok(ChatResult::Message {
-                content: "I'm going to return the answer 2".to_string(),
-                turn_over: false,
-            }),
-            Ok(ChatResult::Message {
-                content: "1+1 is 2".to_string(),
-                turn_over: true,
-            }),
+    assert_events(
+        &scenario.events,
+        &[
+            Event::SessionStarted,
+            Event::ReceivedUserMessage { message: "What is 1+1? Think about it real hard".to_string() },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedAssistantMessage { message: "Okay lets see. The user is asking me what 1+1 is. I need to think about it real hard".to_string() },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedAssistantMessage { message: "I think the answer is 2. I'm not sure if I'm right, as one sand pile plus one sand pile is one big sand pile".to_string() },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedAssistantMessage { message: "I'm going to return the answer 2".to_string() },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedAssistantMessage { message: "1+1 is 2".to_string() },
+            Event::SessionEnded,
         ],
-        client_calls.clone(),
-    );
-    let tool_calls = Arc::new(Mutex::new(vec![]));
-    let tool_registry = MockToolRegistry::new(vec![], tool_calls.clone());
-
-    let mut chat_session = ChatSession::new(
-        Box::new(chat_client),
-        Box::new(tool_registry),
-        Box::new(event_handler),
-        SystemPromptConfig::Default,
     );
 
-    chat_session.run().await.unwrap();
-
-    assert_eq!(tool_calls.lock().unwrap().len(), 0);
-
-    let events = events.lock().unwrap().clone();
-    assert_eq!(events.len(), 11);
-    assert_eq!(events[0], Event::SessionStarted);
-    assert_eq!(
-        events[1],
-        Event::ReceivedUserMessage {
-            message: "What is 1+1? Think about it real hard".to_string()
-        }
+    assert_client_calls(
+        &scenario.client_calls,
+        &(
+            Model::OpenAi(OpenAiModel::Gpt4oMini),
+            vec![
+                ChatMessage::System { content: SYSTEM_PROMPT.to_string() },
+                ChatMessage::User { content: "What is 1+1? Think about it real hard".to_string() },
+                ChatMessage::Assistant { message: AssistantMessage::Content("Okay lets see. The user is asking me what 1+1 is. I need to think about it real hard".to_string()) },
+                ChatMessage::Assistant { message: AssistantMessage::Content("I think the answer is 2. I'm not sure if I'm right, as one sand pile plus one sand pile is one big sand pile".to_string()) },
+                ChatMessage::Assistant { message: AssistantMessage::Content("I'm going to return the answer 2".to_string()) },
+            ],
+            vec![],
+        ),
     );
-    assert_eq!(events[2], Event::AwaitingAssistantResponse);
-    assert_eq!(events[3], Event::ReceivedAssistantMessage { message: "Okay lets see. The user is asking me what 1+1 is. I need to think about it real hard".to_string() });
-    assert_eq!(events[4], Event::AwaitingAssistantResponse);
-    assert_eq!(events[5], Event::ReceivedAssistantMessage { message: "I think the answer is 2. I'm not sure if I'm right, as one sand pile plus one sand pile is one big sand pile".to_string() });
-    assert_eq!(events[6], Event::AwaitingAssistantResponse);
-    assert_eq!(
-        events[7],
-        Event::ReceivedAssistantMessage {
-            message: "I'm going to return the answer 2".to_string()
-        }
-    );
-    assert_eq!(events[8], Event::AwaitingAssistantResponse);
-    assert_eq!(
-        events[9],
-        Event::ReceivedAssistantMessage {
-            message: "1+1 is 2".to_string()
-        }
-    );
-    assert_eq!(events[10], Event::SessionEnded);
 
-    let client_calls = client_calls.lock().unwrap().clone();
-    assert_eq!(client_calls.len(), 4);
-
-    // Call 1
-    let (model, chat_history, tools) = &client_calls[0];
-    assert_eq!(model, &Model::OpenAi(OpenAiModel::Gpt4oMini));
-    assert_eq!(tools.len(), 0);
-    assert_eq!(chat_history.len(), 2);
-    // Call 2
-    let (model, chat_history, tools) = &client_calls[1];
-    assert_eq!(model, &Model::OpenAi(OpenAiModel::Gpt4oMini));
-    assert_eq!(tools.len(), 0);
-    assert_eq!(chat_history.len(), 3);
-    if let ChatMessage::Assistant {
-        message: AssistantMessage::Content(content),
-    } = &chat_history[2]
-    {
-        assert_eq!(
-            content,
-            "Okay lets see. The user is asking me what 1+1 is. I need to think about it real hard"
-        );
-    } else {
-        panic!("expected assistant content message");
-    }
-    // Call 3
-    let (model, chat_history, tools) = &client_calls[2];
-    assert_eq!(model, &Model::OpenAi(OpenAiModel::Gpt4oMini));
-    assert_eq!(tools.len(), 0);
-    assert_eq!(chat_history.len(), 4);
-    if let ChatMessage::Assistant {
-        message: AssistantMessage::Content(content),
-    } = &chat_history[3]
-    {
-        assert_eq!(
-            content,
-            "I think the answer is 2. I'm not sure if I'm right, as one sand pile plus one sand pile is one big sand pile"
-        );
-    } else {
-        panic!("expected assistant content message");
-    }
-    // Call 4
-    let (model, chat_history, tools) = &client_calls[3];
-    assert_eq!(model, &Model::OpenAi(OpenAiModel::Gpt4oMini));
-    assert_eq!(tools.len(), 0);
-    assert_eq!(chat_history.len(), 5);
-    if let ChatMessage::Assistant {
-        message: AssistantMessage::Content(content),
-    } = &chat_history[4]
-    {
-        assert_eq!(content, "I'm going to return the answer 2");
-    } else {
-        panic!("expected assistant content message");
-    }
+    assert_chat_history(
+        &scenario.client_calls.lock().unwrap().clone()[3].1,
+        &[
+            ChatMessage::System { content: SYSTEM_PROMPT.to_string() },
+            ChatMessage::User { content: "What is 1+1? Think about it real hard".to_string() },
+            ChatMessage::Assistant { message: AssistantMessage::Content("Okay lets see. The user is asking me what 1+1 is. I need to think about it real hard".to_string()) },
+            ChatMessage::Assistant { message: AssistantMessage::Content("I think the answer is 2. I'm not sure if I'm right, as one sand pile plus one sand pile is one big sand pile".to_string()) },
+            ChatMessage::Assistant { message: AssistantMessage::Content("I'm going to return the answer 2".to_string()) },
+        ],
+    );
 }
 
 #[tokio::test]
