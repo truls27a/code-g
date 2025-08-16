@@ -146,6 +146,7 @@ impl ScenarioBuilder {
             events: events.lock().unwrap().clone(),
             client: chat_client,
             client_calls,
+            tool_calls: registry_calls,
         }
     }
 }
@@ -163,4 +164,5 @@ pub struct ScenarioResult {
             )>,
         >,
     >,
+    pub tool_calls: Arc<Mutex<Vec<(String, HashMap<String, String>)>>>,
 }

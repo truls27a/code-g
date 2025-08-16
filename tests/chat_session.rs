@@ -7,7 +7,9 @@ use code_g::client::providers::openai::schema::Model as OpenAiModel;
 use code_g::session::event::Event;
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
-use helpers::assertions::{assert_chat_history, assert_client_calls, assert_events};
+use helpers::assertions::{
+    assert_chat_history, assert_client_calls, assert_events, assert_tool_calls,
+};
 use helpers::mocks::{
     chat_client::MockChatClient, event_handler::MockEventHandler, tool_registry::MockTool,
     tool_registry::MockToolRegistry,
@@ -301,6 +303,14 @@ async fn chat_session_handles_tool_call() {
                 },
             ],
             expected_tools,
+        ),
+    );
+
+    assert_tool_calls(
+        &scenario.tool_calls,
+        &(
+            "get_weather".to_string(),
+            HashMap::from([("city".to_string(), "Tokyo".to_string())]),
         ),
     );
 
