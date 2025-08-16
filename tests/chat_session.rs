@@ -7,9 +7,7 @@ use code_g::client::providers::openai::schema::Model as OpenAiModel;
 use code_g::session::event::Event;
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
-use helpers::assertions::{
-    assert_chat_history, assert_client_calls, assert_events,
-};
+use helpers::assertions::{assert_chat_history, assert_client_calls, assert_events};
 use helpers::mocks::{
     chat_client::MockChatClient, event_handler::MockEventHandler, tool_registry::MockTool,
     tool_registry::MockToolRegistry,
@@ -40,159 +38,126 @@ async fn chat_session_handles_message() {
             Event::SessionEnded,
         ],
     );
-    assert_client_calls(&scenario.client_calls, &[
-        (Model::OpenAi(OpenAiModel::Gpt4oMini), vec![
-            ChatMessage::System { content: SYSTEM_PROMPT.to_string() },
-            ChatMessage::User { content: "Hello".to_string() },
-        ], vec![]),
-    ]);
+    assert_client_calls(
+        &scenario.client_calls,
+        &(
+            Model::OpenAi(OpenAiModel::Gpt4oMini),
+            vec![
+                ChatMessage::System {
+                    content: SYSTEM_PROMPT.to_string(),
+                },
+                ChatMessage::User {
+                    content: "Hello".to_string(),
+                },
+            ],
+            vec![],
+        ),
+    );
     assert_chat_history(
         &scenario.client_calls.lock().unwrap().clone()[0].1,
         &[
-            ChatMessage::System { content: SYSTEM_PROMPT.to_string() },
-            ChatMessage::User { content: "Hello".to_string() },
+            ChatMessage::System {
+                content: SYSTEM_PROMPT.to_string(),
+            },
+            ChatMessage::User {
+                content: "Hello".to_string(),
+            },
         ],
     );
 }
 
 #[tokio::test]
 async fn chat_session_handles_multiple_messages() {
-    let events = Arc::new(Mutex::new(vec![]));
-    let event_handler = MockEventHandler::new(
-        events.clone(),
-        vec![
-            "Hello".to_string(),
-            "How are you?".to_string(),
-            "I'm good, thank you!".to_string(),
+    let scenario = ScenarioBuilder::new()
+        .inputs(["Hello", "How are you?", "I'm good, thank you!"])
+        .then_message("Hello human", true)
+        .then_message("Oh, I feel great. What about you?", true)
+        .then_message("Thats nice to hear!", true)
+        .run()
+        .await;
+
+    assert_events(
+        &scenario.events,
+        &[
+            Event::SessionStarted,
+            Event::ReceivedUserMessage {
+                message: "Hello".to_string(),
+            },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedAssistantMessage {
+                message: "Hello human".to_string(),
+            },
+            Event::ReceivedUserMessage {
+                message: "How are you?".to_string(),
+            },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedAssistantMessage {
+                message: "Oh, I feel great. What about you?".to_string(),
+            },
+            Event::ReceivedUserMessage {
+                message: "I'm good, thank you!".to_string(),
+            },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedAssistantMessage {
+                message: "Thats nice to hear!".to_string(),
+            },
+            Event::SessionEnded,
         ],
-        vec![],
     );
 
-    let client_calls = Arc::new(Mutex::new(vec![]));
-    let chat_client = MockChatClient::new(
-        vec![
-            Ok(ChatResult::Message {
-                content: "Hello human".to_string(),
-                turn_over: true,
-            }),
-            Ok(ChatResult::Message {
-                content: "Oh, I feel great. What about you?".to_string(),
-                turn_over: true,
-            }),
-            Ok(ChatResult::Message {
-                content: "Thats nice to hear!".to_string(),
-                turn_over: true,
-            }),
+    assert_client_calls(
+        &scenario.client_calls,
+        &(
+            Model::OpenAi(OpenAiModel::Gpt4oMini),
+            vec![
+                ChatMessage::System {
+                    content: SYSTEM_PROMPT.to_string(),
+                },
+                ChatMessage::User {
+                    content: "Hello".to_string(),
+                },
+                ChatMessage::Assistant {
+                    message: AssistantMessage::Content("Hello human".to_string()),
+                },
+                ChatMessage::User {
+                    content: "How are you?".to_string(),
+                },
+                ChatMessage::Assistant {
+                    message: AssistantMessage::Content(
+                        "Oh, I feel great. What about you?".to_string(),
+                    ),
+                },
+                ChatMessage::User {
+                    content: "I'm good, thank you!".to_string(),
+                },
+            ],
+            vec![],
+        ),
+    );
+
+    assert_chat_history(
+        &scenario.client_calls.lock().unwrap().clone()[2].1,
+        &[
+            ChatMessage::System {
+                content: SYSTEM_PROMPT.to_string(),
+            },
+            ChatMessage::User {
+                content: "Hello".to_string(),
+            },
+            ChatMessage::Assistant {
+                message: AssistantMessage::Content("Hello human".to_string()),
+            },
+            ChatMessage::User {
+                content: "How are you?".to_string(),
+            },
+            ChatMessage::Assistant {
+                message: AssistantMessage::Content("Oh, I feel great. What about you?".to_string()),
+            },
+            ChatMessage::User {
+                content: "I'm good, thank you!".to_string(),
+            },
         ],
-        client_calls.clone(),
     );
-    let tool_calls = Arc::new(Mutex::new(vec![]));
-    let tool_registry = MockToolRegistry::new(vec![], tool_calls.clone());
-
-    let mut chat_session = ChatSession::new(
-        Box::new(chat_client),
-        Box::new(tool_registry),
-        Box::new(event_handler),
-        SystemPromptConfig::Default,
-    );
-
-    chat_session.run().await.unwrap();
-
-    assert_eq!(tool_calls.lock().unwrap().len(), 0);
-
-    let events = events.lock().unwrap().clone();
-    assert_eq!(events.len(), 11);
-    assert_eq!(events[0], Event::SessionStarted);
-    assert_eq!(
-        events[1],
-        Event::ReceivedUserMessage {
-            message: "Hello".to_string()
-        }
-    );
-    assert_eq!(events[2], Event::AwaitingAssistantResponse);
-    assert_eq!(
-        events[3],
-        Event::ReceivedAssistantMessage {
-            message: "Hello human".to_string()
-        }
-    );
-    assert_eq!(
-        events[4],
-        Event::ReceivedUserMessage {
-            message: "How are you?".to_string()
-        }
-    );
-    assert_eq!(events[5], Event::AwaitingAssistantResponse);
-    assert_eq!(
-        events[6],
-        Event::ReceivedAssistantMessage {
-            message: "Oh, I feel great. What about you?".to_string()
-        }
-    );
-    assert_eq!(
-        events[7],
-        Event::ReceivedUserMessage {
-            message: "I'm good, thank you!".to_string()
-        }
-    );
-    assert_eq!(events[8], Event::AwaitingAssistantResponse);
-    assert_eq!(
-        events[9],
-        Event::ReceivedAssistantMessage {
-            message: "Thats nice to hear!".to_string()
-        }
-    );
-    assert_eq!(events[10], Event::SessionEnded);
-
-    let client_calls = client_calls.lock().unwrap().clone();
-    assert_eq!(client_calls.len(), 3);
-
-    // Call 1
-    let (model, chat_history, tools) = &client_calls[0];
-    assert_eq!(model, &Model::OpenAi(OpenAiModel::Gpt4oMini));
-    assert_eq!(tools.len(), 0);
-    assert_eq!(chat_history.len(), 2);
-    if let ChatMessage::User { content } = &chat_history[1] {
-        assert_eq!(content, "Hello");
-    } else {
-        panic!("expected user message");
-    }
-    // Call 2
-    let (model, chat_history, tools) = &client_calls[1];
-    assert_eq!(model, &Model::OpenAi(OpenAiModel::Gpt4oMini));
-    assert_eq!(tools.len(), 0);
-    assert_eq!(chat_history.len(), 4);
-    if let ChatMessage::Assistant {
-        message: AssistantMessage::Content(content),
-    } = &chat_history[2]
-    {
-        assert_eq!(content, "Hello human");
-    } else {
-        panic!("expected assistant content message");
-    }
-    if let ChatMessage::User { content } = &chat_history[3] {
-        assert_eq!(content, "How are you?");
-    } else {
-        panic!("expected user message");
-    }
-    // Call 3
-    let (model, chat_history, tools) = &client_calls[2];
-    assert_eq!(model, &Model::OpenAi(OpenAiModel::Gpt4oMini));
-    assert_eq!(tools.len(), 0);
-    assert_eq!(chat_history.len(), 6);
-    if let ChatMessage::Assistant {
-        message: AssistantMessage::Content(content),
-    } = &chat_history[4]
-    {
-        assert_eq!(content, "Oh, I feel great. What about you?");
-    } else {
-        panic!("expected assistant content message");
-    }
-    if let ChatMessage::User { content } = &chat_history[5] {
-        assert_eq!(content, "I'm good, thank you!");
-    } else {
-        panic!("expected user message");
-    }
 }
 
 #[tokio::test]
