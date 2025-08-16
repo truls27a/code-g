@@ -217,34 +217,11 @@ async fn chat_session_handles_multiple_assistant_messages_per_turn() {
 
 #[tokio::test]
 async fn chat_session_handles_tool_call() {
-    let events = Arc::new(Mutex::new(vec![]));
-    let event_handler = MockEventHandler::new(
-        events.clone(),
-        vec!["What is the weather in Tokyo?".to_string()],
-        vec![],
-    );
-
-    let client_calls = Arc::new(Mutex::new(vec![]));
-    let chat_client = MockChatClient::new(
-        vec![
-            Ok(ChatResult::ToolCalls(vec![ToolCall {
-                id: "1".to_string(),
-                name: "get_weather".to_string(),
-                arguments: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
-            }])),
-            Ok(ChatResult::Message {
-                content: "The weather in Tokyo is sunny".to_string(),
-                turn_over: true,
-            }),
-        ],
-        client_calls.clone(),
-    );
-
-    let tool_calls = Arc::new(Mutex::new(vec![]));
-    let tool_registry = MockToolRegistry::new(
-        vec![Box::new(MockTool::new(
-            "get_weather".to_string(),
-            "Get the weather in a city".to_string(),
+    let scenario = ScenarioBuilder::new()
+        .inputs(["What is the weather in Tokyo?"])
+        .add_mock_tool(
+            "get_weather",
+            "Get the weather in a city",
             Parameters {
                 param_type: "object".to_string(),
                 properties: HashMap::new(),
@@ -253,106 +230,103 @@ async fn chat_session_handles_tool_call() {
             },
             true,
             false,
-            "AI wants to check the weather in Tokyo. Do you approve?".to_string(),
-            "The weather in Tokyo is sunny".to_string(),
-        ))],
-        tool_calls.clone(),
-    );
-
-    let mut chat_session = ChatSession::new(
-        Box::new(chat_client),
-        Box::new(tool_registry),
-        Box::new(event_handler),
-        SystemPromptConfig::Default,
-    );
-
-    chat_session.run().await.unwrap();
-
-    let tool_calls = tool_calls.lock().unwrap().clone();
-    assert_eq!(tool_calls.len(), 1);
-    assert_eq!(
-        tool_calls[0].clone(),
-        (
-            "get_weather".to_string(),
+            "AI wants to check the weather in Tokyo. Do you approve?",
+            "The weather in Tokyo is sunny",
+        )
+        .then_tool_call(
+            "1",
+            "get_weather",
             HashMap::from([("city".to_string(), "Tokyo".to_string())]),
         )
+        .then_message("The weather in Tokyo is sunny", true)
+        .run()
+        .await;
+
+    assert_events(
+        &scenario.events,
+        &[
+            Event::SessionStarted,
+            Event::ReceivedUserMessage {
+                message: "What is the weather in Tokyo?".to_string(),
+            },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedToolCall {
+                tool_name: "get_weather".to_string(),
+                parameters: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+            },
+            Event::ReceivedToolResponse {
+                tool_name: "get_weather".to_string(),
+                response: "The weather in Tokyo is sunny".to_string(),
+                parameters: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+            },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedAssistantMessage {
+                message: "The weather in Tokyo is sunny".to_string(),
+            },
+            Event::SessionEnded,
+        ],
     );
 
-    let events = events.lock().unwrap().clone();
-    assert_eq!(events.len(), 8);
-    assert_eq!(events[0], Event::SessionStarted);
-    assert_eq!(
-        events[1],
-        Event::ReceivedUserMessage {
-            message: "What is the weather in Tokyo?".to_string()
-        }
-    );
-    assert_eq!(events[2], Event::AwaitingAssistantResponse);
-    assert_eq!(
-        events[3],
-        Event::ReceivedToolCall {
-            tool_name: "get_weather".to_string(),
-            parameters: HashMap::from([("city".to_string(), "Tokyo".to_string())])
-        }
-    );
-    assert_eq!(
-        events[4],
-        Event::ReceivedToolResponse {
-            tool_name: "get_weather".to_string(),
-            response: "The weather in Tokyo is sunny".to_string(),
-            parameters: HashMap::from([("city".to_string(), "Tokyo".to_string())])
-        }
-    );
-    assert_eq!(events[5], Event::AwaitingAssistantResponse);
-    assert_eq!(
-        events[6],
-        Event::ReceivedAssistantMessage {
-            message: "The weather in Tokyo is sunny".to_string()
-        }
-    );
-    assert_eq!(events[7], Event::SessionEnded);
+    let expected_tools = scenario
+        .client_calls
+        .lock()
+        .unwrap()
+        .last()
+        .unwrap()
+        .2
+        .clone();
 
-    let client_calls = client_calls.lock().unwrap().clone();
-    assert_eq!(client_calls.len(), 2);
-    // Call 1
-    let (model, chat_history, tools) = &client_calls[0];
-    assert_eq!(model, &Model::OpenAi(OpenAiModel::Gpt4oMini));
-    assert_eq!(tools.len(), 1);
-    assert_eq!(chat_history.len(), 2);
-    if let ChatMessage::User { content } = &chat_history[1] {
-        assert_eq!(content, "What is the weather in Tokyo?");
-    } else {
-        panic!("expected user message");
-    }
-    // Call 2
-    let (model, chat_history, tools) = &client_calls[1];
-    assert_eq!(model, &Model::OpenAi(OpenAiModel::Gpt4oMini));
-    assert_eq!(tools.len(), 1);
-    assert_eq!(chat_history.len(), 4);
-    if let ChatMessage::Assistant {
-        message: AssistantMessage::ToolCalls(tool_calls),
-    } = &chat_history[2]
-    {
-        assert_eq!(tool_calls.len(), 1);
-        let tc = &tool_calls[0];
-        assert_eq!(tc.id, "1");
-        assert_eq!(tc.name, "get_weather");
-        assert_eq!(tc.arguments.get("city"), Some(&"Tokyo".to_string()));
-    } else {
-        panic!("expected assistant tool calls");
-    }
-    if let ChatMessage::Tool {
-        content,
-        tool_call_id,
-        tool_name,
-    } = &chat_history[3]
-    {
-        assert_eq!(content, "The weather in Tokyo is sunny");
-        assert_eq!(tool_call_id, "1");
-        assert_eq!(tool_name, "get_weather");
-    } else {
-        panic!("expected tool message");
-    }
+    assert_client_calls(
+        &scenario.client_calls,
+        &(
+            Model::OpenAi(OpenAiModel::Gpt4oMini),
+            vec![
+                ChatMessage::System {
+                    content: SYSTEM_PROMPT.to_string(),
+                },
+                ChatMessage::User {
+                    content: "What is the weather in Tokyo?".to_string(),
+                },
+                ChatMessage::Assistant {
+                    message: AssistantMessage::ToolCalls(vec![ToolCall {
+                        id: "1".to_string(),
+                        name: "get_weather".to_string(),
+                        arguments: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+                    }]),
+                },
+                ChatMessage::Tool {
+                    content: "The weather in Tokyo is sunny".to_string(),
+                    tool_call_id: "1".to_string(),
+                    tool_name: "get_weather".to_string(),
+                },
+            ],
+            expected_tools,
+        ),
+    );
+
+    assert_chat_history(
+        &scenario.client_calls.lock().unwrap().clone()[1].1,
+        &[
+            ChatMessage::System {
+                content: SYSTEM_PROMPT.to_string(),
+            },
+            ChatMessage::User {
+                content: "What is the weather in Tokyo?".to_string(),
+            },
+            ChatMessage::Assistant {
+                message: AssistantMessage::ToolCalls(vec![ToolCall {
+                    id: "1".to_string(),
+                    name: "get_weather".to_string(),
+                    arguments: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+                }]),
+            },
+            ChatMessage::Tool {
+                content: "The weather in Tokyo is sunny".to_string(),
+                tool_call_id: "1".to_string(),
+                tool_name: "get_weather".to_string(),
+            },
+        ],
+    );
 }
 
 #[tokio::test]
