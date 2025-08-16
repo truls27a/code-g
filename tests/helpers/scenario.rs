@@ -144,7 +144,6 @@ impl ScenarioBuilder {
 
         ScenarioResult {
             events: events.lock().unwrap().clone(),
-            client: chat_client,
             client_calls,
             tool_calls: registry_calls,
         }
@@ -154,7 +153,6 @@ impl ScenarioBuilder {
 #[derive(Clone)]
 pub struct ScenarioResult {
     pub events: Vec<Event>,
-    pub client: MockChatClient,
     pub client_calls: Arc<
         Mutex<
             Vec<(

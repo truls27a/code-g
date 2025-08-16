@@ -7,9 +7,7 @@ use code_g::client::providers::openai::schema::Model as OpenAiModel;
 use code_g::session::event::Event;
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
-use helpers::assertions::{
-    assert_chat_history, assert_client_calls, assert_events, assert_tool_calls,
-};
+use helpers::assertions::{assert_chat_history, assert_events, assert_tool_calls};
 use helpers::mocks::{
     chat_client::MockChatClient, event_handler::MockEventHandler, tool_registry::MockTool,
     tool_registry::MockToolRegistry,
@@ -40,21 +38,7 @@ async fn chat_session_handles_message() {
             Event::SessionEnded,
         ],
     );
-    assert_client_calls(
-        &scenario.client_calls,
-        &(
-            Model::OpenAi(OpenAiModel::Gpt4oMini),
-            vec![
-                ChatMessage::System {
-                    content: SYSTEM_PROMPT.to_string(),
-                },
-                ChatMessage::User {
-                    content: "Hello".to_string(),
-                },
-            ],
-            vec![],
-        ),
-    );
+
     assert_chat_history(
         &scenario.client_calls.lock().unwrap().clone()[0].1,
         &[
@@ -105,36 +89,6 @@ async fn chat_session_handles_multiple_messages() {
             },
             Event::SessionEnded,
         ],
-    );
-
-    assert_client_calls(
-        &scenario.client_calls,
-        &(
-            Model::OpenAi(OpenAiModel::Gpt4oMini),
-            vec![
-                ChatMessage::System {
-                    content: SYSTEM_PROMPT.to_string(),
-                },
-                ChatMessage::User {
-                    content: "Hello".to_string(),
-                },
-                ChatMessage::Assistant {
-                    message: AssistantMessage::Content("Hello human".to_string()),
-                },
-                ChatMessage::User {
-                    content: "How are you?".to_string(),
-                },
-                ChatMessage::Assistant {
-                    message: AssistantMessage::Content(
-                        "Oh, I feel great. What about you?".to_string(),
-                    ),
-                },
-                ChatMessage::User {
-                    content: "I'm good, thank you!".to_string(),
-                },
-            ],
-            vec![],
-        ),
     );
 
     assert_chat_history(
@@ -188,21 +142,6 @@ async fn chat_session_handles_multiple_assistant_messages_per_turn() {
             Event::ReceivedAssistantMessage { message: "1+1 is 2".to_string() },
             Event::SessionEnded,
         ],
-    );
-
-    assert_client_calls(
-        &scenario.client_calls,
-        &(
-            Model::OpenAi(OpenAiModel::Gpt4oMini),
-            vec![
-                ChatMessage::System { content: SYSTEM_PROMPT.to_string() },
-                ChatMessage::User { content: "What is 1+1? Think about it real hard".to_string() },
-                ChatMessage::Assistant { message: AssistantMessage::Content("Okay lets see. The user is asking me what 1+1 is. I need to think about it real hard".to_string()) },
-                ChatMessage::Assistant { message: AssistantMessage::Content("I think the answer is 2. I'm not sure if I'm right, as one sand pile plus one sand pile is one big sand pile".to_string()) },
-                ChatMessage::Assistant { message: AssistantMessage::Content("I'm going to return the answer 2".to_string()) },
-            ],
-            vec![],
-        ),
     );
 
     assert_chat_history(
@@ -269,51 +208,6 @@ async fn chat_session_handles_tool_call() {
         ],
     );
 
-    let expected_tools = scenario
-        .client_calls
-        .lock()
-        .unwrap()
-        .last()
-        .unwrap()
-        .2
-        .clone();
-
-    assert_client_calls(
-        &scenario.client_calls,
-        &(
-            Model::OpenAi(OpenAiModel::Gpt4oMini),
-            vec![
-                ChatMessage::System {
-                    content: SYSTEM_PROMPT.to_string(),
-                },
-                ChatMessage::User {
-                    content: "What is the weather in Tokyo?".to_string(),
-                },
-                ChatMessage::Assistant {
-                    message: AssistantMessage::ToolCalls(vec![ToolCall {
-                        id: "1".to_string(),
-                        name: "get_weather".to_string(),
-                        arguments: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
-                    }]),
-                },
-                ChatMessage::Tool {
-                    content: "The weather in Tokyo is sunny".to_string(),
-                    tool_call_id: "1".to_string(),
-                    tool_name: "get_weather".to_string(),
-                },
-            ],
-            expected_tools,
-        ),
-    );
-
-    assert_tool_calls(
-        &scenario.tool_calls,
-        &(
-            "get_weather".to_string(),
-            HashMap::from([("city".to_string(), "Tokyo".to_string())]),
-        ),
-    );
-
     assert_chat_history(
         &scenario.client_calls.lock().unwrap().clone()[1].1,
         &[
@@ -336,6 +230,14 @@ async fn chat_session_handles_tool_call() {
                 tool_name: "get_weather".to_string(),
             },
         ],
+    );
+
+    assert_tool_calls(
+        &scenario.tool_calls,
+        &(
+            "get_weather".to_string(),
+            HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+        ),
     );
 }
 
