@@ -75,16 +75,9 @@ impl EventHandler for MockEventHandler {
                 let input = self.inputs.lock().unwrap().remove(0);
                 Ok(input)
             }
-            Action::RequestUserApproval {
-                operation,
-                details,
-                tool_name,
-            } => {
-                self.approvals
-                    .lock()
-                    .unwrap()
-                    .push(format!("{}: {}", operation, details));
-                Ok(format!("{}: {}", operation, details))
+            Action::RequestUserApproval { .. } => {
+                let approval = self.approvals.lock().unwrap().remove(0);
+                Ok(approval)
             }
         }
     }

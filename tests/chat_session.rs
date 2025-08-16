@@ -494,7 +494,7 @@ async fn chat_session_handles_tool_call_with_approval() {
     let event_handler = MockEventHandler::new(
         events.clone(),
         vec!["Execute a command in my terminal: echo 'Hello, world!'".to_string()],
-        vec![],
+        vec!["approved".to_string()],
     );
 
     let client_calls = Arc::new(Mutex::new(vec![]));
@@ -528,7 +528,7 @@ async fn chat_session_handles_tool_call_with_approval() {
                 additional_properties: false,
             },
             true,
-            false,
+            true,
             "AI wants to execute a command in the terminal. Do you approve?".to_string(),
             "Hello, world!".to_string(),
         ))],
