@@ -8,7 +8,7 @@ use code_g::session::event::Event;
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use helpers::assertions::{
-    assert_chat_history_at, assert_client_calls_len, assert_events_transcript,
+    assert_chat_history, assert_client_calls, assert_events,
 };
 use helpers::mocks::{
     chat_client::MockChatClient, event_handler::MockEventHandler, tool_registry::MockTool,
@@ -26,7 +26,7 @@ async fn chat_session_handles_message() {
         .run()
         .await;
 
-    assert_events_transcript(
+    assert_events(
         &scenario.events,
         &[
             Event::SessionStarted,
@@ -40,18 +40,19 @@ async fn chat_session_handles_message() {
             Event::SessionEnded,
         ],
     );
-    assert_client_calls_len(&scenario.client_calls, 1);
-    assert_chat_history_at(&scenario.client_calls, 0, |history| {
-        assert_eq!(history.len(), 2);
-        match &history[0] {
-            ChatMessage::System { content } => assert_eq!(content, SYSTEM_PROMPT),
-            _ => panic!("expected system message"),
-        }
-        match &history[1] {
-            ChatMessage::User { content } => assert_eq!(content, "Hello"),
-            _ => panic!("expected user message"),
-        }
-    });
+    assert_client_calls(&scenario.client_calls, &[
+        (Model::OpenAi(OpenAiModel::Gpt4oMini), vec![
+            ChatMessage::System { content: SYSTEM_PROMPT.to_string() },
+            ChatMessage::User { content: "Hello".to_string() },
+        ], vec![]),
+    ]);
+    assert_chat_history(
+        &scenario.client_calls.lock().unwrap().clone()[0].1,
+        &[
+            ChatMessage::System { content: SYSTEM_PROMPT.to_string() },
+            ChatMessage::User { content: "Hello".to_string() },
+        ],
+    );
 }
 
 #[tokio::test]

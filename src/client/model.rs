@@ -176,7 +176,7 @@ pub enum Model {
 ///     },
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Tool {
     #[serde(rename = "type")]
     pub tool_type: ToolType,
@@ -196,7 +196,7 @@ pub struct Tool {
 ///
 /// let tool_type = ToolType::Function;
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ToolType {
     /// Function tool type for calling custom functions
@@ -240,7 +240,7 @@ pub enum ToolType {
 ///     strict: true,
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Function {
     pub name: String,
     pub description: String,
@@ -284,7 +284,7 @@ pub struct Function {
 ///     additional_properties: false,
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Parameters {
     #[serde(rename = "type")]
@@ -325,7 +325,7 @@ pub struct Parameters {
 ///     description: "Whether notifications are enabled".to_string(),
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Property {
     #[serde(rename = "type")]

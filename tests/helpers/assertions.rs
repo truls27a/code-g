@@ -2,31 +2,19 @@ use code_g::client::model::{ChatMessage, Model};
 use code_g::session::event::Event;
 use std::sync::{Arc, Mutex};
 
-pub fn assert_events_transcript(actual_events: &[Event], expected_events: &[Event]) {
-    assert_eq!(actual_events, expected_events, "event transcript mismatch");
+pub fn assert_events(actual_events: &[Event], expected_events: &[Event]) {
+    assert_eq!(actual_events, expected_events, "event mismatch");
 }
 
-pub fn assert_client_calls_len(
+pub fn assert_client_calls(
     client_calls: &Arc<Mutex<Vec<(Model, Vec<ChatMessage>, Vec<code_g::client::model::Tool>)>>>,
-    expected_len: usize,
+    expected_client_calls: &[(Model, Vec<ChatMessage>, Vec<code_g::client::model::Tool>)],
 ) {
     let calls = client_calls.lock().unwrap().clone();
-    assert_eq!(
-        calls.len(),
-        expected_len,
-        "unexpected number of client calls"
-    );
+    assert_eq!(calls, expected_client_calls, "client calls mismatch");
 }
 
-pub fn assert_chat_history_at<F>(
-    client_calls: &Arc<Mutex<Vec<(Model, Vec<ChatMessage>, Vec<code_g::client::model::Tool>)>>>,
-    call_index: usize,
-    assert_fn: F,
-) where
-    F: FnOnce(&[ChatMessage]),
-{
-    let calls = client_calls.lock().unwrap().clone();
-    let (_, chat_history, _) = &calls[call_index];
-    assert_fn(chat_history);
-}
 
+pub fn assert_chat_history(chat_history: &[ChatMessage], expected_chat_history: &[ChatMessage]) {
+    assert_eq!(chat_history, expected_chat_history, "chat history mismatch");
+}
