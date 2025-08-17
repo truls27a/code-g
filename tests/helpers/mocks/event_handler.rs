@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use code_g::session::event::{Action, Event, EventHandler};
 use std::io;
 use std::sync::{Arc, Mutex};

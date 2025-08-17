@@ -1,4 +1,6 @@
-use code_g::client::model::{Parameters, Property, Tool as ToolModel};
+#![allow(dead_code)]
+
+use code_g::client::model::{Parameters, Tool as ToolModel};
 use code_g::tools::traits::{Tool, ToolRegistry};
 use std::{
     collections::HashMap,
