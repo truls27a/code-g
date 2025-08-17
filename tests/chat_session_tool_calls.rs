@@ -238,7 +238,7 @@ async fn chat_session_handles_multiple_tool_calls() {
 }
 
 #[tokio::test]
-async fn chat_session_handles_invalid_tool_call_when_no_tools_are_available() {
+async fn chat_session_handles_tool_call_when_no_tools_are_available() {
     let scenario = ScenarioBuilder::new()
         .inputs(["What is the weather in Tokyo?"])
         .then_tool_call(
@@ -304,6 +304,91 @@ async fn chat_session_handles_invalid_tool_call_when_no_tools_are_available() {
         &[(
             "get_weather".to_string(),
             HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+        )],
+    );
+}
+
+#[tokio::test]
+async fn chat_session_handles_invalid_tool_call_parameters() {
+    let scenario = ScenarioBuilder::new()
+        .inputs(["What is the weather in Tokyo?"])
+        .add_mock_tool(
+            "get_weather",
+            "Get the weather in a city",
+            Parameters {
+                param_type: "object".to_string(),
+                properties: HashMap::new(),
+                required: vec!["city".to_string()],
+                additional_properties: false,
+            },
+            true,
+            false,
+            "AI wants to check the weather in Tokyo. Do you approve?",
+            "The weather in Tokyo is sunny",
+        )
+        .then_tool_call(
+            "1",
+            "get_weather",
+            HashMap::from([("coordinates".to_string(), "123, 456".to_string())]),
+        )
+        .then_message("The weather in Tokyo is sunny", true)
+        .run()
+        .await;
+
+    assert_events(
+        &scenario.events,
+        &[
+            Event::SessionStarted,
+            Event::ReceivedUserMessage {
+                message: "What is the weather in Tokyo?".to_string(),
+            },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedToolCall {
+                tool_name: "get_weather".to_string(),
+                parameters: HashMap::from([("coordinates".to_string(), "123, 456".to_string())]),
+            },
+            Event::ReceivedToolResponse {
+                tool_name: "get_weather".to_string(),
+                response: "The weather in Tokyo is sunny".to_string(), // Mock tool doesnt validate arguments
+                parameters: HashMap::from([("coordinates".to_string(), "123, 456".to_string())]),
+            },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedAssistantMessage {
+                message: "The weather in Tokyo is sunny".to_string(),
+            },
+            Event::SessionEnded,
+        ],
+    );
+
+    assert_chat_history(
+        &scenario.last_client_call().1,
+        &[
+            ChatMessage::System {
+                content: SYSTEM_PROMPT.to_string(),
+            },
+            ChatMessage::User {
+                content: "What is the weather in Tokyo?".to_string(),
+            },
+            ChatMessage::Assistant {
+                message: AssistantMessage::ToolCalls(vec![ToolCall {
+                    id: "1".to_string(),
+                    name: "get_weather".to_string(),
+                    arguments: HashMap::from([("coordinates".to_string(), "123, 456".to_string())]),
+                }]),
+            },
+            ChatMessage::Tool {
+                content: "The weather in Tokyo is sunny".to_string(),
+                tool_call_id: "1".to_string(),
+                tool_name: "get_weather".to_string(),
+            },
+        ],
+    );
+
+    assert_tool_calls(
+        &scenario.tool_calls,
+        &[(
+            "get_weather".to_string(),
+            HashMap::from([("coordinates".to_string(), "123, 456".to_string())]),
         )],
     );
 }
