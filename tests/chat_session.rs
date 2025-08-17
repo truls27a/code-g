@@ -31,7 +31,7 @@ async fn chat_session_handles_message() {
     );
 
     assert_chat_history(
-        &scenario.client_calls.lock().unwrap().clone()[0].1,
+        &scenario.last_client_call().1,
         &[
             ChatMessage::System {
                 content: SYSTEM_PROMPT.to_string(),
@@ -85,7 +85,7 @@ async fn chat_session_handles_multiple_messages() {
     );
 
     assert_chat_history(
-        &scenario.client_calls.lock().unwrap().clone()[2].1,
+        &scenario.last_client_call().1,
         &[
             ChatMessage::System {
                 content: SYSTEM_PROMPT.to_string(),
@@ -140,7 +140,7 @@ async fn chat_session_handles_multiple_assistant_messages_per_turn() {
     );
 
     assert_chat_history(
-        &scenario.client_calls.lock().unwrap().clone()[3].1,
+        &scenario.last_client_call().1,
         &[
             ChatMessage::System { content: SYSTEM_PROMPT.to_string() },
             ChatMessage::User { content: "What is 1+1? Think about it real hard".to_string() },
@@ -206,7 +206,7 @@ async fn chat_session_handles_tool_call() {
     );
 
     assert_chat_history(
-        &scenario.client_calls.lock().unwrap().clone()[1].1,
+        &scenario.last_client_call().1,
         &[
             ChatMessage::System {
                 content: SYSTEM_PROMPT.to_string(),
@@ -306,7 +306,7 @@ async fn chat_session_handles_tool_call_with_approval() {
     );
 
     assert_chat_history(
-        &scenario.client_calls.lock().unwrap().clone()[1].1,
+        &scenario.last_client_call().1,
         &[
             ChatMessage::System {
                 content: SYSTEM_PROMPT.to_string(),
@@ -396,7 +396,7 @@ async fn chat_session_handles_tool_call_with_approval_and_denied() {
     assert_tool_calls(&scenario.tool_calls, &[]);
 
     assert_chat_history(
-        &scenario.client_calls.lock().unwrap().clone()[1].1,
+        &scenario.last_client_call().1,
         &[
             ChatMessage::System {
                 content: SYSTEM_PROMPT.to_string(),

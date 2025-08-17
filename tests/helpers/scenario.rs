@@ -4,11 +4,11 @@ use crate::helpers::mocks::{
     tool_registry::{MockTool, MockToolRegistry},
 };
 use code_g::client::error::ChatClientError;
-use code_g::client::model::{ChatMessage, ChatResult, Parameters, ToolCall};
+use code_g::client::model::{ChatMessage, ChatResult, Parameters, ToolCall, Tool, Model};
+use code_g::tools::traits::Tool as ToolTrait;
 use code_g::session::event::Event;
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::SystemPromptConfig;
-use code_g::tools::traits::Tool;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -18,7 +18,7 @@ pub struct ScenarioBuilder {
     user_inputs: Vec<String>,
     approval_inputs: Vec<String>,
     queued_results: Vec<Result<ChatResult, ChatClientError>>,
-    tools: Vec<Box<dyn Tool>>,
+    tools: Vec<Box<dyn ToolTrait>>,
 }
 
 impl Default for ScenarioBuilder {
@@ -34,15 +34,38 @@ impl Default for ScenarioBuilder {
 }
 
 impl ScenarioBuilder {
+    /// Create a new ScenarioBuilder.
+    /// 
+    /// # Returns
+    ///
+    /// A new ScenarioBuilder.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Set the system prompt config.
+    /// 
+    /// # Arguments
+    ///
+    /// * `config` - The system prompt config to set.
+    /// 
+    /// # Returns
+    ///
+    /// A ScenarioBuilder with the system prompt config set.
     pub fn with_system_prompt_config(mut self, config: SystemPromptConfig) -> Self {
         self.system_prompt_config = config;
         self
     }
 
+    /// Queue a user message.
+    /// 
+    /// # Arguments
+    ///
+    /// * `inputs` - The inputs to queue.
+    /// 
+    /// # Returns
+    ///
+    /// A ScenarioBuilder with the user inputs queued.
     pub fn inputs<I, S>(mut self, inputs: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -62,6 +85,15 @@ impl ScenarioBuilder {
     }
 
     /// Queue a plain assistant message.
+    /// 
+    /// # Arguments
+    ///
+    /// * `content` - The content of the message.
+    /// * `turn_over` - Whether the turn is over.
+    /// 
+    /// # Returns
+    ///
+    /// A ScenarioBuilder with the message queued.
     pub fn then_message<S: Into<String>>(mut self, content: S, turn_over: bool) -> Self {
         self.queued_results.push(Ok(ChatResult::Message {
             content: content.into(),
@@ -71,6 +103,16 @@ impl ScenarioBuilder {
     }
 
     /// Queue an assistant tool call.
+    /// 
+    /// # Arguments
+    ///
+    /// * `id` - The id of the tool call.
+    /// * `name` - The name of the tool.
+    /// * `arguments` - The arguments of the tool call.
+    /// 
+    /// # Returns
+    ///
+    /// A ScenarioBuilder with the tool call queued.
     pub fn then_tool_call(
         mut self,
         id: impl Into<String>,
@@ -87,6 +129,20 @@ impl ScenarioBuilder {
     }
 
     /// Add a mock tool available to the registry.
+    /// 
+    /// # Arguments
+    ///
+    /// * `name` - The name of the tool.
+    /// * `description` - The description of the tool.
+    /// * `parameters` - The parameters of the tool.
+    /// * `strict` - Whether the tool is strict.
+    /// * `requires_approval` - Whether the tool requires approval.
+    /// * `approval_message` - The message to return if the tool requires approval.
+    /// * `return_value` - The value to return if the tool is called.
+    /// 
+    /// # Returns
+    ///
+    /// A ScenarioBuilder with the mock tool added.
     pub fn add_mock_tool(
         mut self,
         name: impl Into<String>,
@@ -111,6 +167,14 @@ impl ScenarioBuilder {
     }
 
     /// Runs the scenario end-to-end and returns artifacts for assertions.
+    /// 
+    /// # Returns
+    ///
+    /// A ScenarioResult containing the events, client calls, and tool calls.
+    /// 
+    /// # Panics
+    ///
+    /// Panics if the events queue is locked.
     pub async fn run(self) -> ScenarioResult {
         let events = Arc::new(Mutex::new(vec![]));
         let event_handler =
@@ -119,9 +183,9 @@ impl ScenarioBuilder {
         let client_calls: Arc<
             Mutex<
                 Vec<(
-                    code_g::client::model::Model,
+                    Model,
                     Vec<ChatMessage>,
-                    Vec<code_g::client::model::Tool>,
+                    Vec<Tool>,
                 )>,
             >,
         > = Arc::new(Mutex::new(vec![]));
@@ -156,11 +220,44 @@ pub struct ScenarioResult {
     pub client_calls: Arc<
         Mutex<
             Vec<(
-                code_g::client::model::Model,
+                Model,
                 Vec<ChatMessage>,
-                Vec<code_g::client::model::Tool>,
+                Vec<Tool>,
             )>,
         >,
     >,
     pub tool_calls: Arc<Mutex<Vec<(String, HashMap<String, String>)>>>,
+}
+
+
+impl ScenarioResult {
+    /// Returns the client call at the given index.
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - The index of the client call to return.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing the model, chat messages, and tools that the client called at the given index.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the index is out of bounds.
+    pub fn client_call_at(&self, index: usize) -> (Model, Vec<ChatMessage>, Vec<Tool>) {
+        self.client_calls.lock().unwrap().get(index).unwrap().clone()
+    }
+
+    /// Returns the last client call.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing the model, chat messages, and tools that the client called last.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the client calls are empty.
+    pub fn last_client_call(&self) -> (Model, Vec<ChatMessage>, Vec<Tool>) {
+        self.client_calls.lock().unwrap().last().unwrap().clone()
+    }
 }
