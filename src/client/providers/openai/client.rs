@@ -275,16 +275,7 @@ mod tests {
         let client = OpenAIClient::new("test-api-key".to_string());
         let result = client
             .create_chat_completion(&Model::OpenAi(OpenAiModel::Gpt4oMini), &[], &[])
-            .await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn create_chat_completion_returns_error_when_api_key_is_invalid() {
-        let client = OpenAIClient::new("invalid-api-key".to_string());
-        let result = client
-            .create_chat_completion(&Model::OpenAi(OpenAiModel::Gpt4oMini), &[], &[])
-            .await;
+            .await; // Wont run
         assert!(result.is_err());
     }
 }
