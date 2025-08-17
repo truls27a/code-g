@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::helpers::mocks::{
     chat_client::MockChatClient,
     event_handler::MockEventHandler,
@@ -231,23 +233,6 @@ pub struct ScenarioResult {
 
 
 impl ScenarioResult {
-    /// Returns the client call at the given index.
-    ///
-    /// # Arguments
-    ///
-    /// * `index` - The index of the client call to return.
-    ///
-    /// # Returns
-    ///
-    /// A tuple containing the model, chat messages, and tools that the client called at the given index.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the index is out of bounds.
-    pub fn client_call_at(&self, index: usize) -> (Model, Vec<ChatMessage>, Vec<Tool>) {
-        self.client_calls.lock().unwrap().get(index).unwrap().clone()
-    }
-
     /// Returns the last client call.
     ///
     /// # Returns

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use code_g::client::model::ChatMessage;
 use code_g::session::event::Event;
 use std::collections::HashMap;
