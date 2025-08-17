@@ -191,3 +191,93 @@ async fn chat_session_handles_tool_call_with_approval_and_denied() {
         ],
     );
 }
+
+#[tokio::test]
+async fn chat_session_handles_tool_call_with_approval_and_invalid_approval() {
+    let scenario = ScenarioBuilder::new()
+        .inputs(["Execute a command in my terminal: echo 'Hello, world!'"])
+        .approvals([":)".to_string()])
+        .add_mock_tool(
+            "execute_command",
+            "Execute a command in the terminal",
+            Parameters {
+                param_type: "object".to_string(),
+                properties: HashMap::new(),
+                required: vec!["command".to_string()],
+                additional_properties: false,
+            },
+            true,
+            true,
+            "AI wants to execute a command in the terminal. Do you approve?",
+            "Hello, world!",
+        )
+        .then_tool_call(
+            "1",
+            "execute_command",
+            HashMap::from([("command".to_string(), "echo 'Hello, world!'".to_string())]),
+        )
+        .then_message("The command was executed successfully", true)
+        .run()
+        .await;
+
+    assert_events(
+        &scenario.events,
+        &[
+            Event::SessionStarted,
+            Event::ReceivedUserMessage {
+                message: "Execute a command in my terminal: echo 'Hello, world!'".to_string(),
+            },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedToolCall {
+                tool_name: "execute_command".to_string(),
+                parameters: HashMap::from([(
+                    "command".to_string(),
+                    "echo 'Hello, world!'".to_string(),
+                )]),
+            },
+            Event::ReceivedToolResponse {
+                tool_name: "execute_command".to_string(),
+                response: "Operation cancelled by user: execute_command with parameters {\"command\": \"echo 'Hello, world!'\"}".to_string(),
+                parameters: HashMap::from([(
+                    "command".to_string(),
+                    "echo 'Hello, world!'".to_string(),
+                )]),
+            },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedAssistantMessage {
+                message: "The command was executed successfully".to_string(),
+            },
+            Event::SessionEnded,
+        ],
+    );
+
+    // No tool should be called when approval is denied
+    assert_tool_calls(&scenario.tool_calls, &[]);
+
+    assert_chat_history(
+        &scenario.last_client_call().1,
+        &[
+            ChatMessage::System {
+                content: SYSTEM_PROMPT.to_string(),
+            },
+            ChatMessage::User {
+                content: "Execute a command in my terminal: echo 'Hello, world!'".to_string(),
+            },
+            ChatMessage::Assistant {
+                message: AssistantMessage::ToolCalls(vec![ToolCall {
+                    id: "1".to_string(),
+                    name: "execute_command".to_string(),
+                    arguments: HashMap::from([(
+                        "command".to_string(),
+                        "echo 'Hello, world!'".to_string(),
+                    )]),
+                }]),
+            },
+            ChatMessage::Tool {
+                content: "Operation cancelled by user: execute_command with parameters {\"command\": \"echo 'Hello, world!'\"}".to_string(),
+                tool_call_id: "1".to_string(),
+                tool_name: "execute_command".to_string(),
+            },
+        ],
+    );
+}
