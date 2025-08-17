@@ -152,5 +152,3 @@ async fn chat_session_handles_multiple_assistant_messages_per_turn() {
     assert_tool_calls(&scenario.tool_calls, &[]);
 }
 
-
-

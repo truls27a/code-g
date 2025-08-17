@@ -236,3 +236,74 @@ async fn chat_session_handles_multiple_tool_calls() {
         )],
     );
 }
+
+#[tokio::test]
+async fn chat_session_handles_invalid_tool_call_when_no_tools_are_available() {
+    let scenario = ScenarioBuilder::new()
+        .inputs(["What is the weather in Tokyo?"])
+        .then_tool_call(
+            "1",
+            "get_weather",
+            HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+        )
+        .then_message("I dont know bro", true)
+        .run()
+        .await;
+
+    assert_events(
+        &scenario.events,
+        &[
+            Event::SessionStarted,
+            Event::ReceivedUserMessage {
+                message: "What is the weather in Tokyo?".to_string(),
+            },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedToolCall {
+                tool_name: "get_weather".to_string(),
+                parameters: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+            },
+            Event::ReceivedToolResponse {
+                tool_name: "get_weather".to_string(),
+                response: "Tool get_weather not found".to_string(),
+                parameters: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+            },
+            Event::AwaitingAssistantResponse,
+            Event::ReceivedAssistantMessage {
+                message: "I dont know bro".to_string(),
+            },
+            Event::SessionEnded,
+        ],
+    );
+
+    assert_chat_history(
+        &scenario.last_client_call().1,
+        &[
+            ChatMessage::System {
+                content: SYSTEM_PROMPT.to_string(),
+            },
+            ChatMessage::User {
+                content: "What is the weather in Tokyo?".to_string(),
+            },
+            ChatMessage::Assistant {
+                message: AssistantMessage::ToolCalls(vec![ToolCall {
+                    id: "1".to_string(),
+                    name: "get_weather".to_string(),
+                    arguments: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+                }]),
+            },
+            ChatMessage::Tool {
+                content: "Tool get_weather not found".to_string(),
+                tool_call_id: "1".to_string(),
+                tool_name: "get_weather".to_string(),
+            },
+        ],
+    );
+
+    assert_tool_calls(
+        &scenario.tool_calls,
+        &[(
+            "get_weather".to_string(),
+            HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+        )],
+    );
+}
