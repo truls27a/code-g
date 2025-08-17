@@ -23,3 +23,23 @@ fn read_file_tool_returns_error_when_file_does_not_exist() {
 
     assert!(result.is_err());
 }
+
+#[test]
+fn read_file_tool_returns_error_when_path_is_not_provided() {
+    let tool = ReadFile;
+    let args = HashMap::new();
+
+    let result = tool.call(args);
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn read_file_tool_returns_error_when_path_is_empty() {
+    let tool = ReadFile;
+    let args = HashMap::from([("path".to_string(), "".to_string())]);
+
+    let result = tool.call(args);
+
+    assert!(result.is_err());
+}
