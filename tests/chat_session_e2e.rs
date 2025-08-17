@@ -8,7 +8,7 @@ use helpers::scenario::ScenarioBuilder;
 use std::collections::HashMap;
 
 #[tokio::test]
-async fn chat_session_full_e2e_workflow() {
+async fn chat_session_handles_full_e2e_workflow() {
     let scenario = ScenarioBuilder::new()
         .inputs([
             "I need a function to calculate the factorial of a number. Please implement it in a new file called math_utils.rs",
