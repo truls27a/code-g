@@ -57,6 +57,7 @@ async fn chat_session_handles_tool_call_with_approval() {
                     "command".to_string(),
                     "echo 'Hello, world!'".to_string(),
                 )]),
+                approved: true,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {
@@ -152,6 +153,7 @@ async fn chat_session_handles_tool_call_with_approval_and_denied() {
                     "command".to_string(),
                     "echo 'Hello, world!'".to_string(),
                 )]),
+                approved: false,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {
@@ -242,6 +244,7 @@ async fn chat_session_handles_tool_call_with_approval_and_invalid_approval() {
                     "command".to_string(),
                     "echo 'Hello, world!'".to_string(),
                 )]),
+                approved: false,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {

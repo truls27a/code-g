@@ -136,8 +136,8 @@ pub trait ToolRegistry {
 ///         false
 ///     }
 ///
-///     fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
-///         ("Simple Tool".to_string(), "Running my_tool".to_string())
+///     fn approval_message(&self, args: &HashMap<String, String>) -> String {
+///         "CodeG wants to use tool".to_string()
 ///     }
 ///
 ///     fn status(&self, args: &HashMap<String, String>) -> Status {

@@ -50,6 +50,7 @@ async fn chat_session_handles_tool_call() {
                 tool_name: "get_weather".to_string(),
                 response: "The weather in Tokyo is sunny".to_string(),
                 parameters: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+                approved: true,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {
@@ -160,6 +161,7 @@ async fn chat_session_handles_multiple_tool_calls() {
                 tool_name: "read_file".to_string(),
                 response: "assert_eq!(1, 2);".to_string(),
                 parameters: HashMap::from([("file_path".to_string(), "main.rs".to_string())]),
+                approved: true,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {
@@ -174,6 +176,7 @@ async fn chat_session_handles_multiple_tool_calls() {
                 tool_name: "write_file".to_string(),
                 response: "File written successfully".to_string(),
                 parameters: HashMap::from([("file_path".to_string(), "main.rs".to_string()), ("content".to_string(), "assert_eq!(1, 1);".to_string())]),
+                approved: true,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {
@@ -266,6 +269,7 @@ async fn chat_session_handles_tool_call_when_no_tools_are_available() {
                 tool_name: "get_weather".to_string(),
                 response: "Tool get_weather not found".to_string(),
                 parameters: HashMap::from([("city".to_string(), "Tokyo".to_string())]),
+                approved: true,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {
@@ -351,6 +355,7 @@ async fn chat_session_handles_invalid_tool_call_parameters() {
                 tool_name: "get_weather".to_string(),
                 response: "The weather in Tokyo is sunny".to_string(), // Mock tool doesnt validate arguments
                 parameters: HashMap::from([("coordinates".to_string(), "123, 456".to_string())]),
+                approved: true,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {

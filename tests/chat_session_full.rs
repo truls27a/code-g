@@ -191,6 +191,7 @@ async fn chat_session_handles_full_workflow() {
                 tool_name: "search_files".to_string(),
                 response: "src/lib.rs\nsrc/main.rs\nsrc/utils/mod.rs".to_string(),
                 parameters: HashMap::from([("pattern".to_string(), "*math*".to_string())]),
+                approved: true,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {
@@ -205,6 +206,7 @@ async fn chat_session_handles_full_workflow() {
                 tool_name: "search_files".to_string(),
                 response: "src/lib.rs\nsrc/main.rs\nsrc/utils/mod.rs".to_string(),
                 parameters: HashMap::from([("pattern".to_string(), "*utils*".to_string())]),
+                approved: true,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {
@@ -219,6 +221,7 @@ async fn chat_session_handles_full_workflow() {
                 tool_name: "read_file".to_string(),
                 response: "// This is the main library file\npub mod utils;\n".to_string(),
                 parameters: HashMap::from([("file_path".to_string(), "src/lib.rs".to_string())]),
+                approved: true,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {
@@ -239,6 +242,7 @@ async fn chat_session_handles_full_workflow() {
                     ("file_path".to_string(), "src/math_utils.rs".to_string()),
                     ("content".to_string(), "/// Calculate the factorial of a non-negative integer\n/// \n/// # Arguments\n/// \n/// * `n` - A non-negative integer\n/// \n/// # Returns\n/// \n/// The factorial of n\n/// \n/// # Examples\n/// \n/// ```\n/// assert_eq!(factorial(5), 120);\n/// assert_eq!(factorial(0), 1);\n/// ```\npub fn factorial(n: u32) -> u64 {\n    match n {\n        0 | 1 => 1,\n        _ => (2..=n as u64).product(),\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_factorial() {\n        assert_eq!(factorial(0), 1);\n        assert_eq!(factorial(1), 1);\n        assert_eq!(factorial(5), 120);\n        assert_eq!(factorial(10), 3628800);\n    }\n}".to_string())
                 ]),
+                approved: true,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {
@@ -269,6 +273,7 @@ async fn chat_session_handles_full_workflow() {
                     ("search_text".to_string(), "pub fn factorial(n: u32) -> u64 {\n    match n {\n        0 | 1 => 1,\n        _ => (2..=n as u64).product(),\n    }\n}".to_string()),
                     ("replacement_text".to_string(), "pub fn factorial(n: i32) -> Result<u64, String> {\n    if n < 0 {\n        return Err(\"Factorial is not defined for negative numbers\".to_string());\n    }\n    \n    let n = n as u32;\n    match n {\n        0 | 1 => Ok(1),\n        _ => Ok((2..=n as u64).product()),\n    }\n}".to_string())
                 ]),
+                approved: true,
             },
             Event::AwaitingAssistantResponse,
             Event::ReceivedAssistantMessage {

@@ -94,7 +94,15 @@ impl EventHandler for Tui {
                 tool_name,
                 response,
                 parameters,
+                approved,
             } => {
+                if !approved {
+                    self.state.add_tool_response(
+                        format!("Operation cancelled by user: {} with parameters {:?}", tool_name, parameters),
+                        false,
+                    );
+                    return;
+                }
                 let is_error = response.starts_with("Error:");
 
                 let summary = if let Some(tool) = Registry::get_from_all_tools(&tool_name) {
@@ -389,6 +397,7 @@ mod tests {
             tool_name: tool_name.clone(),
             response: tool_response.clone(),
             parameters: arguments.clone(),
+            approved: true,
         });
 
         assert_eq!(tui.state.messages.len(), 1);

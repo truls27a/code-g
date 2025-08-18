@@ -198,24 +198,20 @@ impl ChatSession {
                 )
                 .await
             {
-                Ok(response) => {
-                    response
-                }
-                Err(e) => {
-                    match self.handle_chat_client_error(e, iterations) {
-                        ChatSessionErrorHandling::Fatal(err) => {
-                            return Err(err);
-                        }
-                        ChatSessionErrorHandling::Retry => {
-                            continue;
-                        }
-                        ChatSessionErrorHandling::AddToMemoryAndRetry(message) => {
-                            self.memory
-                                .add_message(ChatMessage::System { content: message });
-                            continue;
-                        }
+                Ok(response) => response,
+                Err(e) => match self.handle_chat_client_error(e, iterations) {
+                    ChatSessionErrorHandling::Fatal(err) => {
+                        return Err(err);
                     }
-                }
+                    ChatSessionErrorHandling::Retry => {
+                        continue;
+                    }
+                    ChatSessionErrorHandling::AddToMemoryAndRetry(message) => {
+                        self.memory
+                            .add_message(ChatMessage::System { content: message });
+                        continue;
+                    }
+                },
             };
 
             // 4. Handle the response from the client
@@ -255,7 +251,7 @@ impl ChatSession {
                         });
 
                         // 6.2.2 Check if tool requires approval and request if needed
-                        let tool_response = if self
+                        let (tool_response, approved) = if self
                             .tools
                             .get_tool(&tool_call.name)
                             .map(|tool| tool.requires_approval())
@@ -264,33 +260,39 @@ impl ChatSession {
                             match self.request_approval(&tool_call.name, &tool_call.arguments) {
                                 Ok(true) => {
                                     // User approved, proceed with tool execution
-                                    self.tools
+                                    let response = self
+                                        .tools
                                         .call_tool(
                                             tool_call.name.as_str(),
                                             tool_call.arguments.clone(),
                                         )
-                                        .unwrap_or_else(|e| e)
+                                        .unwrap_or_else(|e| e);
+                                    (response, true)
                                 }
                                 Ok(false) => {
                                     // User declined, return cancellation message
-                                    format!(
+                                    let response = format!(
                                         "Operation cancelled by user: {} with parameters {:?}",
                                         tool_call.name, tool_call.arguments
-                                    )
+                                    );
+                                    (response, false)
                                 }
                                 Err(e) => {
                                     // Error requesting approval
-                                    format!(
+                                    let response = format!(
                                         "Failed to request approval for {}: {}",
                                         tool_call.name, e
-                                    )
+                                    );
+                                    (response, false)
                                 }
                             }
                         } else {
                             // Tool doesn't require approval, execute directly
-                            self.tools
+                            let response = self
+                                .tools
                                 .call_tool(tool_call.name.as_str(), tool_call.arguments.clone())
-                                .unwrap_or_else(|e| e)
+                                .unwrap_or_else(|e| e);
+                            (response, true)
                         };
 
                         // 6.2.3 Add tool response to memory
@@ -306,6 +308,7 @@ impl ChatSession {
                                 tool_name: tool_call.name.clone(),
                                 response: tool_response.clone(),
                                 parameters: tool_call.arguments.clone(),
+                                approved,
                             });
                     }
 
@@ -403,8 +406,8 @@ impl ChatSession {
 mod tests {
     use super::*;
     use crate::client::providers::openai::client::OpenAIClient;
-    use crate::tui::tui::Tui;
     use crate::tools::registry::Registry;
+    use crate::tui::tui::Tui;
 
     #[test]
     fn new_creates_a_chat_session_with_empty_memory() {

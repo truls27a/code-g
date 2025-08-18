@@ -36,6 +36,7 @@ pub enum Event {
         tool_name: String,
         response: String,
         parameters: HashMap<String, String>,
+        approved: bool,
     },
     /// The system is waiting for the assistant to respond
     AwaitingAssistantResponse,
