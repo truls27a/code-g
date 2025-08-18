@@ -74,6 +74,12 @@ impl Tool for ReadFile {
         format!("CodeG wants to read file {}", path)
     }
 
+    /// Generates the declined message for the read file tool with the given arguments.
+    fn declined_message(&self, args: &HashMap<String, String>) -> String {
+        let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+        format!("Read file {} was declined by user", path)
+    }
+
     /// Generates the TUI status for the read file tool with the given arguments.
     fn status(&self, args: &HashMap<String, String>) -> Status {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");

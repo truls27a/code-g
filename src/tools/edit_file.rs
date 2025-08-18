@@ -98,6 +98,12 @@ impl Tool for EditFile {
         format!("CodeG wants to edit file {}", path)
     }
 
+    /// Generates the declined message for the edit file tool with the given arguments.
+    fn declined_message(&self, args: &HashMap<String, String>) -> String {
+        let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+        format!("Edit file {} was declined by user", path)
+    }
+
     /// Generates the TUI status for the edit file tool with the given arguments.
     fn status(&self, args: &HashMap<String, String>) -> Status {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");

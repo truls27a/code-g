@@ -6,11 +6,11 @@ use crate::helpers::mocks::{
     tool_registry::{MockTool, MockToolRegistry},
 };
 use code_g::client::error::ChatClientError;
-use code_g::client::model::{ChatMessage, ChatResult, Parameters, ToolCall, Tool, Model};
-use code_g::tools::traits::Tool as ToolTrait;
+use code_g::client::model::{ChatMessage, ChatResult, Model, Parameters, Tool, ToolCall};
 use code_g::session::event::Event;
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::SystemPromptConfig;
+use code_g::tools::traits::Tool as ToolTrait;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -37,7 +37,7 @@ impl Default for ScenarioBuilder {
 
 impl ScenarioBuilder {
     /// Create a new ScenarioBuilder.
-    /// 
+    ///
     /// # Returns
     ///
     /// A new ScenarioBuilder.
@@ -46,11 +46,11 @@ impl ScenarioBuilder {
     }
 
     /// Set the system prompt config.
-    /// 
+    ///
     /// # Arguments
     ///
     /// * `config` - The system prompt config to set.
-    /// 
+    ///
     /// # Returns
     ///
     /// A ScenarioBuilder with the system prompt config set.
@@ -60,11 +60,11 @@ impl ScenarioBuilder {
     }
 
     /// Queue a user message.
-    /// 
+    ///
     /// # Arguments
     ///
     /// * `inputs` - The inputs to queue.
-    /// 
+    ///
     /// # Returns
     ///
     /// A ScenarioBuilder with the user inputs queued.
@@ -87,12 +87,12 @@ impl ScenarioBuilder {
     }
 
     /// Queue a plain assistant message.
-    /// 
+    ///
     /// # Arguments
     ///
     /// * `content` - The content of the message.
     /// * `turn_over` - Whether the turn is over.
-    /// 
+    ///
     /// # Returns
     ///
     /// A ScenarioBuilder with the message queued.
@@ -105,13 +105,13 @@ impl ScenarioBuilder {
     }
 
     /// Queue an assistant tool call.
-    /// 
+    ///
     /// # Arguments
     ///
     /// * `id` - The id of the tool call.
     /// * `name` - The name of the tool.
     /// * `arguments` - The arguments of the tool call.
-    /// 
+    ///
     /// # Returns
     ///
     /// A ScenarioBuilder with the tool call queued.
@@ -131,7 +131,7 @@ impl ScenarioBuilder {
     }
 
     /// Add a mock tool available to the registry.
-    /// 
+    ///
     /// # Arguments
     ///
     /// * `name` - The name of the tool.
@@ -141,7 +141,7 @@ impl ScenarioBuilder {
     /// * `requires_approval` - Whether the tool requires approval.
     /// * `approval_message` - The message to return if the tool requires approval.
     /// * `return_value` - The value to return if the tool is called.
-    /// 
+    ///
     /// # Returns
     ///
     /// A ScenarioBuilder with the mock tool added.
@@ -153,6 +153,7 @@ impl ScenarioBuilder {
         strict: bool,
         requires_approval: bool,
         approval_message: impl Into<String>,
+        declined_message: impl Into<String>,
         return_value: impl Into<String>,
     ) -> Self {
         let tool = Box::new(MockTool::new(
@@ -162,6 +163,7 @@ impl ScenarioBuilder {
             strict,
             requires_approval,
             approval_message.into(),
+            declined_message.into(),
             return_value.into(),
         ));
         self.tools.push(tool);
@@ -169,11 +171,11 @@ impl ScenarioBuilder {
     }
 
     /// Runs the scenario end-to-end and returns artifacts for assertions.
-    /// 
+    ///
     /// # Returns
     ///
     /// A ScenarioResult containing the events, client calls, and tool calls.
-    /// 
+    ///
     /// # Panics
     ///
     /// Panics if the events queue is locked.
@@ -182,15 +184,8 @@ impl ScenarioBuilder {
         let event_handler =
             MockEventHandler::new(events.clone(), self.user_inputs, self.approval_inputs);
 
-        let client_calls: Arc<
-            Mutex<
-                Vec<(
-                    Model,
-                    Vec<ChatMessage>,
-                    Vec<Tool>,
-                )>,
-            >,
-        > = Arc::new(Mutex::new(vec![]));
+        let client_calls: Arc<Mutex<Vec<(Model, Vec<ChatMessage>, Vec<Tool>)>>> =
+            Arc::new(Mutex::new(vec![]));
 
         let chat_client = MockChatClient::new(self.queued_results, client_calls.clone());
 
@@ -219,18 +214,9 @@ impl ScenarioBuilder {
 #[derive(Clone)]
 pub struct ScenarioResult {
     pub events: Vec<Event>,
-    pub client_calls: Arc<
-        Mutex<
-            Vec<(
-                Model,
-                Vec<ChatMessage>,
-                Vec<Tool>,
-            )>,
-        >,
-    >,
+    pub client_calls: Arc<Mutex<Vec<(Model, Vec<ChatMessage>, Vec<Tool>)>>>,
     pub tool_calls: Arc<Mutex<Vec<(String, HashMap<String, String>)>>>,
 }
-
 
 impl ScenarioResult {
     /// Returns the last client call.

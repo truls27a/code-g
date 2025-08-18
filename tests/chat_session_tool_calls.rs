@@ -23,6 +23,7 @@ async fn chat_session_handles_tool_call() {
             true,
             false,
             "AI wants to check the weather in Tokyo. Do you approve?",
+            "Get the weather in a city was declined by user",
             "The weather in Tokyo is sunny",
         )
         .then_tool_call(
@@ -109,6 +110,7 @@ async fn chat_session_handles_multiple_tool_calls() {
             true,
             false,
             "AI wants to read a file. Do you approve?",
+            "Read file {} was declined by user",
             "assert_eq!(1, 2);",
         )
         .add_mock_tool(
@@ -123,6 +125,7 @@ async fn chat_session_handles_multiple_tool_calls() {
             true,
             false,
             "AI wants to write to a file. Do you approve?",
+            "Write to file {} was declined by user",
             "File written successfully",
         )
         .then_message("Sure, let me read the file and then fix the errors", false)
@@ -328,6 +331,7 @@ async fn chat_session_handles_invalid_tool_call_parameters() {
             true,
             false,
             "AI wants to check the weather in Tokyo. Do you approve?",
+            "Get the weather in a city was declined by user",
             "The weather in Tokyo is sunny",
         )
         .then_tool_call(

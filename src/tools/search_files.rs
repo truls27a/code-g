@@ -81,6 +81,12 @@ impl Tool for SearchFiles {
         format!("CodeG wants to search for files matching pattern {}", pattern)
     }
 
+    /// Generates the declined message for the search files tool with the given arguments.
+    fn declined_message(&self, args: &HashMap<String, String>) -> String {
+        let pattern = args.get("pattern").map(|s| s.as_str()).unwrap_or("unknown");
+        format!("Search for files matching pattern {} was declined by user", pattern)
+    }
+
     /// Generates the TUI status for the search files tool with the given arguments.
     fn status(&self, args: &HashMap<String, String>) -> Status {
         let pattern = args.get("pattern").map(|s| s.as_str()).unwrap_or("unknown");

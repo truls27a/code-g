@@ -83,6 +83,12 @@ impl Tool for WriteFile {
         format!("CodeG wants to write to file {}", path)
     }
 
+    /// Generates the declined message for the write file tool with the given arguments.
+    fn declined_message(&self, args: &HashMap<String, String>) -> String {
+        let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+        format!("Write to file {} was declined by user", path)
+    }
+
     /// Generates the TUI status for the write file tool with the given arguments.
     fn status(&self, args: &HashMap<String, String>) -> Status {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");

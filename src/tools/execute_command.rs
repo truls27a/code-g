@@ -77,6 +77,12 @@ impl Tool for ExecuteCommand {
         format!("CodeG wants to execute command {}", command)
     }
 
+    /// Generates the declined message for the execute command tool with the given arguments.
+    fn declined_message(&self, args: &HashMap<String, String>) -> String {
+        let command = args.get("command").map(|s| s.as_str()).unwrap_or("unknown");
+        format!("Execute command {} was declined by user", command)
+    }
+
     /// Generates the TUI status for the execute command tool with the given arguments.
     fn status(&self, args: &HashMap<String, String>) -> Status {
         let command = args.get("command").map(|s| s.as_str()).unwrap_or("unknown");

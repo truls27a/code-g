@@ -140,9 +140,14 @@ pub trait ToolRegistry {
 ///         "CodeG wants to use tool".to_string()
 ///     }
 ///
+///     fn declined_message(&self, args: &HashMap<String, String>) -> String {
+///         "Tool was declined by user".to_string()
+///     }
+///
 ///     fn status(&self, args: &HashMap<String, String>) -> Status {
 ///         Status::ExecutingTool { tool_name: self.name() }
 ///     }
+///
 ///
 ///     fn summary_message(&self, args: &HashMap<String, String>, result: &str) -> String {
 ///         format!("Tool '{}' completed with result: {}", self.name(), result)
@@ -218,8 +223,22 @@ pub trait Tool: ToolClone {
     ///
     /// # Returns
     ///
-    /// A tuple containing (operation_name, details) for display to the user.
+    /// A `String` containing the approval message.
     fn approval_message(&self, args: &HashMap<String, String>) -> String;
+
+    /// Generates the declined message for this tool with the given arguments.
+    ///
+    /// This method creates a user-friendly description indicating that the tool
+    /// was declined by the user and what it was trying to do.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
+    ///
+    /// # Returns
+    ///
+    /// A `String` containing the declined message.
+    fn declined_message(&self, args: &HashMap<String, String>) -> String;
 
     /// Generates the TUI status for this tool with the given arguments.
     ///

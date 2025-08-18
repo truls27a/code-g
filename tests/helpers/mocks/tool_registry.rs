@@ -20,6 +20,7 @@ pub struct MockTool {
     strict: bool,
     requires_approval: bool,
     approval_message: String,
+    declined_message: String,
     calls: Arc<Mutex<Vec<HashMap<String, String>>>>,
     return_value: Arc<Mutex<String>>,
 }
@@ -41,6 +42,7 @@ impl MockTool {
         strict: bool,
         requires_approval: bool,
         approval_message: String,
+        declined_message: String,
         return_value: String,
     ) -> Self {
         Self {
@@ -50,6 +52,7 @@ impl MockTool {
             strict,
             requires_approval,
             approval_message,
+            declined_message,
             calls: Arc::new(Mutex::new(vec![])),
             return_value: Arc::new(Mutex::new(return_value)),
         }
@@ -97,6 +100,10 @@ impl Tool for MockTool {
 
     fn approval_message(&self, _args: &HashMap<String, String>) -> String {
         self.approval_message.clone()
+    }
+
+    fn declined_message(&self, _args: &HashMap<String, String>) -> String {
+        self.declined_message.clone()
     }
 
     fn status(&self, _args: &HashMap<String, String>) -> Status {

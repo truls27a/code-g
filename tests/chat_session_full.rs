@@ -35,7 +35,8 @@ async fn chat_session_handles_full_workflow() {
             true,
             false,
             "AI wants to search for files",
-            "src/lib.rs\nsrc/main.rs\nsrc/utils/mod.rs"
+            "Search for files matching pattern {} was declined by user",
+            "src/lib.rs\nsrc/main.rs\nsrc/utils/mod.rs",
         )
         .add_mock_tool(
             "read_file",
@@ -57,6 +58,7 @@ async fn chat_session_handles_full_workflow() {
             true,
             false,
             "AI wants to read a file",
+            "Read file {} was declined by user",
             "// This is the main library file\npub mod utils;\n"
         )
         .add_mock_tool(
@@ -86,6 +88,7 @@ async fn chat_session_handles_full_workflow() {
             true,
             false,
             "AI wants to write to a file",
+            "Write to file {} was declined by user",
             "File written successfully"
         )
         .add_mock_tool(
@@ -122,6 +125,7 @@ async fn chat_session_handles_full_workflow() {
             true,
             false,
             "AI wants to edit a file",
+            "Edit file {} was declined by user",
             "File edited successfully"
         )
         // First AI response: understanding the request and searching for existing files
