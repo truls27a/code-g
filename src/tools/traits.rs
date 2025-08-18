@@ -103,6 +103,7 @@ pub trait ToolRegistry {
 /// ```rust
 /// use code_g::tools::traits::Tool;
 /// use code_g::client::model::Parameters;
+/// use code_g::tui::model::Status;
 /// use std::collections::HashMap;
 ///
 /// struct MyTool;
@@ -135,6 +136,14 @@ pub trait ToolRegistry {
 ///
 ///     fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
 ///         ("Simple Tool".to_string(), "Running my_tool".to_string())
+///     }
+/// 
+///     fn status(&self, args: &HashMap<String, String>) -> Status {
+///         Status::ExecutingTool { tool_name: self.name() }
+///     }
+///
+///     fn summary_message(&self, args: &HashMap<String, String>, result: &str) -> String {
+///         format!("Tool '{}' completed with result: {}", self.name(), result)
 ///     }
 ///
 ///     fn call(&self, args: HashMap<String, String>) -> Result<String, String> {
