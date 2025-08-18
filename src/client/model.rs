@@ -1,7 +1,7 @@
+use crate::client::providers::openai::schema::Model as OpenAiModel;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-// Chat
 /// Represents the result of a chat completion operation.
 ///
 /// This enum encapsulates the two possible outcomes of a chat completion:
@@ -12,7 +12,7 @@ use std::collections::HashMap;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::model::{ChatResult, ToolCall};
+/// use code_g::client::model::{ChatResult, ToolCall};
 /// use std::collections::HashMap;
 ///
 /// // Simple message response
@@ -49,7 +49,7 @@ pub enum ChatResult {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::model::{ChatMessage, AssistantMessage};
+/// use code_g::client::model::{ChatMessage, AssistantMessage};
 ///
 /// // System message for instructions
 /// let system_msg = ChatMessage::System {
@@ -91,7 +91,7 @@ pub enum ChatMessage {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::model::{AssistantMessage, ToolCall};
+/// use code_g::client::model::{AssistantMessage, ToolCall};
 /// use std::collections::HashMap;
 ///
 /// // Text content
@@ -117,43 +117,26 @@ pub enum AssistantMessage {
     ToolCalls(Vec<ToolCall>),
 }
 
-// Model
-/// Represents the available OpenAI models for chat completions.
+/// Represents the model used for chat completions.
 ///
-/// This enum defines the different OpenAI models that can be used for chat
-/// completions, each with different capabilities, performance characteristics,
-/// and pricing. The enum uses serde renaming to match the exact model names
-/// expected by the OpenAI API.
+/// This enum encapsulates the different models that can be used for chat
+/// completions, currently supporting only OpenAI models. It provides a
+/// unified interface for working with different AI providers and their
+/// model configurations.
 ///
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::model::OpenAiModel;
+/// use code_g::client::model::Model;
+/// use code_g::client::providers::openai::schema::Model as OpenAiModel;
 ///
-/// let model = OpenAiModel::Gpt4o;
-/// let mini_model = OpenAiModel::Gpt4oMini;
-/// let latest_model = OpenAiModel::GptO3;
+/// let model = Model::OpenAi(OpenAiModel::Gpt4o);
 /// ```
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub enum OpenAiModel {
-    /// GPT-4o - Latest high-performance model with vision capabilities
-    #[serde(rename = "gpt-4o")]
-    Gpt4o,
-    /// GPT-4o Mini - Smaller, faster, and more cost-effective variant
-    #[serde(rename = "gpt-4o-mini")]
-    Gpt4oMini,
-    /// GPT-o3 - Next-generation model with enhanced reasoning capabilities
-    #[serde(rename = "gpt-o3")]
-    GptO3,
-    /// GPT-o4 Mini - Compact version of the o4 model family
-    #[serde(rename = "gpt-o4-mini")]
-    GptO4Mini,
-    /// GPT-o4 Mini High - High-performance variant of the o4 mini model
-    #[serde(rename = "gpt-o4-mini-high")]
-    GptO4MiniHigh,
+pub enum Model {
+    OpenAi(OpenAiModel),
 }
 
-// Tool
 /// Represents a tool or function available to the assistant.
 ///
 /// This struct defines a tool that the OpenAI assistant can call during
@@ -169,7 +152,7 @@ pub enum OpenAiModel {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::model::{Tool, ToolType, Function, Parameters, Property};
+/// use code_g::client::model::{Tool, ToolType, Function, Parameters, Property};
 /// use std::collections::HashMap;
 ///
 /// let mut properties = HashMap::new();
@@ -193,7 +176,7 @@ pub enum OpenAiModel {
 ///     },
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Tool {
     #[serde(rename = "type")]
     pub tool_type: ToolType,
@@ -209,11 +192,11 @@ pub struct Tool {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::model::ToolType;
+/// use code_g::client::model::ToolType;
 ///
 /// let tool_type = ToolType::Function;
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ToolType {
     /// Function tool type for calling custom functions
@@ -236,7 +219,7 @@ pub enum ToolType {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::model::{Function, Parameters, Property};
+/// use code_g::client::model::{Function, Parameters, Property};
 /// use std::collections::HashMap;
 ///
 /// let mut properties = HashMap::new();
@@ -257,7 +240,7 @@ pub enum ToolType {
 ///     strict: true,
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Function {
     pub name: String,
     pub description: String,
@@ -281,7 +264,7 @@ pub struct Function {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::model::{Parameters, Property};
+/// use code_g::client::model::{Parameters, Property};
 /// use std::collections::HashMap;
 ///
 /// let mut properties = HashMap::new();
@@ -301,7 +284,7 @@ pub struct Function {
 ///     additional_properties: false,
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Parameters {
     #[serde(rename = "type")]
@@ -325,7 +308,7 @@ pub struct Parameters {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::model::Property;
+/// use code_g::client::model::Property;
 ///
 /// let string_prop = Property {
 ///     prop_type: "string".to_string(),
@@ -342,7 +325,7 @@ pub struct Parameters {
 ///     description: "Whether notifications are enabled".to_string(),
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Property {
     #[serde(rename = "type")]
@@ -365,7 +348,7 @@ pub struct Property {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::model::ToolCall;
+/// use code_g::client::model::ToolCall;
 /// use std::collections::HashMap;
 ///
 /// let mut arguments = HashMap::new();

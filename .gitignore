@@ -3,4 +3,9 @@
 *.log
 
 
+# Cursor
 /.cursor
+
+# Claude
+/.claude
+CLAUDE.md

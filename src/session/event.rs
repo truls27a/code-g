@@ -10,11 +10,11 @@ use std::io;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat::event::Event;
+/// use code_g::session::event::Event;
 ///
 /// let event = Event::ReceivedUserMessage { message: "Hello".to_string() };
 /// ```
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Event {
     /// The chat session has been started
     SessionStarted,
@@ -50,10 +50,11 @@ pub enum Event {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat::event::Action;
+/// use code_g::session::event::Action;
 ///
 /// let action = Action::RequestUserInput;
 /// ```
+#[derive(Debug, PartialEq)]
 pub enum Action {
     /// Request input from the user
     RequestUserInput,
@@ -74,7 +75,7 @@ pub enum Action {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::chat::event::{Event, Action, EventHandler};
+/// use code_g::session::event::{Event, Action, EventHandler};
 /// use std::io;
 ///
 /// struct MyHandler;

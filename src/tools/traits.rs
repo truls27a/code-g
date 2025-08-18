@@ -1,5 +1,95 @@
-use crate::openai::model::{Function, Parameters, Tool as OpenAiTool, ToolType};
+use crate::client::model::{Function, Parameters, Tool as ToolModel, ToolType};
 use std::collections::HashMap;
+
+/// A trait defining the interface for tool registries.
+///
+/// The `ToolRegistry` trait provides a standardized interface for implementing
+/// tool registries that can be used to manage and execute tools.
+///
+/// # Examples
+/// ```rust
+/// use code_g::tools::traits::ToolRegistry;
+/// use code_g::tools::traits::Tool;
+/// use code_g::client::model::Tool as ToolModel;
+/// use std::collections::HashMap;
+///
+/// struct MyToolRegistry;
+///
+/// impl ToolRegistry for MyToolRegistry {
+///     fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String> {
+///         // Implement the tool execution logic here
+///         Ok("Tool executed successfully".to_string())
+///     }
+///
+///     fn to_tools(&self) -> Vec<ToolModel> {
+///         // Implement the conversion logic here
+///         vec![]
+///     }
+///
+///     fn len(&self) -> usize {
+///         // Implement the logic to return the number of tools
+///         0
+///     }
+///
+///     fn get_tool(&self, tool_name: &str) -> Option<&Box<dyn Tool>> {
+///         // Implement the logic to return a tool by name
+///         None
+///     }
+///
+///     fn get_tools(&self) -> &[Box<dyn Tool>] {
+///         // Implement the logic to return all tools  
+///         &[]
+///     }
+/// }
+/// ```
+pub trait ToolRegistry {
+    /// Executes a tool by name with the provided arguments.
+    ///
+    /// Searches for a tool with the given name in the registry and executes it
+    /// with the provided arguments. If the tool is not found, returns an error.
+    ///
+    /// # Arguments
+    ///
+    /// * `tool_name` - The name of the tool to execute.
+    /// * `args` - A HashMap containing the arguments to pass to the tool.
+    ///
+    /// # Returns
+    /// The output from the tool execution as a String.
+    ///
+    /// # Errors
+    /// Returns an error if the tool is not found in the registry or if the tool
+    /// execution fails.
+    fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String>;
+
+    /// Converts all tools in the registry to tool format.
+    /// 
+    /// This is useful when integrating with AI models that support tool calling.
+    ///
+    /// # Returns
+    /// A vector of tool definitions.
+    fn to_tools(&self) -> Vec<ToolModel>;
+
+    /// Returns the number of tools in the registry.
+    ///
+    /// # Returns
+    /// The count of tools currently registered.
+    fn len(&self) -> usize;
+
+    /// Returns a tool by name.
+    ///
+    /// # Arguments
+    /// * `tool_name` - The name of the tool to find.
+    ///
+    /// # Returns
+    /// An `Option` containing a reference to the tool if found, or `None` if not found.
+    fn get_tool(&self, tool_name: &str) -> Option<&Box<dyn Tool>>;
+
+    /// Returns a reference to all tools in the registry.
+    ///
+    /// # Returns
+    /// A slice of references to all tools in the registry.
+    fn get_tools(&self) -> &[Box<dyn Tool>];
+}
 
 /// A trait defining the interface for tools that can be called with arguments.
 ///
@@ -10,8 +100,8 @@ use std::collections::HashMap;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::tools::tool::Tool;
-/// use code_g::openai::model::Parameters;
+/// use code_g::tools::traits::Tool;
+/// use code_g::client::model::Parameters;
 /// use std::collections::HashMap;
 ///
 /// struct MyTool;
@@ -140,17 +230,15 @@ pub trait Tool {
     /// such as invalid arguments, I/O errors, or internal processing errors.
     fn call(&self, args: HashMap<String, String>) -> Result<String, String>;
 
-    /// Converts the tool to OpenAI tool format.
-    ///
-    /// Creates an OpenAI-compatible tool representation that can be used
-    /// with OpenAI's function calling API. This method provides a default
-    /// implementation that constructs the tool using the other trait methods.
+    /// Converts the tool to tool format.
+    /// 
+    /// This is useful when integrating with AI models that support tool calling.
     ///
     /// # Returns
     ///
-    /// An `OpenAiTool` object representing this tool in OpenAI's format.
-    fn to_openai_tool(&self) -> OpenAiTool {
-        OpenAiTool {
+    /// A `Tool` object representing this tool.
+    fn to_tool(&self) -> ToolModel {
+        ToolModel {
             tool_type: ToolType::Function,
             function: Function {
                 name: self.name(),

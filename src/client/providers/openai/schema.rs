@@ -1,9 +1,44 @@
-use crate::openai::model::{AssistantMessage, ChatMessage, OpenAiModel, Tool, ToolCall, ToolType};
+use crate::client::model::{AssistantMessage, ChatMessage, Tool, ToolCall, ToolType};
+
 use serde::de::Error;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
-// Request
+/// Represents the available OpenAI models for chat completions.
+///
+/// This enum defines the different OpenAI models that can be used for chat
+/// completions, each with different capabilities, performance characteristics,
+/// and pricing. The enum uses serde renaming to match the exact model names
+/// expected by the OpenAI API.
+///
+/// # Examples
+///
+/// ```rust
+/// use code_g::client::providers::openai::schema::Model;
+///
+/// let model = Model::Gpt4o;
+/// let mini_model = Model::Gpt4oMini;
+/// let latest_model = Model::GptO3;
+/// ```
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum Model {
+    /// GPT-4o - Latest high-performance model with vision capabilities
+    #[serde(rename = "gpt-4o")]
+    Gpt4o,
+    /// GPT-4o Mini - Smaller, faster, and more cost-effective variant
+    #[serde(rename = "gpt-4o-mini")]
+    Gpt4oMini,
+    /// GPT-o3 - Next-generation model with enhanced reasoning capabilities
+    #[serde(rename = "gpt-o3")]
+    GptO3,
+    /// GPT-o4 Mini - Compact version of the o4 model family
+    #[serde(rename = "gpt-o4-mini")]
+    GptO4Mini,
+    /// GPT-o4 Mini High - High-performance variant of the o4 mini model
+    #[serde(rename = "gpt-o4-mini-high")]
+    GptO4MiniHigh,
+}
+
 /// Represents a chat completion request to the OpenAI API.
 ///
 /// This struct contains all the necessary information to make a chat completion
@@ -20,11 +55,10 @@ use std::convert::TryFrom;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::schema::ChatCompletionRequest;
-/// use code_g::openai::model::OpenAiModel;
+/// use code_g::client::providers::openai::schema::{ChatCompletionRequest, Model};
 ///
 /// let request = ChatCompletionRequest {
-///     model: OpenAiModel::Gpt4o,
+///     model: Model::Gpt4o,
 ///     messages: vec![],
 ///     tools: None,
 ///     response_format: None,
@@ -32,7 +66,7 @@ use std::convert::TryFrom;
 /// ```
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChatCompletionRequest {
-    pub model: OpenAiModel,
+    pub model: Model,
     pub messages: Vec<ChatMessageRequest>,
     pub tools: Option<Vec<Tool>>,
     pub response_format: Option<ResponseFormat>,
@@ -54,7 +88,7 @@ pub struct ChatCompletionRequest {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::schema::{ChatMessageRequest, Role};
+/// use code_g::client::providers::openai::schema::{ChatMessageRequest, Role};
 ///
 /// let message = ChatMessageRequest {
 ///     role: Role::User,
@@ -95,8 +129,8 @@ impl TryFrom<ChatMessage> for ChatMessageRequest {
     ///
     /// ```rust
     /// use std::convert::TryFrom;
-    /// use code_g::openai::model::ChatMessage;
-    /// use code_g::openai::schema::ChatMessageRequest;
+    /// use code_g::client::model::ChatMessage;
+    /// use code_g::client::providers::openai::schema::ChatMessageRequest;
     ///
     /// let chat_msg = ChatMessage::User { content: "Hello".to_string() };
     /// let request = ChatMessageRequest::try_from(chat_msg);
@@ -175,8 +209,8 @@ impl TryFrom<ChatMessageRequest> for ChatMessage {
     ///
     /// ```rust
     /// use std::convert::TryFrom;
-    /// use code_g::openai::schema::{ChatMessageRequest, Role};
-    /// use code_g::openai::model::ChatMessage;
+    /// use code_g::client::providers::openai::schema::{ChatMessageRequest, Role};
+    /// use code_g::client::model::ChatMessage;
     ///
     /// let request = ChatMessageRequest {
     ///     role: Role::User,
@@ -251,7 +285,7 @@ impl TryFrom<ChatMessageRequest> for ChatMessage {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::schema::Role;
+/// use code_g::client::providers::openai::schema::Role;
 ///
 /// let user_role = Role::User;
 /// let system_role = Role::System;
@@ -287,7 +321,7 @@ pub enum Role {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::schema::ChatCompletionResponse;
+/// use code_g::client::providers::openai::schema::ChatCompletionResponse;
 ///
 /// // Typically received from API deserialization
 /// let json_response = r#"{"id":"test","object":"chat.completion","created":123,"model":"gpt-4o","choices":[]}"#;
@@ -317,7 +351,7 @@ pub struct ChatCompletionResponse {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::schema::{ChoiceResponse, MessageResponse, Role};
+/// use code_g::client::providers::openai::schema::{ChoiceResponse, MessageResponse, Role};
 ///
 /// let choice = ChoiceResponse {
 ///     index: 0,
@@ -352,7 +386,7 @@ pub struct ChoiceResponse {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::schema::{MessageResponse, Role};
+/// use code_g::client::providers::openai::schema::{MessageResponse, Role};
 ///
 /// let message = MessageResponse {
 ///     role: Role::Assistant,
@@ -384,7 +418,7 @@ pub struct MessageResponse {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::schema::ContentResponse;
+/// use code_g::client::providers::openai::schema::ContentResponse;
 /// use std::convert::TryFrom;
 ///
 /// let json_content = r#"{"message": "Hello!", "turn_over": true}"#;
@@ -422,7 +456,7 @@ impl TryFrom<&str> for ContentResponse {
     ///
     /// ```rust
     /// use std::convert::TryFrom;
-    /// use code_g::openai::schema::ContentResponse;
+    /// use code_g::client::providers::openai::schema::ContentResponse;
     ///
     /// let json = r#"{"message": "Hello!", "turn_over": false}"#;
     /// let response = ContentResponse::try_from(json).unwrap();
@@ -449,8 +483,8 @@ impl TryFrom<&str> for ContentResponse {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::schema::{ToolCallResponse, FunctionResponse};
-/// use code_g::openai::model::ToolType;
+/// use code_g::client::providers::openai::schema::{ToolCallResponse, FunctionResponse};
+/// use code_g::client::model::ToolType;
 ///
 /// let tool_call = ToolCallResponse {
 ///     id: "call_123".to_string(),
@@ -496,8 +530,8 @@ impl TryFrom<ToolCall> for ToolCallResponse {
     /// ```rust
     /// use std::convert::TryFrom;
     /// use std::collections::HashMap;
-    /// use code_g::openai::model::ToolCall;
-    /// use code_g::openai::schema::ToolCallResponse;
+    /// use code_g::client::model::ToolCall;
+    /// use code_g::client::providers::openai::schema::ToolCallResponse;
     ///
     /// let mut arguments = HashMap::new();
     /// arguments.insert("location".to_string(), "London".to_string());
@@ -547,8 +581,8 @@ impl TryFrom<ToolCallResponse> for ToolCall {
     ///
     /// ```rust
     /// use std::convert::TryFrom;
-    /// use code_g::openai::schema::{ToolCallResponse, FunctionResponse};
-    /// use code_g::openai::model::{ToolCall, ToolType};
+    /// use code_g::client::providers::openai::schema::{ToolCallResponse, FunctionResponse};
+    /// use code_g::client::model::{ToolCall, ToolType};
     ///
     /// let response = ToolCallResponse {
     ///     id: "call_123".to_string(),
@@ -584,7 +618,7 @@ impl TryFrom<ToolCallResponse> for ToolCall {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::schema::FunctionResponse;
+/// use code_g::client::providers::openai::schema::FunctionResponse;
 ///
 /// let function = FunctionResponse {
 ///     name: "calculate_sum".to_string(),
@@ -612,7 +646,7 @@ pub struct FunctionResponse {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::schema::{ResponseFormat, JsonSchema};
+/// use code_g::client::providers::openai::schema::{ResponseFormat, JsonSchema};
 ///
 /// let format = ResponseFormat {
 ///     response_format_type: "json_schema".to_string(),
@@ -649,7 +683,7 @@ pub struct ResponseFormat {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::openai::schema::JsonSchema;
+/// use code_g::client::providers::openai::schema::JsonSchema;
 /// use serde_json::json;
 ///
 /// let schema = JsonSchema {

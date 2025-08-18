@@ -1,6 +1,6 @@
-use code_g::chat::session::ChatSession;
-use code_g::chat::system_prompt::SystemPromptConfig;
-use code_g::openai::client::OpenAIClient;
+use code_g::session::session::ChatSession;
+use code_g::session::system_prompt::SystemPromptConfig;
+use code_g::client::providers::openai::client::OpenAIClient;
 use code_g::tools::registry::Registry;
 use code_g::tui::tui::Tui;
 use std::env;
@@ -22,8 +22,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tui = Tui::new();
 
     let mut chat_session = ChatSession::new(
-        openai_client,
-        tools,
+        Box::new(openai_client),
+        Box::new(tools),
         Box::new(tui),
         SystemPromptConfig::Default,
     );

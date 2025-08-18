@@ -1,5 +1,5 @@
 pub mod registry;
-pub mod tool;
+pub mod traits;
 
 // Tools
 pub mod edit_file;

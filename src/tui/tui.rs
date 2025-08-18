@@ -1,7 +1,7 @@
 use super::formatter::{terminal::TerminalFormatter, text::TextFormatter, tool::ToolFormatter};
 use super::model::{Message, Status};
 use super::state::TuiState;
-use crate::chat::event::{Action, Event, EventHandler};
+use crate::session::event::{Action, Event, EventHandler};
 use std::io::{self, BufRead, Write};
 
 /// Terminal User Interface for the chat application.
@@ -14,7 +14,7 @@ use std::io::{self, BufRead, Write};
 ///
 /// ```rust
 /// use code_g::tui::tui::Tui;
-/// use code_g::chat::event::{Event, EventHandler};
+/// use code_g::session::event::{Event, EventHandler};
 ///
 /// let mut tui = Tui::new();
 ///
@@ -56,7 +56,7 @@ impl EventHandler for Tui {
     ///
     /// ```rust
     /// use code_g::tui::tui::Tui;
-    /// use code_g::chat::event::{Event, EventHandler};
+    /// use code_g::session::event::{Event, EventHandler};
     ///
     /// let mut tui = Tui::new();
     ///
@@ -122,7 +122,7 @@ impl EventHandler for Tui {
     ///
     /// ```rust, no_run
     /// use code_g::tui::tui::Tui;
-    /// use code_g::chat::event::{Action, EventHandler};
+    /// use code_g::session::event::{Action, EventHandler};
     ///
     /// let mut tui = Tui::new();
     ///
@@ -275,7 +275,7 @@ impl Tui {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chat::event::Event;
+    use crate::session::event::Event;
     use std::collections::HashMap;
     use std::io::Cursor;
 

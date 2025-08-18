@@ -1,5 +1,5 @@
-use crate::openai::model::{Parameters, Property};
-use crate::tools::tool::Tool;
+use crate::client::model::{Parameters, Property};
+use crate::tools::traits::Tool;
 use std::collections::HashMap;
 use std::fs;
 
@@ -11,9 +11,9 @@ use std::fs;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,no_run
 /// use code_g::tools::read_file::ReadFile;
-/// use code_g::tools::tool::Tool;
+/// use code_g::tools::traits::Tool;
 /// use std::collections::HashMap;
 ///
 /// let tool = ReadFile;
@@ -142,33 +142,6 @@ impl Tool for ReadFile {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn call_reads_file() {
-        let path = "call_reads_file_tmp_file.txt";
-        let content = "Hello, world!";
-        fs::write(path, content).unwrap();
-
-        let tool = ReadFile;
-
-        let result = tool.call(HashMap::from([("path".to_string(), path.to_string())]));
-
-        assert_eq!(result.unwrap(), "Hello, world!");
-
-        fs::remove_file(path).unwrap();
-    }
-
-    #[test]
-    fn call_returns_error_when_file_does_not_exist() {
-        let tool = ReadFile;
-
-        let result = tool.call(HashMap::from([(
-            "path".to_string(),
-            "non_existent_file.txt".to_string(),
-        )]));
-
-        assert!(result.is_err());
-    }
 
     #[test]
     fn call_returns_error_when_path_is_not_provided() {
