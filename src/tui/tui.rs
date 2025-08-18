@@ -95,13 +95,15 @@ impl EventHandler for Tui {
                 response,
                 parameters,
             } => {
-                if let Some(tool) = Registry::get_from_all_tools(&tool_name) {
-                    let summary = tool.summary_message(&parameters, &response);
-                    self.state.add_tool_response(summary, false);
+                let is_error = response.starts_with("Error");
+
+                let summary = if let Some(tool) = Registry::get_from_all_tools(&tool_name) {
+                    tool.summary_message(&parameters, &response)
                 } else {
-                    let summary = format!("{}: {}", tool_name, response);
-                    self.state.add_tool_response(summary, false);
-                }
+                    format!("{}: {}", tool_name, response)
+                };
+
+                self.state.add_tool_response(summary, is_error);
             }
             Event::AwaitingAssistantResponse => {
                 self.state.set_status(Some(Status::Thinking));
