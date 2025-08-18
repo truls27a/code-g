@@ -107,6 +107,7 @@ pub trait ToolRegistry {
 /// use code_g::tui::model::Status;
 /// use std::collections::HashMap;
 ///
+/// #[derive(Clone)]
 /// struct MyTool;
 ///
 /// impl Tool for MyTool {

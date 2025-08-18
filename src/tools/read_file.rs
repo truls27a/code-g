@@ -86,7 +86,7 @@ impl Tool for ReadFile {
     fn summary_message(&self, args: &HashMap<String, String>, result: &str) -> String {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
         let lines = result.lines().count();
-        format!("Read {} lines from file: {}", lines, path)
+        format!("Read {} lines from {}", lines, path)
     }
 
     /// Executes the read file operation with the provided arguments.

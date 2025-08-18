@@ -104,7 +104,7 @@ impl Tool for WriteFile {
     fn summary_message(&self, args: &HashMap<String, String>, result: &str) -> String {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
         let lines = result.lines().count();
-        format!("Wrote {} lines to file: {}", lines, path)
+        format!("Wrote {} lines to {}", lines, path)
     }
 
     /// Executes the write file operation with the provided arguments.
