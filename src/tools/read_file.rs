@@ -28,6 +28,7 @@ use std::fs;
 /// - The tool reads the entire file content into memory as a string.
 ///   This is not efficient for large files and can cause issues when passed to the AI.
 /// - The file must exist and be readable by the current process.
+#[derive(Clone)]
 pub struct ReadFile;
 
 impl Tool for ReadFile {
@@ -70,16 +71,15 @@ impl Tool for ReadFile {
     /// Generates the approval message for the read file tool with the given arguments.
     fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
-        (
-            "Read File".to_string(),
-            format!("File: {}", path),
-        )
+        ("Read File".to_string(), format!("File: {}", path))
     }
 
     /// Generates the TUI status for the read file tool with the given arguments.
     fn status(&self, args: &HashMap<String, String>) -> Status {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
-        Status::ReadingFile { path: path.to_string() }
+        Status::ReadingFile {
+            path: path.to_string(),
+        }
     }
 
     /// Generates the summary message for the read file tool with the given arguments.

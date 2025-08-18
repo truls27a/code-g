@@ -12,6 +12,7 @@ use std::{
 ///
 /// This tool is used to test the tool registry and tool execution.
 /// It is not intended to be used in production.
+#[derive(Clone)]
 pub struct MockTool {
     name: String,
     description: String,

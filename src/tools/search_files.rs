@@ -33,6 +33,7 @@ const MAX_FILES_RETURNED: usize = 50;
 /// - Supports wildcard patterns: `*` (any characters) and `?` (single character).
 /// - Search is performed recursively from the current directory.
 /// - Files are returned in sorted order.
+#[derive(Clone)]
 pub struct SearchFiles;
 
 impl Tool for SearchFiles {

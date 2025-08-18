@@ -1,7 +1,8 @@
-use super::formatter::{terminal::TerminalFormatter, text::TextFormatter, tool::ToolFormatter};
+use super::formatter::{terminal::TerminalFormatter, text::TextFormatter};
 use super::model::{Message, Status};
 use super::state::TuiState;
 use crate::session::event::{Action, Event, EventHandler};
+use crate::tools::registry::Registry;
 use std::io::{self, BufRead, Write};
 
 /// Terminal User Interface for the chat application.
@@ -81,17 +82,26 @@ impl EventHandler for Tui {
                 tool_name,
                 parameters,
             } => {
-                let status = ToolFormatter::create_status(&tool_name, &parameters);
-                self.state.set_status(Some(status));
+                if let Some(tool) = Registry::get_from_all_tools(&tool_name) {
+                    let status = tool.status(&parameters);
+                    self.state.set_status(Some(status));
+                } else {
+                    self.state
+                        .set_status(Some(Status::ExecutingTool { tool_name }));
+                }
             }
             Event::ReceivedToolResponse {
                 tool_name,
                 response,
                 parameters,
             } => {
-                let (summary, is_error) =
-                    ToolFormatter::create_summary(&response, &tool_name, parameters);
-                self.state.add_tool_response(summary, is_error);
+                if let Some(tool) = Registry::get_from_all_tools(&tool_name) {
+                    let summary = tool.summary_message(&parameters, &response);
+                    self.state.add_tool_response(summary, false);
+                } else {
+                    let summary = format!("{}: {}", tool_name, response);
+                    self.state.add_tool_response(summary, false);
+                }
             }
             Event::AwaitingAssistantResponse => {
                 self.state.set_status(Some(Status::Thinking));

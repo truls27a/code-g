@@ -32,6 +32,7 @@ use std::fs;
 /// - The tool will fail if the target string appears multiple times in the file
 /// - Empty replacement strings can be used to delete content
 /// - The tool preserves file permissions and encoding
+#[derive(Clone)]
 pub struct EditFile;
 
 impl Tool for EditFile {
@@ -108,7 +109,9 @@ impl Tool for EditFile {
     /// Generates the TUI status for the edit file tool with the given arguments.
     fn status(&self, args: &HashMap<String, String>) -> Status {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
-        Status::EditingFile { path: path.to_string() }
+        Status::EditingFile {
+            path: path.to_string(),
+        }
     }
 
     /// Generates the summary message for the edit file tool with the given arguments.

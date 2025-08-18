@@ -94,10 +94,7 @@ impl ToolRegistry for Registry {
     /// // Use tools with AI model
     /// ```
     fn to_tools(&self) -> Vec<ToolModel> {
-        self.tools
-            .iter()
-            .map(|tool| tool.to_tool())
-            .collect()
+        self.tools.iter().map(|tool| tool.to_tool()).collect()
     }
 
     /// Returns a reference to all tools in the registry.
@@ -182,6 +179,20 @@ impl Registry {
     /// ```
     pub fn new() -> Self {
         Self { tools: vec![] }
+    }
+
+    /// Finds a tool by name in all tools.
+    ///
+    /// # Arguments
+    ///
+    /// * `tool_name` - The name of the tool to find.
+    ///
+    /// # Returns
+    ///
+    /// An `Option` containing an owned cloned tool if found, or `None` if not found.
+    pub fn get_from_all_tools(tool_name: &str) -> Option<Box<dyn Tool>> {
+        let registry = Registry::all_tools();
+        registry.get_tool(tool_name).cloned()
     }
 
     /// Creates a registry with the provided tools.

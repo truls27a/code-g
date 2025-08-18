@@ -31,6 +31,7 @@ use std::process::Command;
 /// - Both stdout and stderr are captured and returned
 /// - Long-running commands may cause timeouts
 /// - Be cautious with commands that modify the filesystem
+#[derive(Clone)]
 pub struct ExecuteCommand;
 
 impl Tool for ExecuteCommand {

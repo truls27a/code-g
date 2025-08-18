@@ -2,6 +2,7 @@ use crate::client::model::{Function, Parameters, Tool as ToolModel, ToolType};
 use crate::tui::model::Status;
 use std::collections::HashMap;
 
+
 /// A trait defining the interface for tool registries.
 ///
 /// The `ToolRegistry` trait provides a standardized interface for implementing
@@ -63,7 +64,7 @@ pub trait ToolRegistry {
     fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String>;
 
     /// Converts all tools in the registry to tool format.
-    /// 
+    ///
     /// This is useful when integrating with AI models that support tool calling.
     ///
     /// # Returns
@@ -137,7 +138,7 @@ pub trait ToolRegistry {
 ///     fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
 ///         ("Simple Tool".to_string(), "Running my_tool".to_string())
 ///     }
-/// 
+///
 ///     fn status(&self, args: &HashMap<String, String>) -> Status {
 ///         Status::ExecutingTool { tool_name: self.name() }
 ///     }
@@ -152,7 +153,7 @@ pub trait ToolRegistry {
 ///     }
 /// }
 /// ```
-pub trait Tool {
+pub trait Tool: ToolClone {
     /// Returns the name of the tool.
     ///
     /// The name should be a unique identifier for the tool, typically in snake_case.
@@ -272,7 +273,7 @@ pub trait Tool {
     fn call(&self, args: HashMap<String, String>) -> Result<String, String>;
 
     /// Converts the tool to tool format.
-    /// 
+    ///
     /// This is useful when integrating with AI models that support tool calling.
     ///
     /// # Returns
@@ -288,5 +289,25 @@ pub trait Tool {
                 strict: self.strict(),
             },
         }
+    }
+}
+
+/// Enables cloning of boxed trait objects implementing `Tool`.
+pub trait ToolClone {
+    fn box_clone(&self) -> Box<dyn Tool>;
+}
+
+impl<T> ToolClone for T
+where
+    T: 'static + Tool + Clone,
+{
+    fn box_clone(&self) -> Box<dyn Tool> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn Tool> {
+    fn clone(&self) -> Box<dyn Tool> {
+        self.box_clone()
     }
 }

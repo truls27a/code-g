@@ -28,6 +28,7 @@ use std::fs;
 /// # Notes
 /// - The tool overwrites the file if it already exists.
 /// - The tool creates the file if it does not exist.
+#[derive(Clone)]
 pub struct WriteFile;
 
 impl Tool for WriteFile {
@@ -94,7 +95,9 @@ impl Tool for WriteFile {
     /// Generates the TUI status for the write file tool with the given arguments.
     fn status(&self, args: &HashMap<String, String>) -> Status {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
-        Status::WritingFile { path: path.to_string() }
+        Status::WritingFile {
+            path: path.to_string(),
+        }
     }
 
     /// Generates the summary message for the write file tool with the given arguments.
