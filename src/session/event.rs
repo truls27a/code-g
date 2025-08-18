@@ -31,7 +31,7 @@ pub enum Event {
         tool_name: String,
         parameters: HashMap<String, String>,
     },
-    /// A tool response was received with tool name, response, and parameters
+    /// A tool response was received with tool name, response, parameters, and approval status
     ReceivedToolResponse {
         tool_name: String,
         response: String,
