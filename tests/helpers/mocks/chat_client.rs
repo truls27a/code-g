@@ -62,11 +62,6 @@ impl ChatClient for MockChatClient {
         chat_history: &[ChatMessage],
         tools: &[Tool],
     ) -> Result<ChatResult, ChatClientError> {
-        // Debug print the input parameters
-        println!("Debug: Model: {:?}", model);
-        println!("Debug: Chat History: {:?}", chat_history);
-        println!("Debug: Tools: {:?}", tools);
-
         // Record the call
         self.calls
             .lock()
