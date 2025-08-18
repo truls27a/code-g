@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex};
 /// They are ignored by default. To run them locally on Windows PowerShell:
 ///
 ///   $env:OPENAI_API_KEY = "sk-..."
-///   cargo test --test chat_session_e2e -- --ignored --test-threads=1
+///   cargo test --test chat_session_live -- --ignored
 ///
 /// Note: These tests will create and edit files in the working directory when the
 /// assistant decides to use tools. They are meant for local, manual verification.
