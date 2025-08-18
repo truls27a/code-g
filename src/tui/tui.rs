@@ -145,10 +145,9 @@ impl EventHandler for Tui {
         match action {
             Action::RequestUserInput => self.read_user_input(),
             Action::RequestUserApproval {
-                operation,
-                details,
+                approval_message,
                 tool_name: _,
-            } => self.request_user_approval(&operation, &details),
+            } => self.request_user_approval(&approval_message),
         }
     }
 }
@@ -217,21 +216,13 @@ impl Tui {
         Ok(input.trim().to_string())
     }
 
-    fn request_user_approval(
-        &mut self,
-        operation: &str,
-        details: &str,
-    ) -> Result<String, io::Error> {
-        // Save current cursor position and move to bottom to show approval prompt
-        print!("{}", TerminalFormatter::save_cursor());
+    fn request_user_approval(&mut self, approval_message: &str) -> Result<String, io::Error> {
+        // Move to bottom and then save current cursor position to show approval prompt
         print!("{}", TerminalFormatter::move_to_bottom());
+        print!("{}", TerminalFormatter::save_cursor());
 
         // Display approval prompt
-        writeln!(self.writer)?;
-        writeln!(self.writer, "⚠️  Permission Required ⚠️")?;
-        writeln!(self.writer, "Operation: {}", operation)?;
-        writeln!(self.writer, "Details: {}", details)?;
-        writeln!(self.writer)?;
+        writeln!(self.writer, "{}", approval_message)?;
         print!("[A]pprove / [D]ecline: ");
         io::stdout().flush()?;
 

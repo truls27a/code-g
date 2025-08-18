@@ -95,8 +95,8 @@ impl Tool for MockTool {
         self.requires_approval
     }
 
-    fn approval_message(&self, _args: &HashMap<String, String>) -> (String, String) {
-        (self.name.clone(), self.approval_message.clone())
+    fn approval_message(&self, _args: &HashMap<String, String>) -> String {
+        self.approval_message.clone()
     }
 
     fn status(&self, _args: &HashMap<String, String>) -> Status {

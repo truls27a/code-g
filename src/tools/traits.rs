@@ -219,7 +219,7 @@ pub trait Tool: ToolClone {
     /// # Returns
     ///
     /// A tuple containing (operation_name, details) for display to the user.
-    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String);
+    fn approval_message(&self, args: &HashMap<String, String>) -> String;
 
     /// Generates the TUI status for this tool with the given arguments.
     ///

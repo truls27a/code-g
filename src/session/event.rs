@@ -60,8 +60,7 @@ pub enum Action {
     RequestUserInput,
     /// Request user approval for a potentially dangerous operation
     RequestUserApproval {
-        operation: String,
-        details: String,
+        approval_message: String,
         tool_name: String,
     },
 }

@@ -69,9 +69,9 @@ impl Tool for ReadFile {
     }
 
     /// Generates the approval message for the read file tool with the given arguments.
-    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+    fn approval_message(&self, args: &HashMap<String, String>) -> String {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
-        ("Read File".to_string(), format!("File: {}", path))
+        format!("CodeG wants to read file {}", path)
     }
 
     /// Generates the TUI status for the read file tool with the given arguments.

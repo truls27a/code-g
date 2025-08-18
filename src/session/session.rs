@@ -338,20 +338,16 @@ impl ChatSession {
         tool_name: &str,
         parameters: &HashMap<String, String>,
     ) -> Result<bool, ChatSessionError> {
-        let (operation, details) = if let Some(tool) = self.tools.get_tool(tool_name) {
+        let approval_message = if let Some(tool) = self.tools.get_tool(tool_name) {
             tool.approval_message(parameters)
         } else {
-            (
-                "Unknown Operation".to_string(),
-                format!("Tool: {}", tool_name),
-            )
+            format!("CodeG wants to use tool: {}", tool_name)
         };
 
         let response = self
             .event_handler
             .handle_action(Action::RequestUserApproval {
-                operation,
-                details,
+                approval_message,
                 tool_name: tool_name.to_string(),
             })
             .map_err(|e| {

@@ -72,12 +72,9 @@ impl Tool for ExecuteCommand {
     }
 
     /// Generates the approval message for the execute command tool with the given arguments.
-    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+    fn approval_message(&self, args: &HashMap<String, String>) -> String {
         let command = args.get("command").map(|s| s.as_str()).unwrap_or("unknown");
-        (
-            "Execute Command".to_string(),
-            format!("Command: {}", command),
-        )
+        format!("CodeG wants to execute command {}", command)
     }
 
     /// Generates the TUI status for the execute command tool with the given arguments.

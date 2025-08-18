@@ -76,12 +76,9 @@ impl Tool for SearchFiles {
     }
 
     /// Generates the approval message for the search files tool with the given arguments.
-    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+    fn approval_message(&self, args: &HashMap<String, String>) -> String {
         let pattern = args.get("pattern").map(|s| s.as_str()).unwrap_or("unknown");
-        (
-            "Search Files".to_string(),
-            format!("Pattern: {}", pattern),
-        )
+        format!("CodeG wants to search for files matching pattern {}", pattern)
     }
 
     /// Generates the TUI status for the search files tool with the given arguments.

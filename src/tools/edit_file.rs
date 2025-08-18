@@ -93,17 +93,9 @@ impl Tool for EditFile {
     }
 
     /// Generates the approval message for the edit file tool with the given arguments.
-    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+    fn approval_message(&self, args: &HashMap<String, String>) -> String {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
-        let old_string = args.get("old_string").map(|s| s.as_str()).unwrap_or("");
-        let new_string = args.get("new_string").map(|s| s.as_str()).unwrap_or("");
-        (
-            "Edit File".to_string(),
-            format!(
-                "File: {}\nReplace: {:?}\nWith: {:?}",
-                path, old_string, new_string
-            ),
-        )
+        format!("CodeG wants to edit file {}", path)
     }
 
     /// Generates the TUI status for the edit file tool with the given arguments.

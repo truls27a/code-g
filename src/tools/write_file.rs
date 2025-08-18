@@ -78,18 +78,9 @@ impl Tool for WriteFile {
     }
 
     /// Generates the approval message for the write file tool with the given arguments.
-    fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
+    fn approval_message(&self, args: &HashMap<String, String>) -> String {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
-        let content = args.get("content").map(|s| s.as_str()).unwrap_or("");
-        let content_preview = if content.len() > 100 {
-            format!("{}...", &content[..100])
-        } else {
-            content.to_string()
-        };
-        (
-            "Write File".to_string(),
-            format!("File: {}\nContent: {}", path, content_preview),
-        )
+        format!("CodeG wants to write to file {}", path)
     }
 
     /// Generates the TUI status for the write file tool with the given arguments.
