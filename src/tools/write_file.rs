@@ -1,5 +1,6 @@
 use crate::client::model::{Parameters, Property};
 use crate::tools::traits::Tool;
+use crate::tui::model::Status;
 use std::collections::HashMap;
 use std::fs;
 
@@ -30,32 +31,17 @@ use std::fs;
 pub struct WriteFile;
 
 impl Tool for WriteFile {
-    /// Returns the name identifier for this tool.
-    ///
-    /// # Returns
-    ///
-    /// A string containing "write_file" as the tool identifier.
+    /// Returns the name identifier for the write file tool.
     fn name(&self) -> String {
         "write_file".to_string()
     }
 
-    /// Returns a human-readable description of what this tool does.
-    ///
-    /// # Returns
-    ///
-    /// A string describing the tool's functionality for writing files.
+    /// Returns a human-readable description of what the write file tool does.
     fn description(&self) -> String {
         "Write to a file. If the file does not exist, it will be created. If the file exists, it will be overwritten.".to_string()
     }
 
-    /// Returns the parameter schema for this tool.
-    ///
-    /// Defines the required parameters for the write_file tool: path and content.
-    /// Both parameters are required string values.
-    ///
-    /// # Returns
-    ///
-    /// A Parameters object containing the schema for path and content arguments.
+    /// Returns the parameter schema for the write file tool.
     fn parameters(&self) -> Parameters {
         Parameters {
             param_type: "object".to_string(),
@@ -80,33 +66,17 @@ impl Tool for WriteFile {
         }
     }
 
-    /// Returns whether this tool uses strict parameter validation.
-    ///
-    /// # Returns
-    ///
-    /// Always returns true, indicating strict parameter validation is enabled.
+    /// The write file tool uses strict parameter validation.
     fn strict(&self) -> bool {
         true
     }
 
-    /// Returns whether this tool requires user approval before execution.
-    ///
-    /// # Returns
-    ///
-    /// Always returns true, as writing files modifies the filesystem.
+    /// The write file tool requires approval before execution.
     fn requires_approval(&self) -> bool {
         true
     }
 
-    /// Generates the approval message for this tool with the given arguments.
-    ///
-    /// # Arguments
-    ///
-    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
-    ///
-    /// # Returns
-    ///
-    /// A tuple containing (operation_name, details) for display to the user.
+    /// Generates the approval message for the write file tool with the given arguments.
     fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
         let content = args.get("content").map(|s| s.as_str()).unwrap_or("");
@@ -119,6 +89,19 @@ impl Tool for WriteFile {
             "Write File".to_string(),
             format!("File: {}\nContent: {}", path, content_preview),
         )
+    }
+
+    /// Generates the TUI status for the write file tool with the given arguments.
+    fn status(&self, args: &HashMap<String, String>) -> Status {
+        let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+        Status::WritingFile { path: path.to_string() }
+    }
+
+    /// Generates the summary message for the write file tool with the given arguments.
+    fn summary_message(&self, args: &HashMap<String, String>, result: &str) -> String {
+        let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+        let lines = result.lines().count();
+        format!("Wrote {} lines to file: {}", lines, path)
     }
 
     /// Executes the write file operation with the provided arguments.

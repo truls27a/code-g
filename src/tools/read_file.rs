@@ -1,5 +1,6 @@
 use crate::client::model::{Parameters, Property};
 use crate::tools::traits::Tool;
+use crate::tui::model::Status;
 use std::collections::HashMap;
 use std::fs;
 
@@ -30,32 +31,17 @@ use std::fs;
 pub struct ReadFile;
 
 impl Tool for ReadFile {
-    /// Returns the name identifier for this tool.
-    ///
-    /// # Returns
-    ///
-    /// A string containing "read_file" as the tool identifier.
+    /// Returns the name identifier for the read file tool.
     fn name(&self) -> String {
         "read_file".to_string()
     }
 
-    /// Returns a human-readable description of what this tool does.
-    ///
-    /// # Returns
-    ///
-    /// A string describing the tool's functionality for reading files.
+    /// Returns a human-readable description of what the read file tool does.
     fn description(&self) -> String {
         "Read the content of a file".to_string()
     }
 
-    /// Returns the parameter schema for this tool.
-    ///
-    /// Defines the required parameter for the read_file tool: path.
-    /// The path parameter is a required string value.
-    ///
-    /// # Returns
-    ///
-    /// A Parameters object containing the schema for the path argument.
+    /// Returns the parameter schema for the read file tool.
     fn parameters(&self) -> Parameters {
         Parameters {
             param_type: "object".to_string(),
@@ -71,39 +57,36 @@ impl Tool for ReadFile {
         }
     }
 
-    /// Returns whether this tool uses strict parameter validation.
-    ///
-    /// # Returns
-    ///
-    /// Always returns true, indicating strict parameter validation is enabled.
+    /// The read file tool uses strict parameter validation.
     fn strict(&self) -> bool {
         true
     }
 
-    /// Returns whether this tool requires user approval before execution.
-    ///
-    /// # Returns
-    ///
-    /// Always returns false, as reading files is a safe operation.
+    /// The read file tool does not require user approval before execution.
     fn requires_approval(&self) -> bool {
         false
     }
 
-    /// Generates the approval message for this tool with the given arguments.
-    ///
-    /// # Arguments
-    ///
-    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
-    ///
-    /// # Returns
-    ///
-    /// A tuple containing (operation_name, details) for display to the user.
+    /// Generates the approval message for the read file tool with the given arguments.
     fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
         (
             "Read File".to_string(),
             format!("File: {}", path),
         )
+    }
+
+    /// Generates the TUI status for the read file tool with the given arguments.
+    fn status(&self, args: &HashMap<String, String>) -> Status {
+        let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+        Status::ReadingFile { path: path.to_string() }
+    }
+
+    /// Generates the summary message for the read file tool with the given arguments.
+    fn summary_message(&self, args: &HashMap<String, String>, result: &str) -> String {
+        let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+        let lines = result.lines().count();
+        format!("Read {} lines from file: {}", lines, path)
     }
 
     /// Executes the read file operation with the provided arguments.

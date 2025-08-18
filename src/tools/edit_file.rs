@@ -1,5 +1,6 @@
 use crate::client::model::{Parameters, Property};
 use crate::tools::traits::Tool;
+use crate::tui::model::Status;
 use std::collections::HashMap;
 use std::fs;
 
@@ -34,32 +35,17 @@ use std::fs;
 pub struct EditFile;
 
 impl Tool for EditFile {
-    /// Returns the name identifier for this tool.
-    ///
-    /// # Returns
-    ///
-    /// The string "edit_file" which identifies this tool in the tool registry.
+    /// Returns the name identifier for the edit file tool.
     fn name(&self) -> String {
         "edit_file".to_string()
     }
 
-    /// Returns a human-readable description of what this tool does.
-    ///
-    /// # Returns
-    ///
-    /// A description explaining that this tool edits files by replacing strings.
+    /// Returns a human-readable description of what the edit file tool does.
     fn description(&self) -> String {
         "Edit a file by replacing a specific string with new content".to_string()
     }
 
-    /// Returns the parameter schema for this tool.
-    ///
-    /// Defines the required parameters for the edit_file tool: path, old_string,
-    /// and new_string. All parameters are required and must be strings.
-    ///
-    /// # Returns
-    ///
-    /// A Parameters struct containing the schema definition for tool arguments.
+    /// Returns the parameter schema for the edit file tool.
     fn parameters(&self) -> Parameters {
         Parameters {
             param_type: "object".to_string(),
@@ -95,34 +81,17 @@ impl Tool for EditFile {
         }
     }
 
-    /// Returns whether this tool uses strict parameter validation.
-    ///
-    /// # Returns
-    ///
-    /// Always returns true, indicating that this tool requires strict adherence
-    /// to the parameter schema.
+    /// The edit file tool uses strict parameter validation.
     fn strict(&self) -> bool {
         true
     }
 
-    /// Returns whether this tool requires user approval before execution.
-    ///
-    /// # Returns
-    ///
-    /// Always returns true, as editing files modifies the filesystem.
+    /// The edit file tool requires user approval before execution.
     fn requires_approval(&self) -> bool {
         true
     }
 
-    /// Generates the approval message for this tool with the given arguments.
-    ///
-    /// # Arguments
-    ///
-    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
-    ///
-    /// # Returns
-    ///
-    /// A tuple containing (operation_name, details) for display to the user.
+    /// Generates the approval message for the edit file tool with the given arguments.
     fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
         let old_string = args.get("old_string").map(|s| s.as_str()).unwrap_or("");
@@ -134,6 +103,19 @@ impl Tool for EditFile {
                 path, old_string, new_string
             ),
         )
+    }
+
+    /// Generates the TUI status for the edit file tool with the given arguments.
+    fn status(&self, args: &HashMap<String, String>) -> Status {
+        let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+        Status::EditingFile { path: path.to_string() }
+    }
+
+    /// Generates the summary message for the edit file tool with the given arguments.
+    fn summary_message(&self, args: &HashMap<String, String>, result: &str) -> String {
+        let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
+        let lines = result.lines().count();
+        format!("Edited {} lines in {}", lines, path)
     }
 
     /// Executes the file editing operation.

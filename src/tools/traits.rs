@@ -1,4 +1,5 @@
 use crate::client::model::{Function, Parameters, Tool as ToolModel, ToolType};
+use crate::tui::model::Status;
 use std::collections::HashMap;
 
 /// A trait defining the interface for tool registries.
@@ -208,6 +209,37 @@ pub trait Tool {
     ///
     /// A tuple containing (operation_name, details) for display to the user.
     fn approval_message(&self, args: &HashMap<String, String>) -> (String, String);
+
+    /// Generates the TUI status for this tool with the given arguments.
+    ///
+    /// This method creates a user-friendly description of what the tool is doing
+    /// when executed with the provided arguments. It returns a status that can
+    /// be displayed to the user to provide feedback on the tool's progress.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
+    ///
+    /// # Returns
+    ///
+    /// A `Status` containing the status.
+    fn status(&self, args: &HashMap<String, String>) -> Status;
+
+    /// Generates the summary message for this tool with the given arguments.
+    ///
+    /// This method creates a user-friendly description of what the tool did
+    /// when executed with the provided arguments. It returns a string that can
+    /// be displayed to the user to provide feedback on the tool's result.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
+    /// * `result` - A `String` containing the result of the tool execution.
+    ///
+    /// # Returns
+    ///
+    /// A `String` containing the summary message.
+    fn summary_message(&self, args: &HashMap<String, String>, result: &str) -> String;
 
     /// Executes the tool with the provided arguments.
     ///

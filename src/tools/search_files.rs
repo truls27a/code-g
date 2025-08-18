@@ -1,5 +1,6 @@
 use crate::client::model::{Parameters, Property};
 use crate::tools::traits::Tool;
+use crate::tui::model::Status;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -35,32 +36,17 @@ const MAX_FILES_RETURNED: usize = 50;
 pub struct SearchFiles;
 
 impl Tool for SearchFiles {
-    /// Returns the name identifier for this tool.
-    ///
-    /// # Returns
-    ///
-    /// A string containing "search_files" as the tool identifier.
+    /// Returns the name identifier for the search files tool.
     fn name(&self) -> String {
         "search_files".to_string()
     }
 
-    /// Returns a human-readable description of what this tool does.
-    ///
-    /// # Returns
-    ///
-    /// A string describing the tool's functionality for searching files with patterns.
+    /// Returns a human-readable description of what the search files tool does.
     fn description(&self) -> String {
         "Search for files matching a pattern. The pattern can be a specific filename or use wildcards (e.g., '*.rs' for all Rust files, 'config.*' for files starting with 'config').".to_string()
     }
 
-    /// Returns the parameter schema for this tool.
-    ///
-    /// Defines the required parameter for the search_files tool: pattern.
-    /// The pattern parameter is a required string value that supports wildcards.
-    ///
-    /// # Returns
-    ///
-    /// A Parameters object containing the schema for the pattern argument.
+    /// Returns the parameter schema for the search files tool.
     fn parameters(&self) -> Parameters {
         Parameters {
             param_type: "object".to_string(),
@@ -78,39 +64,36 @@ impl Tool for SearchFiles {
         }
     }
 
-    /// Returns whether this tool uses strict parameter validation.
-    ///
-    /// # Returns
-    ///
-    /// Always returns true, indicating strict parameter validation is enabled.
+    /// The search files tool uses strict parameter validation.
     fn strict(&self) -> bool {
         true
     }
 
-    /// Returns whether this tool requires user approval before execution.
-    ///
-    /// # Returns
-    ///
-    /// Always returns false, as searching files is a safe, read-only operation.
+    /// The search files tool does not require user approval before execution.
     fn requires_approval(&self) -> bool {
         false
     }
 
-    /// Generates the approval message for this tool with the given arguments.
-    ///
-    /// # Arguments
-    ///
-    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
-    ///
-    /// # Returns
-    ///
-    /// A tuple containing (operation_name, details) for display to the user.
+    /// Generates the approval message for the search files tool with the given arguments.
     fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
         let pattern = args.get("pattern").map(|s| s.as_str()).unwrap_or("unknown");
         (
             "Search Files".to_string(),
             format!("Pattern: {}", pattern),
         )
+    }
+
+    /// Generates the TUI status for the search files tool with the given arguments.
+    fn status(&self, args: &HashMap<String, String>) -> Status {
+        let pattern = args.get("pattern").map(|s| s.as_str()).unwrap_or("unknown");
+        Status::SearchingFiles { pattern: pattern.to_string() }
+    }
+
+    /// Generates the summary message for the search files tool with the given arguments.
+    fn summary_message(&self, args: &HashMap<String, String>, result: &str) -> String {
+        let pattern = args.get("pattern").map(|s| s.as_str()).unwrap_or("unknown");
+        let lines = result.lines().count();
+        format!("Found {} files matching pattern '{}'", lines, pattern)
     }
 
     /// Executes the file search operation with the provided arguments.

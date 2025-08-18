@@ -1,5 +1,6 @@
 use crate::client::model::{Parameters, Property};
 use crate::tools::traits::Tool;
+use crate::tui::model::Status;
 use std::collections::HashMap;
 use std::process::Command;
 
@@ -33,32 +34,17 @@ use std::process::Command;
 pub struct ExecuteCommand;
 
 impl Tool for ExecuteCommand {
-    /// Returns the name identifier for this tool.
-    ///
-    /// # Returns
-    ///
-    /// The string "execute_command" which identifies this tool in the tool registry.
+    /// Returns the name identifier for the execute command tool.
     fn name(&self) -> String {
         "execute_command".to_string()
     }
 
-    /// Returns a human-readable description of what this tool does.
-    ///
-    /// # Returns
-    ///
-    /// A description explaining that this tool executes shell commands.
+    /// Returns a human-readable description of what the execute command tool does.
     fn description(&self) -> String {
         "Execute a shell command and return its output".to_string()
     }
 
-    /// Returns the parameter schema for this tool.
-    ///
-    /// Defines the required parameter for the execute_command tool: command.
-    /// The command parameter is required and must be a string.
-    ///
-    /// # Returns
-    ///
-    /// A Parameters struct containing the schema definition for tool arguments.
+    /// Returns the parameter schema for the execute command tool.
     fn parameters(&self) -> Parameters {
         Parameters {
             param_type: "object".to_string(),
@@ -74,40 +60,35 @@ impl Tool for ExecuteCommand {
         }
     }
 
-    /// Returns whether this tool uses strict parameter validation.
-    ///
-    /// # Returns
-    ///
-    /// Always returns true, indicating that this tool requires strict adherence
-    /// to the parameter schema.
+    /// The execute command tool uses strict parameter validation.
     fn strict(&self) -> bool {
         true
     }
 
-    /// Returns whether this tool requires user approval before execution.
-    ///
-    /// # Returns
-    ///
-    /// Always returns true, as executing commands can potentially modify the system.
+    /// The execute command tool requires user approval before execution.
     fn requires_approval(&self) -> bool {
         true
     }
 
-    /// Generates the approval message for this tool with the given arguments.
-    ///
-    /// # Arguments
-    ///
-    /// * `args` - A HashMap containing the tool arguments as key-value string pairs.
-    ///
-    /// # Returns
-    ///
-    /// A tuple containing (operation_name, details) for display to the user.
+    /// Generates the approval message for the execute command tool with the given arguments.
     fn approval_message(&self, args: &HashMap<String, String>) -> (String, String) {
         let command = args.get("command").map(|s| s.as_str()).unwrap_or("unknown");
         (
             "Execute Command".to_string(),
             format!("Command: {}", command),
         )
+    }
+
+    /// Generates the TUI status for the execute command tool with the given arguments.
+    fn status(&self, args: &HashMap<String, String>) -> Status {
+        let command = args.get("command").map(|s| s.as_str()).unwrap_or("unknown");
+        Status::ExecutingCommand { command: command.to_string() }
+    }
+
+    /// Generates the summary message for the execute command tool with the given arguments.
+    fn summary_message(&self, args: &HashMap<String, String>, _result: &str) -> String {
+        let command = args.get("command").map(|s| s.as_str()).unwrap_or("unknown");
+        format!("Executed command '{}'", command)
     }
 
     /// Executes the shell command and returns its output.
