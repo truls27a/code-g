@@ -2,6 +2,7 @@
 
 use code_g::client::model::{Parameters, Tool as ToolModel};
 use code_g::tools::traits::{Tool, ToolRegistry};
+use code_g::tui::model::Status;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -95,6 +96,14 @@ impl Tool for MockTool {
 
     fn approval_message(&self, _args: &HashMap<String, String>) -> (String, String) {
         (self.name.clone(), self.approval_message.clone())
+    }
+
+    fn status(&self, _args: &HashMap<String, String>) -> Status {
+        Status::ExecutingTool { tool_name: self.name.clone() }
+    }
+
+    fn summary_message(&self, _args: &HashMap<String, String>, result: &str) -> String {
+        format!("Tool '{}' completed with result: {}", self.name, result)
     }
 
     fn call(&self, args: HashMap<String, String>) -> Result<String, String> {
