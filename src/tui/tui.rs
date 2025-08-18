@@ -96,22 +96,26 @@ impl EventHandler for Tui {
                 parameters,
                 approved,
             } => {
-                if !approved {
-                    self.state.add_tool_response(
-                        format!("Operation cancelled by user: {} with parameters {:?}", tool_name, parameters),
-                        false,
-                    );
-                    return;
-                }
-                let is_error = response.starts_with("Error:");
+                let tool = Registry::get_from_all_tools(&tool_name);
 
-                let summary = if let Some(tool) = Registry::get_from_all_tools(&tool_name) {
-                    tool.summary_message(&parameters, &response)
+                if approved {
+                    let is_error = response.starts_with("Error:");
+
+                    let summary = if let Some(tool) = tool {
+                        tool.summary_message(&parameters, &response)
+                    } else {
+                        format!("Tool '{}' executed successfully", tool_name)
+                    };
+
+                    self.state.add_tool_response(summary, is_error);
                 } else {
-                    format!("{}: {}", tool_name, response)
-                };
-
-                self.state.add_tool_response(summary, is_error);
+                    let declined_message = if let Some(tool) = tool {
+                        tool.declined_message(&parameters)
+                    } else {
+                        format!("Tool '{}' was declined by user", tool_name)
+                    };
+                    self.state.add_tool_response(declined_message, false);
+                }
             }
             Event::AwaitingAssistantResponse => {
                 self.state.set_status(Some(Status::Thinking));
