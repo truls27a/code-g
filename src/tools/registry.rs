@@ -69,11 +69,10 @@ impl ToolRegistry for Registry {
     /// let result = registry.call_tool("read_file", args);
     /// ```
     fn call_tool(&self, tool_name: &str, args: HashMap<String, String>) -> Result<String, String> {
-        let tool = self.tools.iter().find(|t| t.name() == tool_name);
-        if let Some(tool) = tool {
-            tool.call(args)
-        } else {
-            Err(format!("Tool {} not found", tool_name))
+        let tool = self.get_tool(tool_name).ok_or(format!("Tool {} not found", tool_name))?;
+        match tool.call(args) {
+            Ok(result) => Ok(result),
+            Err(error_message) => Err(format!("Error: {}", error_message)), // Ensure error message is always prefixed with "Error:"
         }
     }
 

@@ -95,7 +95,7 @@ impl EventHandler for Tui {
                 response,
                 parameters,
             } => {
-                let is_error = response.starts_with("Error");
+                let is_error = response.starts_with("Error:");
 
                 let summary = if let Some(tool) = Registry::get_from_all_tools(&tool_name) {
                     tool.summary_message(&parameters, &response)
