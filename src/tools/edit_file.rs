@@ -1,5 +1,6 @@
 use crate::client::model::{Parameters, Property};
 use crate::tools::traits::Tool;
+use crate::tui::formatter::text::TextFormatter;
 use crate::tui::model::Status;
 use std::collections::HashMap;
 use std::fs;
@@ -214,22 +215,76 @@ impl EditFile {
                 let occurrence_count = content.matches(old_string).count();
 
                 if occurrence_count == 0 {
-                    return format!(
-                        "--- {path}\n+++ {path}\n@@ -0,0 +0,0 @@\n! Note: the specified old_string was not found; the operation will fail.\n- {old}\n+ {new}\n",
-                        path = path,
-                        old = old_string,
-                        new = new_string
-                    );
+                    let mut diff = String::new();
+                    diff.push_str(&TextFormatter::colored_text(
+                        &format!("--- {}", path),
+                        TextFormatter::cyan(),
+                    ));
+                    diff.push('\n');
+                    diff.push_str(&TextFormatter::colored_text(
+                        &format!("+++ {}", path),
+                        TextFormatter::cyan(),
+                    ));
+                    diff.push('\n');
+                    diff.push_str(&TextFormatter::colored_text(
+                        "@@ -0,0 +0,0 @@",
+                        TextFormatter::yellow(),
+                    ));
+                    diff.push('\n');
+                    diff.push_str(&TextFormatter::colored_text(
+                        "! Note: the specified old_string was not found; the operation will fail.",
+                        TextFormatter::yellow(),
+                    ));
+                    diff.push('\n');
+                    diff.push_str(&TextFormatter::colored_text(
+                        &format!("- {}", old_string),
+                        TextFormatter::red(),
+                    ));
+                    diff.push('\n');
+                    diff.push_str(&TextFormatter::colored_text(
+                        &format!("+ {}", new_string),
+                        TextFormatter::green(),
+                    ));
+                    diff.push('\n');
+                    return diff;
                 }
 
                 if occurrence_count > 1 {
-                    return format!(
-                        "--- {path}\n+++ {path}\n@@ -0,0 +0,0 @@\n! Note: the specified old_string appears {n} times; operation requires a unique match.\n- {old}\n+ {new}\n",
-                        path = path,
-                        n = occurrence_count,
-                        old = old_string,
-                        new = new_string
-                    );
+                    let mut diff = String::new();
+                    diff.push_str(&TextFormatter::colored_text(
+                        &format!("--- {}", path),
+                        TextFormatter::cyan(),
+                    ));
+                    diff.push('\n');
+                    diff.push_str(&TextFormatter::colored_text(
+                        &format!("+++ {}", path),
+                        TextFormatter::cyan(),
+                    ));
+                    diff.push('\n');
+                    diff.push_str(&TextFormatter::colored_text(
+                        "@@ -0,0 +0,0 @@",
+                        TextFormatter::yellow(),
+                    ));
+                    diff.push('\n');
+                    diff.push_str(&TextFormatter::colored_text(
+                        &format!(
+                            "! Note: the specified old_string appears {} times; operation requires a unique match.",
+                            occurrence_count
+                        ),
+                        TextFormatter::yellow(),
+                    ));
+                    diff.push('\n');
+                    diff.push_str(&TextFormatter::colored_text(
+                        &format!("- {}", old_string),
+                        TextFormatter::red(),
+                    ));
+                    diff.push('\n');
+                    diff.push_str(&TextFormatter::colored_text(
+                        &format!("+ {}", new_string),
+                        TextFormatter::green(),
+                    ));
+                    diff.push('\n');
+                    return diff;
                 }
 
                 // Build a compact preview with a small context window
@@ -253,8 +308,16 @@ impl EditFile {
 
                 // Compose unified-like diff with standard hunk header
                 let mut diff = String::new();
-                diff.push_str(&format!("--- {}\n", path));
-                diff.push_str(&format!("+++ {}\n", path));
+                diff.push_str(&TextFormatter::colored_text(
+                    &format!("--- {}", path),
+                    TextFormatter::cyan(),
+                ));
+                diff.push('\n');
+                diff.push_str(&TextFormatter::colored_text(
+                    &format!("+++ {}", path),
+                    TextFormatter::cyan(),
+                ));
+                diff.push('\n');
                 let count_before = start_line - hunk_start;
                 let count_after = hunk_end.saturating_sub(end_line);
                 let old_count = count_before + old_lines + count_after;
@@ -262,10 +325,14 @@ impl EditFile {
                 let new_count = count_before + new_lines + count_after;
                 let old_start = hunk_start + 1; // 1-based
                 let new_start = hunk_start + 1; // same anchor in new file for replacement
-                diff.push_str(&format!(
-                    "@@ -{},{} +{},{} @@\n",
-                    old_start, old_count, new_start, new_count
+                diff.push_str(&TextFormatter::colored_text(
+                    &format!(
+                        "@@ -{},{} +{},{} @@",
+                        old_start, old_count, new_start, new_count
+                    ),
+                    TextFormatter::yellow(),
                 ));
+                diff.push('\n');
 
                 for i in hunk_start..start_line {
                     diff.push_str(" ");
@@ -275,15 +342,19 @@ impl EditFile {
 
                 // Removed block (old_string), split by lines
                 for line in old_string.split('\n') {
-                    diff.push_str("-");
-                    diff.push_str(line);
+                    diff.push_str(&TextFormatter::colored_text(
+                        &format!("-{}", line),
+                        TextFormatter::red(),
+                    ));
                     diff.push('\n');
                 }
 
                 // Added block (new_string), split by lines
                 for line in new_string.split('\n') {
-                    diff.push_str("+");
-                    diff.push_str(line);
+                    diff.push_str(&TextFormatter::colored_text(
+                        &format!("+{}", line),
+                        TextFormatter::green(),
+                    ));
                     diff.push('\n');
                 }
 
@@ -304,13 +375,40 @@ impl EditFile {
                     diff
                 }
             }
-            Err(e) => format!(
-                "--- {path}\n+++ {path}\n@@ -0,0 +0,0 @@\n! Note: failed to read file for preview: {err}\n- {old}\n+ {new}\n",
-                path = path,
-                err = e,
-                old = old_string,
-                new = new_string
-            ),
+            Err(e) => {
+                let mut diff = String::new();
+                diff.push_str(&TextFormatter::colored_text(
+                    &format!("--- {}", path),
+                    TextFormatter::cyan(),
+                ));
+                diff.push('\n');
+                diff.push_str(&TextFormatter::colored_text(
+                    &format!("+++ {}", path),
+                    TextFormatter::cyan(),
+                ));
+                diff.push('\n');
+                diff.push_str(&TextFormatter::colored_text(
+                    "@@ -0,0 +0,0 @@",
+                    TextFormatter::yellow(),
+                ));
+                diff.push('\n');
+                diff.push_str(&TextFormatter::colored_text(
+                    &format!("! Note: failed to read file for preview: {}", e),
+                    TextFormatter::yellow(),
+                ));
+                diff.push('\n');
+                diff.push_str(&TextFormatter::colored_text(
+                    &format!("- {}", old_string),
+                    TextFormatter::red(),
+                ));
+                diff.push('\n');
+                diff.push_str(&TextFormatter::colored_text(
+                    &format!("+ {}", new_string),
+                    TextFormatter::green(),
+                ));
+                diff.push('\n');
+                diff
+            }
         }
     }
 }
