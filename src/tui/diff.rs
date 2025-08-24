@@ -1,9 +1,69 @@
 use super::formatter::text::TextFormatter;
 
+/// Unified diff utilities for the Terminal UI.
+///
+/// Provides helpers to build unified diff strings for previewing changes in the
+/// TUI, with both plain (no color) and minimally colorized variants. All
+/// functions are pure string builders – they do not perform any filesystem I/O.
+///
+/// # Examples
+///
+/// ```rust
+/// use code_g::tui::diff::Diff;
+///
+/// let path = "example.txt";
+/// let before = "line 1\nold\nline 3";
+/// let after = "line 1\nnew\nline 3";
+///
+/// // Plain unified diff for a single replacement
+/// let plain = Diff::build_unified_diff(path, before, "old", "new", 2);
+/// assert!(plain.contains("--- example.txt"));
+/// assert!(plain.contains("+++ example.txt"));
+/// assert!(plain.contains("-old"));
+/// assert!(plain.contains("+new"));
+///
+/// // Colorized unified diff for displaying in the TUI
+/// let colored = Diff::build_colored_unified_diff(path, before, "old", "new", 2);
+/// assert!(colored.contains("\u{1b}[91m") || colored.contains("-old")); // red for removals, or plain if stripped
+/// ```
 pub struct Diff;
 
 impl Diff {
-    /// Build a colored unified diff for replacing a single occurrence of old_string with new_string.
+    /// Build a colored unified diff for replacing a single occurrence of `old_string` with `new_string`.
+    ///
+    /// Produces a minimally colorized unified diff (red for removals, green for additions)
+    /// suitable for direct rendering in the TUI. If the `old_string` does not exist or
+    /// appears multiple times, a helpful note and a minimal hunk header are included.
+    ///
+    /// # Arguments
+    ///
+    /// - `path` - Path label shown in the diff headers (no file I/O is performed).
+    /// - `content` - The full original file content.
+    /// - `old_string` - The exact string to replace (must appear exactly once for a normal hunk).
+    /// - `new_string` - The replacement string.
+    /// - `context` - Number of context lines to include before and after the change.
+    ///
+    /// # Returns
+    ///
+    /// A unified diff string with color escape sequences for removals/additions.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tui::diff::Diff;
+    ///
+    /// let diff = Diff::build_colored_unified_diff(
+    ///     "example.txt",
+    ///     "a\nX\nc\n",
+    ///     "X",
+    ///     "Y",
+    ///     1,
+    /// );
+    /// assert!(diff.contains("--- example.txt"));
+    /// assert!(diff.contains("+++ example.txt"));
+    /// assert!(diff.contains("-X"));
+    /// assert!(diff.contains("+Y"));
+    /// ```
     pub fn build_colored_unified_diff(
         path: &str,
         content: &str,
@@ -15,7 +75,36 @@ impl Diff {
         Self::colorize_unified_diff(&plain)
     }
 
-    /// Build a colored unified diff error preview when file can't be read or inputs missing.
+    /// Build a colored unified diff error preview when file content can't be obtained.
+    ///
+    /// Intended for cases where reading the file failed or inputs are incomplete.
+    /// It emits a minimal diff with a note line explaining the issue.
+    ///
+    /// # Arguments
+    ///
+    /// - `path` - Path label shown in the diff headers.
+    /// - `message` - A human-readable error note displayed in the diff body.
+    /// - `old_string` - The string that would have been removed.
+    /// - `new_string` - The string that would have been added.
+    ///
+    /// # Returns
+    ///
+    /// A minimal unified diff with a note, colorized for removals/additions.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tui::diff::Diff;
+    ///
+    /// let diff = Diff::build_colored_unified_diff_error(
+    ///     "missing.txt",
+    ///     "Note: failed to read file for preview",
+    ///     "OLD",
+    ///     "NEW",
+    /// );
+    /// assert!(diff.contains("--- missing.txt"));
+    /// assert!(diff.contains("! Note:"));
+    /// ```
     pub fn build_colored_unified_diff_error(
         path: &str,
         message: &str,
@@ -27,6 +116,33 @@ impl Diff {
     }
 
     /// Build a colored unified diff representing an overwrite of a file's contents.
+    ///
+    /// Shows all previous lines as removals and all new lines as additions in a
+    /// single hunk. Useful for write operations where the entire file is replaced.
+    ///
+    /// # Arguments
+    ///
+    /// - `path` - Path label shown in the diff headers.
+    /// - `old_content` - The previous file contents (may be empty if file did not exist).
+    /// - `new_content` - The new file contents to be written.
+    ///
+    /// # Returns
+    ///
+    /// A unified diff string colorized for removals/additions.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tui::diff::Diff;
+    ///
+    /// let diff = Diff::build_colored_unified_diff_overwrite(
+    ///     "out.txt",
+    ///     "old line\n",
+    ///     "new line\n",
+    /// );
+    /// assert!(diff.contains("-old line"));
+    /// assert!(diff.contains("+new line"));
+    /// ```
     pub fn build_colored_unified_diff_overwrite(
         path: &str,
         old_content: &str,
@@ -36,7 +152,35 @@ impl Diff {
         Self::colorize_unified_diff(&plain)
     }
 
-    /// UI-agnostic: build unified diff (no colors)
+    /// Build a plain unified diff (no colors) for a single replacement.
+    ///
+    /// Emits a standard unified diff with a single hunk that replaces exactly one
+    /// occurrence of `old_string` with `new_string`, including up to `context`
+    /// lines of surrounding context. If the target string is missing or appears
+    /// more than once, a minimal diff with a note is produced instead.
+    ///
+    /// # Arguments
+    ///
+    /// - `path` - Path label shown in the diff headers.
+    /// - `content` - The full original file content.
+    /// - `old_string` - The exact string to replace.
+    /// - `new_string` - The replacement string.
+    /// - `context` - Number of context lines to include.
+    ///
+    /// # Returns
+    ///
+    /// A unified diff string without color escape sequences.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tui::diff::Diff;
+    ///
+    /// let diff = Diff::build_unified_diff("f.txt", "A\nB\nC\n", "B", "X", 1);
+    /// assert!(diff.contains("@@"));
+    /// assert!(diff.contains("-B"));
+    /// assert!(diff.contains("+X"));
+    /// ```
     pub fn build_unified_diff(
         path: &str,
         content: &str,
@@ -118,7 +262,30 @@ impl Diff {
         diff
     }
 
-    /// UI-agnostic: build unified diff error stub (no colors)
+    /// Build a plain unified diff error stub (no colors).
+    ///
+    /// Produces a minimal diff with a note line when a normal diff cannot be
+    /// constructed (e.g., file could not be read or inputs are missing).
+    ///
+    /// # Arguments
+    ///
+    /// - `path` - Path label shown in the diff headers.
+    /// - `message` - A human-readable error note displayed in the diff body.
+    /// - `old_string` - The string that would have been removed.
+    /// - `new_string` - The string that would have been added.
+    ///
+    /// # Returns
+    ///
+    /// A minimal unified diff string without color escape sequences.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tui::diff::Diff;
+    ///
+    /// let diff = Diff::build_unified_diff_error("x.txt", "Note: error", "OLD", "NEW");
+    /// assert!(diff.contains("! Note: error"));
+    /// ```
     pub fn build_unified_diff_error(
         path: &str,
         message: &str,
@@ -134,7 +301,30 @@ impl Diff {
         diff
     }
 
-    /// UI-agnostic: build overwrite unified diff (no colors)
+    /// Build a plain overwrite unified diff (no colors).
+    ///
+    /// Shows all previous lines as removals and all new lines as additions in a
+    /// single hunk. Useful for write operations where the entire file is replaced.
+    ///
+    /// # Arguments
+    ///
+    /// - `path` - Path label shown in the diff headers.
+    /// - `old_content` - The previous file contents (may be empty if file did not exist).
+    /// - `new_content` - The new file contents to be written.
+    ///
+    /// # Returns
+    ///
+    /// A unified diff string without color escape sequences.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use code_g::tui::diff::Diff;
+    ///
+    /// let diff = Diff::build_unified_diff_overwrite("f.txt", "old\n", "new\n");
+    /// assert!(diff.contains("-old"));
+    /// assert!(diff.contains("+new"));
+    /// ```
     pub fn build_unified_diff_overwrite(
         path: &str,
         old_content: &str,
