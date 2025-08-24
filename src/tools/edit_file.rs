@@ -95,7 +95,25 @@ impl Tool for EditFile {
     /// Generates the approval message for the edit file tool with the given arguments.
     fn approval_message(&self, args: &HashMap<String, String>) -> String {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
-        format!("CodeG wants to edit file {}", path)
+
+        let old_string = args.get("old_string").map(|s| s.as_str());
+        let new_string = args.get("new_string").map(|s| s.as_str());
+
+        // If required args for preview are missing, fall back to simple message
+        if old_string.is_none() || new_string.is_none() {
+            return format!("CodeG wants to edit file {}", path);
+        }
+
+        let old_string = old_string.unwrap();
+        let new_string = new_string.unwrap();
+
+        let preview = Self::build_diff_preview(path, old_string, new_string);
+
+        format!(
+            "CodeG wants to edit file {path}\n\n{preview}",
+            path = path,
+            preview = preview
+        )
     }
 
     /// Generates the declined message for the edit file tool with the given arguments.
@@ -185,6 +203,109 @@ impl Tool for EditFile {
             "Successfully edited file '{}': replaced '{}' with '{}'",
             path, old_string, new_string
         ))
+    }
+}
+
+impl EditFile {
+    fn build_diff_preview(path: &str, old_string: &str, new_string: &str) -> String {
+        match fs::read_to_string(path) {
+            Ok(content) => {
+                // Count occurrences to mirror the tool behavior and inform the user
+                let occurrence_count = content.matches(old_string).count();
+
+                if occurrence_count == 0 {
+                    return format!(
+                        "--- {path}\n+++ {path}\n! Note: the specified old_string was not found; the operation will fail.\n- {old}\n+ {new}\n",
+                        path = path,
+                        old = old_string,
+                        new = new_string
+                    );
+                }
+
+                if occurrence_count > 1 {
+                    return format!(
+                        "--- {path}\n+++ {path}\n! Note: the specified old_string appears {n} times; operation requires a unique match.\n- {old}\n+ {new}\n",
+                        path = path,
+                        n = occurrence_count,
+                        old = old_string,
+                        new = new_string
+                    );
+                }
+
+                // Build a compact preview with a small context window
+                let idx = content.find(old_string).unwrap_or(0);
+                let before = &content[..idx];
+
+                // Determine context lines: capture up to 3 lines before and after
+                let context_before = 3usize;
+                let context_after = 3usize;
+
+                let lines: Vec<&str> = content.split('\n').collect();
+
+                // Compute line indexes
+                let start_line = before.bytes().filter(|&b| b == b'\n').count();
+                let old_lines = old_string.split('\n').count();
+                let end_line = start_line + old_lines.saturating_sub(1);
+
+                let total_lines = lines.len();
+                let hunk_start = start_line.saturating_sub(context_before);
+                let hunk_end = usize::min(total_lines.saturating_sub(1), end_line + context_after);
+
+                // Compose unified-like diff
+                let mut diff = String::new();
+                diff.push_str(&format!("--- {}\n", path));
+                diff.push_str(&format!("+++ {}\n", path));
+                diff.push_str(&format!(
+                    "@@ -{},{} @@\n",
+                    start_line + 1,
+                    (hunk_end - hunk_start + 1)
+                ));
+
+                for i in hunk_start..start_line {
+                    diff.push_str(" ");
+                    diff.push_str(lines.get(i).unwrap_or(&""));
+                    diff.push('\n');
+                }
+
+                // Removed block (old_string), split by lines
+                for line in old_string.split('\n') {
+                    diff.push_str("-");
+                    diff.push_str(line);
+                    diff.push('\n');
+                }
+
+                // Added block (new_string), split by lines
+                for line in new_string.split('\n') {
+                    diff.push_str("+");
+                    diff.push_str(line);
+                    diff.push('\n');
+                }
+
+                for i in (end_line + 1)..=hunk_end {
+                    diff.push_str(" ");
+                    diff.push_str(lines.get(i).unwrap_or(&""));
+                    diff.push('\n');
+                }
+
+                // Truncate overly large previews
+                const MAX_PREVIEW_LEN: usize = 8000;
+                if diff.len() > MAX_PREVIEW_LEN {
+                    let mut truncated = diff;
+                    truncated.truncate(MAX_PREVIEW_LEN);
+                    truncated.push_str("\n... (diff truncated)\n");
+                    truncated
+                } else {
+                    diff
+                }
+            }
+            Err(e) => format!(
+                "--- {path}\n+++ {path}\n! Note: failed to read file for preview: {err}\n- {old}\n+ {new}\n",
+                path = path,
+                err = e,
+                old = old_string,
+                new = new_string
+            ),
+        }
     }
 }
 
