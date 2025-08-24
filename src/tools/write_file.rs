@@ -1,4 +1,5 @@
 use crate::client::model::{Parameters, Property};
+use crate::diff::build_unified_diff_overwrite;
 use crate::tools::traits::Tool;
 use crate::tui::model::Status;
 use std::collections::HashMap;
@@ -80,7 +81,27 @@ impl Tool for WriteFile {
     /// Generates the approval message for the write file tool with the given arguments.
     fn approval_message(&self, args: &HashMap<String, String>) -> String {
         let path = args.get("path").map(|s| s.as_str()).unwrap_or("unknown");
-        format!("CodeG wants to write to file {}", path)
+        let new_content = args.get("content").map(|s| s.as_str());
+
+        if new_content.is_none() {
+            return format!("CodeG wants to write to file {}", path);
+        }
+
+        let new_content = new_content.unwrap();
+
+        // Read existing content if present; treat as empty if file doesn't exist
+        let old_content = match fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(_) => String::new(),
+        };
+
+        let preview = build_unified_diff_overwrite(path, &old_content, new_content);
+
+        format!(
+            "CodeG wants to write to file {path}\n\n{preview}",
+            path = path,
+            preview = preview
+        )
     }
 
     /// Generates the declined message for the write file tool with the given arguments.
