@@ -211,3 +211,27 @@ fn write_file_tool_success_message_contains_file_path() {
 
     cleanup_temp_dir(&temp_dir);
 }
+
+#[test]
+fn approval_message_includes_overwrite_unified_diff() {
+    let temp_dir = create_temp_dir();
+    let file_path = temp_dir.join("overwrite.txt");
+
+    fs::write(&file_path, "old line\n").expect("Failed to create initial file");
+
+    let tool = WriteFile;
+    let args = HashMap::from([
+        ("path".to_string(), file_path.to_string_lossy().to_string()),
+        ("content".to_string(), "new line\n".to_string()),
+    ]);
+
+    let preview = tool.approval_message(&args);
+
+    assert!(preview.contains(&format!("--- {}", file_path.to_string_lossy())));
+    assert!(preview.contains(&format!("+++ {}", file_path.to_string_lossy())));
+    assert!(preview.contains("@@ -1,1 +1,1 @@") || preview.contains("@@ -1,1 +1,1 @@"));
+    assert!(preview.contains("-old line"));
+    assert!(preview.contains("+new line"));
+
+    cleanup_temp_dir(&temp_dir);
+}

@@ -228,3 +228,56 @@ fn edit_file_tool_success_message_contains_details() {
 
     cleanup_temp_dir(&temp_dir);
 }
+
+#[test]
+fn approval_message_includes_unified_diff_when_single_occurrence() {
+    let temp_dir = create_temp_dir();
+    let file_path = temp_dir.join("preview.txt");
+
+    fs::write(&file_path, "alpha beta gamma").expect("Failed to create initial file");
+
+    let tool = EditFile;
+    let args = HashMap::from([
+        ("path".to_string(), file_path.to_string_lossy().to_string()),
+        ("old_string".to_string(), "beta".to_string()),
+        ("new_string".to_string(), "BETA".to_string()),
+    ]);
+
+    let preview = tool.approval_message(&args);
+
+    assert!(preview.contains(&format!("--- {}", file_path.to_string_lossy())));
+    assert!(preview.contains(&format!("+++ {}", file_path.to_string_lossy())));
+    assert!(preview.contains("@@"));
+    // Replacement lines
+    assert!(preview.contains("-beta"));
+    assert!(preview.contains("+BETA"));
+
+    cleanup_temp_dir(&temp_dir);
+}
+
+#[test]
+fn approval_message_includes_note_when_target_not_found() {
+    let temp_dir = create_temp_dir();
+    let file_path = temp_dir.join("not_found_preview.txt");
+
+    fs::write(&file_path, "no match here").expect("Failed to create initial file");
+
+    let tool = EditFile;
+    let args = HashMap::from([
+        ("path".to_string(), file_path.to_string_lossy().to_string()),
+        ("old_string".to_string(), "zzz".to_string()),
+        ("new_string".to_string(), "yyy".to_string()),
+    ]);
+
+    let preview = tool.approval_message(&args);
+
+    assert!(preview.contains(&format!("--- {}", file_path.to_string_lossy())));
+    assert!(preview.contains(&format!("+++ {}", file_path.to_string_lossy())));
+    assert!(preview.contains("@@ -0,0 +0,0 @@"));
+    assert!(preview.contains("! Note:"));
+    // Error stub lines include a space after the sign
+    assert!(preview.contains("- zzz"));
+    assert!(preview.contains("+ yyy"));
+
+    cleanup_temp_dir(&temp_dir);
+}
