@@ -1,6 +1,6 @@
 use crate::client::model::{Parameters, Property};
 use crate::tools::traits::Tool;
-use crate::tui::diff::{build_colored_unified_diff, build_colored_unified_diff_error};
+use crate::tui::diff::Diff;
 use crate::tui::model::Status;
 use std::collections::HashMap;
 use std::fs;
@@ -109,8 +109,10 @@ impl Tool for EditFile {
         let new_string = new_string.unwrap();
 
         let preview = match fs::read_to_string(path) {
-            Ok(content) => build_colored_unified_diff(path, &content, old_string, new_string, 3),
-            Err(e) => build_colored_unified_diff_error(
+            Ok(content) => {
+                Diff::build_colored_unified_diff(path, &content, old_string, new_string, 3)
+            }
+            Err(e) => Diff::build_colored_unified_diff_error(
                 path,
                 &format!("Note: failed to read file for preview: {}", e),
                 old_string,

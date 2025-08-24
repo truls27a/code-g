@@ -1,6 +1,6 @@
 use crate::client::model::{Parameters, Property};
 use crate::tools::traits::Tool;
-use crate::tui::diff::build_colored_unified_diff_overwrite;
+use crate::tui::diff::Diff;
 use crate::tui::model::Status;
 use std::collections::HashMap;
 use std::fs;
@@ -95,7 +95,7 @@ impl Tool for WriteFile {
             Err(_) => String::new(),
         };
 
-        let preview = build_colored_unified_diff_overwrite(path, &old_content, new_content);
+        let preview = Diff::build_colored_unified_diff_overwrite(path, &old_content, new_content);
 
         format!(
             "CodeG wants to write to file {path}\n\n{preview}",
