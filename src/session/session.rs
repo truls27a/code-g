@@ -10,7 +10,7 @@ use crate::tools::traits::ToolRegistry;
 use std::collections::HashMap;
 
 // Maximum number of iterations per message to prevent infinite loops
-const MAX_ITERATIONS: usize = 10;
+const MAX_ITERATIONS: usize = 50;
 
 /// Core component that orchestrates conversations between a user and an AI assistant.
 ///
