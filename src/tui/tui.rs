@@ -233,23 +233,8 @@ impl Tui {
         print!("{}", TerminalFormatter::move_to_bottom());
         print!("{}", TerminalFormatter::save_cursor());
 
-        // Display approval prompt with colorized diff if present
-        for line in approval_message.lines() {
-            let colored = if line.starts_with("--- ") || line.starts_with("+++ ") {
-                TextFormatter::colored_text(line, TextFormatter::cyan())
-            } else if line.starts_with("@@") {
-                TextFormatter::colored_text(line, TextFormatter::yellow())
-            } else if line.starts_with("! ") {
-                TextFormatter::colored_text(line, TextFormatter::yellow())
-            } else if line.starts_with("- ") || (line.starts_with('-') && !line.starts_with("--- ")) {
-                TextFormatter::colored_text(line, TextFormatter::red())
-            } else if line.starts_with("+ ") || (line.starts_with('+') && !line.starts_with("+++ ")) {
-                TextFormatter::colored_text(line, TextFormatter::green())
-            } else {
-                line.to_string()
-            };
-            writeln!(self.writer, "{}", colored)?;
-        }
+        // Display approval prompt as provided (already colorized if applicable)
+        writeln!(self.writer, "{}", approval_message)?;
         print!("[A]pprove / [D]ecline: ");
         io::stdout().flush()?;
 

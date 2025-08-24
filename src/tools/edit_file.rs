@@ -1,6 +1,6 @@
 use crate::client::model::{Parameters, Property};
-use crate::diff::{build_unified_diff, build_unified_diff_error};
 use crate::tools::traits::Tool;
+use crate::tui::diff::{build_colored_unified_diff, build_colored_unified_diff_error};
 use crate::tui::model::Status;
 use std::collections::HashMap;
 use std::fs;
@@ -108,7 +108,15 @@ impl Tool for EditFile {
         let old_string = old_string.unwrap();
         let new_string = new_string.unwrap();
 
-        let preview = Self::build_diff_preview(path, old_string, new_string);
+        let preview = match fs::read_to_string(path) {
+            Ok(content) => build_colored_unified_diff(path, &content, old_string, new_string, 3),
+            Err(e) => build_colored_unified_diff_error(
+                path,
+                &format!("Note: failed to read file for preview: {}", e),
+                old_string,
+                new_string,
+            ),
+        };
 
         format!(
             "CodeG wants to edit {path}\n\n{preview}",
@@ -207,19 +215,7 @@ impl Tool for EditFile {
     }
 }
 
-impl EditFile {
-    fn build_diff_preview(path: &str, old_string: &str, new_string: &str) -> String {
-        match fs::read_to_string(path) {
-            Ok(content) => build_unified_diff(path, &content, old_string, new_string, 3),
-            Err(e) => build_unified_diff_error(
-                path,
-                &format!("Note: failed to read file for preview: {}", e),
-                old_string,
-                new_string,
-            ),
-        }
-    }
-}
+// no helper; preview is built inline in approval_message using TUI diff utilities
 
 #[cfg(test)]
 mod tests {
