@@ -174,16 +174,16 @@ impl Diff {
         diff
     }
 
-    /// Apply colors to unified diff text: headers cyan, hunks yellow, removals red, additions green, notes yellow.
+    /// Apply colors to unified diff text: removals red, additions green; others uncolored.
     fn colorize_unified_diff(plain: &str) -> String {
         let mut colored = String::new();
         for line in plain.lines() {
             let c = if line.starts_with("--- ") || line.starts_with("+++ ") {
-                TextFormatter::colored_text(line, TextFormatter::cyan())
+                line.to_string()
             } else if line.starts_with("@@") {
-                TextFormatter::colored_text(line, TextFormatter::yellow())
+                line.to_string()
             } else if line.starts_with("! ") {
-                TextFormatter::colored_text(line, TextFormatter::yellow())
+                line.to_string()
             } else if line.starts_with("- ") || (line.starts_with('-') && !line.starts_with("--- "))
             {
                 TextFormatter::colored_text(line, TextFormatter::red())
