@@ -334,16 +334,22 @@ impl Diff {
         diff.push_str(&format!("--- {}\n", path));
         diff.push_str(&format!("+++ {}\n", path));
 
-        let old_count = if old_content.is_empty() {
+        let mut old_count = if old_content.is_empty() {
             0
         } else {
             old_content.split('\n').count()
         };
-        let new_count = if new_content.is_empty() {
+        if old_content.ends_with('\n') && old_count > 0 {
+            old_count -= 1;
+        }
+        let mut new_count = if new_content.is_empty() {
             0
         } else {
             new_content.split('\n').count()
         };
+        if new_content.ends_with('\n') && new_count > 0 {
+            new_count -= 1;
+        }
         diff.push_str(&format!("@@ -1,{} +1,{} @@\n", old_count, new_count));
 
         if old_count > 0 {
@@ -387,5 +393,92 @@ impl Diff {
             colored.push('\n');
         }
         colored
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Diff;
+
+    #[test]
+    fn build_unified_diff_single_replacement_includes_headers_and_changes() {
+        let path = "file.txt";
+        let content = "a\nold\nc\n";
+        let diff = Diff::build_unified_diff(path, content, "old", "new", 1);
+
+        assert!(diff.contains("--- file.txt"));
+        assert!(diff.contains("+++ file.txt"));
+        assert!(diff.contains("@@"));
+        assert!(diff.contains("-old"));
+        assert!(diff.contains("+new"));
+    }
+
+    #[test]
+    fn build_unified_diff_when_not_found_includes_note_and_stub_hunk() {
+        let diff = Diff::build_unified_diff("x.txt", "a\nb\nc\n", "zzz", "yyy", 2);
+
+        assert!(diff.contains("--- x.txt"));
+        assert!(diff.contains("+++ x.txt"));
+        assert!(diff.contains("@@ -0,0 +0,0 @@"));
+        assert!(diff.contains("! Note: the specified old_string was not found"));
+        assert!(diff.contains("- zzz"));
+        assert!(diff.contains("+ yyy"));
+    }
+
+    #[test]
+    fn build_unified_diff_when_multiple_matches_includes_count_note() {
+        let content = "old\nline\nold\n";
+        let diff = Diff::build_unified_diff("y.txt", content, "old", "new", 1);
+
+        assert!(diff.contains("--- y.txt"));
+        assert!(diff.contains("+++ y.txt"));
+        assert!(diff.contains("appears 2 times"));
+        assert!(diff.contains("- old"));
+        assert!(diff.contains("+ new"));
+    }
+
+    #[test]
+    fn build_unified_diff_error_includes_note_and_stub_hunk() {
+        let diff = Diff::build_unified_diff_error("z.txt", "Note: error", "OLD", "NEW");
+
+        assert!(diff.contains("--- z.txt"));
+        assert!(diff.contains("+++ z.txt"));
+        assert!(diff.contains("@@ -0,0 +0,0 @@"));
+        assert!(diff.contains("! Note: error"));
+        assert!(diff.contains("- OLD"));
+        assert!(diff.contains("+ NEW"));
+    }
+
+    #[test]
+    fn build_unified_diff_overwrite_includes_all_old_and_new_lines() {
+        let old_content = "one\ntwo\n";
+        let new_content = "alpha\nbeta\n";
+        let diff = Diff::build_unified_diff_overwrite("w.txt", old_content, new_content);
+
+        assert!(diff.contains("--- w.txt"));
+        assert!(diff.contains("+++ w.txt"));
+        assert!(diff.contains("@@ -1,2 +1,2 @@"));
+        assert!(diff.contains("-one"));
+        assert!(diff.contains("-two"));
+        assert!(diff.contains("+alpha"));
+        assert!(diff.contains("+beta"));
+    }
+
+    #[test]
+    fn build_colored_unified_diff_colors_additions_and_removals() {
+        let content = "old\n";
+        let diff = Diff::build_colored_unified_diff("c.txt", content, "old", "new", 0);
+
+        // Red (91) for removals and Green (92) for additions
+        assert!(diff.contains("\x1B[91m-"));
+        assert!(diff.contains("\x1B[92m+"));
+    }
+
+    #[test]
+    fn build_colored_unified_diff_overwrite_colors_additions_and_removals() {
+        let diff = Diff::build_colored_unified_diff_overwrite("o.txt", "A\n", "B\n");
+
+        assert!(diff.contains("\x1B[91m-"));
+        assert!(diff.contains("\x1B[92m+"));
     }
 }
