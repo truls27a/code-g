@@ -110,7 +110,7 @@ impl Tool for EditFile {
         let preview = Self::build_diff_preview(path, old_string, new_string);
 
         format!(
-            "CodeG wants to edit file {path}\n\n{preview}",
+            "CodeG wants to edit {path}\n\n{preview}",
             path = path,
             preview = preview
         )
@@ -215,7 +215,7 @@ impl EditFile {
 
                 if occurrence_count == 0 {
                     return format!(
-                        "--- {path}\n+++ {path}\n! Note: the specified old_string was not found; the operation will fail.\n- {old}\n+ {new}\n",
+                        "--- {path}\n+++ {path}\n@@ -0,0 +0,0 @@\n! Note: the specified old_string was not found; the operation will fail.\n- {old}\n+ {new}\n",
                         path = path,
                         old = old_string,
                         new = new_string
@@ -224,7 +224,7 @@ impl EditFile {
 
                 if occurrence_count > 1 {
                     return format!(
-                        "--- {path}\n+++ {path}\n! Note: the specified old_string appears {n} times; operation requires a unique match.\n- {old}\n+ {new}\n",
+                        "--- {path}\n+++ {path}\n@@ -0,0 +0,0 @@\n! Note: the specified old_string appears {n} times; operation requires a unique match.\n- {old}\n+ {new}\n",
                         path = path,
                         n = occurrence_count,
                         old = old_string,
@@ -251,14 +251,20 @@ impl EditFile {
                 let hunk_start = start_line.saturating_sub(context_before);
                 let hunk_end = usize::min(total_lines.saturating_sub(1), end_line + context_after);
 
-                // Compose unified-like diff
+                // Compose unified-like diff with standard hunk header
                 let mut diff = String::new();
                 diff.push_str(&format!("--- {}\n", path));
                 diff.push_str(&format!("+++ {}\n", path));
+                let count_before = start_line - hunk_start;
+                let count_after = hunk_end.saturating_sub(end_line);
+                let old_count = count_before + old_lines + count_after;
+                let new_lines = new_string.split('\n').count();
+                let new_count = count_before + new_lines + count_after;
+                let old_start = hunk_start + 1; // 1-based
+                let new_start = hunk_start + 1; // same anchor in new file for replacement
                 diff.push_str(&format!(
-                    "@@ -{},{} @@\n",
-                    start_line + 1,
-                    (hunk_end - hunk_start + 1)
+                    "@@ -{},{} +{},{} @@\n",
+                    old_start, old_count, new_start, new_count
                 ));
 
                 for i in hunk_start..start_line {
@@ -299,7 +305,7 @@ impl EditFile {
                 }
             }
             Err(e) => format!(
-                "--- {path}\n+++ {path}\n! Note: failed to read file for preview: {err}\n- {old}\n+ {new}\n",
+                "--- {path}\n+++ {path}\n@@ -0,0 +0,0 @@\n! Note: failed to read file for preview: {err}\n- {old}\n+ {new}\n",
                 path = path,
                 err = e,
                 old = old_string,
