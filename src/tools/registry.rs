@@ -1,4 +1,4 @@
-use crate::client::model::Tool as ToolModel;
+use crate::client::models::Tool as ToolModel;
 use crate::tools::edit_file::EditFile;
 use crate::tools::execute_command::ExecuteCommand;
 use crate::tools::read_file::ReadFile;

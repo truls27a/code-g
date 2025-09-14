@@ -1,6 +1,6 @@
 mod helpers;
 
-use code_g::client::model::ChatMessage;
+use code_g::client::models::ChatMessage;
 use code_g::session::event::Event;
 use code_g::session::system_prompt::{SYSTEM_PROMPT, SystemPromptConfig};
 use helpers::assertions::{assert_chat_history, assert_events, assert_tool_calls};

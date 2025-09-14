@@ -6,7 +6,7 @@ use crate::helpers::mocks::{
     tool_registry::{MockTool, MockToolRegistry},
 };
 use code_g::client::error::ChatClientError;
-use code_g::client::model::{ChatMessage, ChatResult, Model, Parameters, Tool, ToolCall};
+use code_g::client::models::{ChatMessage, ChatResult, Model, Parameters, Tool, ToolCall};
 use code_g::session::event::Event;
 use code_g::session::session::ChatSession;
 use code_g::session::system_prompt::SystemPromptConfig;

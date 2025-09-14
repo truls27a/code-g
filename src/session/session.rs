@@ -1,5 +1,5 @@
 use crate::client::error::{ChatClientError, ErrorRetryStrategy};
-use crate::client::model::{AssistantMessage, ChatMessage, ChatResult, Model};
+use crate::client::models::{AssistantMessage, ChatMessage, ChatResult, Model};
 use crate::client::providers::openai::schema::Model as OpenAiModel;
 use crate::client::traits::ChatClient;
 use crate::session::error::{ChatSessionError, ChatSessionErrorHandling};

@@ -1,5 +1,5 @@
 use crate::client::error::ChatClientError;
-use crate::client::model::{ChatMessage, ChatResult, Model, Tool, ToolCall};
+use crate::client::models::{ChatMessage, ChatResult, Model, Tool, ToolCall};
 use crate::client::providers::openai::error::OpenAIError;
 use crate::client::providers::openai::schema::{
     ChatCompletionRequest, ChatCompletionResponse, ChatMessageRequest, ContentResponse, JsonSchema,

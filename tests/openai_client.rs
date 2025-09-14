@@ -1,6 +1,6 @@
 use code_g::client::error::ChatClientError;
-use code_g::client::model::{ChatMessage, ChatResult, Model};
-use code_g::client::model::{Function, Parameters, Property, Tool, ToolType};
+use code_g::client::models::{ChatMessage, ChatResult, Model};
+use code_g::client::models::{Function, Parameters, Property, Tool, ToolType};
 use code_g::client::providers::openai::client::OpenAIClient;
 use code_g::client::providers::openai::schema::Model as OpenAiModel;
 use code_g::client::traits::ChatClient;

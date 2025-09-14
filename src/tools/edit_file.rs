@@ -1,7 +1,7 @@
-use crate::client::model::{Parameters, Property};
+use crate::client::models::{Parameters, Property};
 use crate::tools::traits::Tool;
 use crate::tui::diff::Diff;
-use crate::tui::model::Status;
+use crate::tui::models::Status;
 use std::collections::HashMap;
 use std::fs;
 

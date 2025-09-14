@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use code_g::client::{
     error::ChatClientError,
-    model::{ChatMessage, ChatResult, Model, Tool},
+    models::{ChatMessage, ChatResult, Model, Tool},
     traits::ChatClient,
 };
 use std::sync::{Arc, Mutex};

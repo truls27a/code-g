@@ -1,5 +1,5 @@
-use crate::client::model::{Function, Parameters, Tool as ToolModel, ToolType};
-use crate::tui::model::Status;
+use crate::client::models::{Function, Parameters, Tool as ToolModel, ToolType};
+use crate::tui::models::Status;
 use std::collections::HashMap;
 
 

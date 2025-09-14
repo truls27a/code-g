@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-use code_g::client::model::{Parameters, Tool as ToolModel};
+use code_g::client::models::{Parameters, Tool as ToolModel};
 use code_g::tools::traits::{Tool, ToolRegistry};
-use code_g::tui::model::Status;
+use code_g::tui::models::Status;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},

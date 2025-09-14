@@ -1,4 +1,4 @@
-use crate::client::model::{AssistantMessage, ChatMessage, Tool, ToolCall, ToolType};
+use crate::client::models::{AssistantMessage, ChatMessage, Tool, ToolCall, ToolType};
 
 use serde::de::Error;
 use serde::{Deserialize, Serialize};

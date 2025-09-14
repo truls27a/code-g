@@ -1,5 +1,5 @@
 use crate::client::error::ChatClientError;
-use crate::client::model::{ChatMessage, ChatResult, Model, Tool};
+use crate::client::models::{ChatMessage, ChatResult, Model, Tool};
 use async_trait::async_trait;
 
 /// Trait defining the interface for chat completion clients.

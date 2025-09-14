@@ -1,5 +1,5 @@
 use super::formatter::{terminal::TerminalFormatter, text::TextFormatter};
-use super::model::{Message, Status};
+use super::models::{Message, Status};
 use super::state::TuiState;
 use crate::session::event::{Action, Event, EventHandler};
 use crate::tools::registry::Registry;

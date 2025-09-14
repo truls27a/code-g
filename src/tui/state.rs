@@ -1,4 +1,4 @@
-use super::model::{Message, Status};
+use super::models::{Message, Status};
 
 /// The state of the TUI.
 /// 
