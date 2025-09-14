@@ -12,7 +12,7 @@ use async_trait::async_trait;
 ///
 /// ```rust
 /// use code_g::client::traits::ChatClient;
-/// use code_g::client::model::{ChatMessage, ChatResult, Model, Tool};
+/// use code_g::client::models::{ChatMessage, ChatResult, Model, Tool};
 /// use code_g::client::error::ChatClientError;
 /// use async_trait::async_trait;
 /// 

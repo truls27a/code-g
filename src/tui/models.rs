@@ -1,13 +1,13 @@
 /// The message types for the TUI.
 ///
 /// The `Message` enum is used to store the messages in the TUI state.
-/// This enum is used instead of the [`ChatMessage`] enum in the [`openai::model::ChatMessage`]
+/// This enum is used instead of the [`ChatMessage`] enum in the [`openai::models::ChatMessage`]
 /// because the TUI does not need to store as much information as the [`ChatSession`].
 ///
 /// # Examples
 ///
 /// ```rust
-/// use code_g::tui::model::Message;
+/// use code_g::tui::models::Message;
 ///
 /// let message = Message::User { content: "Hello, how are you?".to_string() };
 /// ```
@@ -29,7 +29,7 @@ pub enum Message {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::tui::model::Status;
+/// use code_g::tui::models::Status;
 ///
 /// let status = Status::Thinking;
 /// ```
@@ -64,7 +64,7 @@ impl Status {
     /// # Examples
     ///
     /// ```rust
-    /// use code_g::tui::model::Status;
+    /// use code_g::tui::models::Status;
     ///
     /// let status = Status::Thinking;
     /// assert_eq!(status.to_string(), "Thinking...");

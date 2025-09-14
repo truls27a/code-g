@@ -12,7 +12,7 @@ use std::collections::HashMap;
 /// # Examples
 ///
 /// ```rust
-/// use code_g::client::model::{ChatResult, ToolCall};
+/// use code_g::client::models::{ChatResult, ToolCall};
 /// use std::collections::HashMap;
 ///
 /// // Simple message response
@@ -49,7 +49,7 @@ pub enum ChatResult {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::client::model::{ChatMessage, AssistantMessage};
+/// use code_g::client::models::{ChatMessage, AssistantMessage};
 ///
 /// // System message for instructions
 /// let system_msg = ChatMessage::System {
@@ -91,7 +91,7 @@ pub enum ChatMessage {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::client::model::{AssistantMessage, ToolCall};
+/// use code_g::client::models::{AssistantMessage, ToolCall};
 /// use std::collections::HashMap;
 ///
 /// // Text content
@@ -127,7 +127,7 @@ pub enum AssistantMessage {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::client::model::Model;
+/// use code_g::client::models::Model;
 /// use code_g::client::providers::openai::schema::Model as OpenAiModel;
 ///
 /// let model = Model::OpenAi(OpenAiModel::Gpt4o);
@@ -152,7 +152,7 @@ pub enum Model {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::client::model::{Tool, ToolType, Function, Parameters, Property};
+/// use code_g::client::models::{Tool, ToolType, Function, Parameters, Property};
 /// use std::collections::HashMap;
 ///
 /// let mut properties = HashMap::new();
@@ -192,7 +192,7 @@ pub struct Tool {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::client::model::ToolType;
+/// use code_g::client::models::ToolType;
 ///
 /// let tool_type = ToolType::Function;
 /// ```
@@ -219,7 +219,7 @@ pub enum ToolType {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::client::model::{Function, Parameters, Property};
+/// use code_g::client::models::{Function, Parameters, Property};
 /// use std::collections::HashMap;
 ///
 /// let mut properties = HashMap::new();
@@ -264,7 +264,7 @@ pub struct Function {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::client::model::{Parameters, Property};
+/// use code_g::client::models::{Parameters, Property};
 /// use std::collections::HashMap;
 ///
 /// let mut properties = HashMap::new();
@@ -308,7 +308,7 @@ pub struct Parameters {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::client::model::Property;
+/// use code_g::client::models::Property;
 ///
 /// let string_prop = Property {
 ///     prop_type: "string".to_string(),
@@ -348,7 +348,7 @@ pub struct Property {
 /// # Examples
 ///
 /// ```rust
-/// use code_g::client::model::ToolCall;
+/// use code_g::client::models::ToolCall;
 /// use std::collections::HashMap;
 ///
 /// let mut arguments = HashMap::new();

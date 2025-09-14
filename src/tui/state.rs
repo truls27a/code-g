@@ -1,21 +1,21 @@
 use super::models::{Message, Status};
 
 /// The state of the TUI.
-/// 
+///
 /// Stores the TUI messages and current status. The status is used to display the current loading state.
-/// 
+///
 /// # Fields
-/// 
+///
 /// - `messages`: [`Vec<Message>`] The messages to display
 /// - `current_status`: [`Option<Status>`] The current status of the TUI
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```rust
 /// use code_g::tui::state::TuiState;
-/// 
+///
 /// let mut state = TuiState::new();
-/// 
+///
 /// state.add_user_message("Hello, how are you?".to_string());
 /// state.add_assistant_message("I'm doing well, thank you!".to_string());
 /// state.add_tool_response("Tool executed successfully".to_string(), false);
@@ -28,16 +28,16 @@ pub struct TuiState {
 
 impl TuiState {
     /// Create a new TUI state.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// - `TuiState` The new TUI state
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```rust
     /// use code_g::tui::state::TuiState;
-    /// 
+    ///
     /// let state = TuiState::new();
     /// ```
     pub fn new() -> Self {
@@ -48,16 +48,16 @@ impl TuiState {
     }
 
     /// Add a user message to the state.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// - `content`: [`String`] The content of the user message
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```rust
     /// use code_g::tui::state::TuiState;
-    /// 
+    ///
     /// let mut state = TuiState::new();
     /// state.add_user_message("Hello, how are you?".to_string());
     /// ```
@@ -67,16 +67,16 @@ impl TuiState {
     }
 
     /// Add an assistant message to the state.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// - `content`: [`String`] The content of the assistant message
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```rust
     /// use code_g::tui::state::TuiState;
-    /// 
+    ///
     /// let mut state = TuiState::new();
     /// state.add_assistant_message("I'm doing well, thank you!".to_string());
     /// ```
@@ -86,17 +86,17 @@ impl TuiState {
     }
 
     /// Add a tool response to the state.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// - `summary`: [`String`] The summary of the tool response
     /// - `is_error`: [`bool`] Whether the tool response is an error
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```rust
     /// use code_g::tui::state::TuiState;
-    /// 
+    ///
     /// let mut state = TuiState::new();
     /// state.add_tool_response("Read 23 lines from test.txt".to_string(), false);
     /// ```
@@ -107,17 +107,17 @@ impl TuiState {
     }
 
     /// Set the current status of the TUI.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// - `status`: [`Option<Status>`] The status to set
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```rust
     /// use code_g::tui::state::TuiState;
-    /// use code_g::tui::model::Status;
-    /// 
+    /// use code_g::tui::models::Status;
+    ///
     /// let mut state = TuiState::new();
     /// state.set_status(Some(Status::Thinking));
     /// ```
@@ -126,12 +126,12 @@ impl TuiState {
     }
 
     /// Clear the state.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```rust
     /// use code_g::tui::state::TuiState;
-    /// 
+    ///
     /// let mut state = TuiState::new();
     /// state.clear();
     /// ```

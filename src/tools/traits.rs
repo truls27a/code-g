@@ -12,7 +12,7 @@ use std::collections::HashMap;
 /// ```rust
 /// use code_g::tools::traits::ToolRegistry;
 /// use code_g::tools::traits::Tool;
-/// use code_g::client::model::Tool as ToolModel;
+/// use code_g::client::models::Tool as ToolModel;
 /// use std::collections::HashMap;
 ///
 /// struct MyToolRegistry;
@@ -103,8 +103,8 @@ pub trait ToolRegistry {
 ///
 /// ```rust
 /// use code_g::tools::traits::Tool;
-/// use code_g::client::model::Parameters;
-/// use code_g::tui::model::Status;
+/// use code_g::client::models::Parameters;
+/// use code_g::tui::models::Status;
 /// use std::collections::HashMap;
 ///
 /// #[derive(Clone)]

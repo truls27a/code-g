@@ -11,7 +11,7 @@ use crate::client::models::ChatMessage;
 ///
 /// ```rust
 /// use code_g::session::memory::ChatMemory;
-/// use code_g::client::model::ChatMessage;
+/// use code_g::client::models::ChatMessage;
 ///
 /// let mut memory = ChatMemory::new();
 /// memory.add_message(ChatMessage::User {
@@ -57,7 +57,7 @@ impl ChatMemory {
     ///
     /// ```rust
     /// use code_g::session::memory::ChatMemory;
-    /// use code_g::client::model::ChatMessage;
+    /// use code_g::client::models::ChatMessage;
     ///
     /// let messages = vec![
     ///     ChatMessage::User { content: "Hello".to_string() }
@@ -83,7 +83,7 @@ impl ChatMemory {
     ///
     /// ```rust
     /// use code_g::session::memory::ChatMemory;
-    /// use code_g::client::model::ChatMessage;
+    /// use code_g::client::models::ChatMessage;
     ///
     /// let mut memory = ChatMemory::new();
     /// memory.add_message(ChatMessage::User {
@@ -126,7 +126,7 @@ impl ChatMemory {
     ///
     /// ```rust
     /// use code_g::session::memory::ChatMemory;
-    /// use code_g::client::model::ChatMessage;
+    /// use code_g::client::models::ChatMessage;
     ///
     /// let mut memory = ChatMemory::new();
     /// memory.add_message(ChatMessage::User {

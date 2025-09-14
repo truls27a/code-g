@@ -233,13 +233,19 @@ async fn chat_session_handles_multiple_tool_calls() {
 
     assert_tool_calls(
         &scenario.tool_calls,
-        &[(
-            "read_file".to_string(),
-            HashMap::from([("file_path".to_string(), "main.rs".to_string())]),
-        ), (
-            "write_file".to_string(),
-            HashMap::from([("file_path".to_string(), "main.rs".to_string()), ("content".to_string(), "assert_eq!(1, 1);".to_string())]),
-        )],
+        &[
+            (
+                "read_file".to_string(),
+                HashMap::from([("file_path".to_string(), "main.rs".to_string())]),
+            ),
+            (
+                "write_file".to_string(),
+                HashMap::from([
+                    ("file_path".to_string(), "main.rs".to_string()),
+                    ("content".to_string(), "assert_eq!(1, 1);".to_string()),
+                ]),
+            ),
+        ],
     );
 }
 

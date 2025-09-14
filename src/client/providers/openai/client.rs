@@ -26,7 +26,7 @@ use std::collections::HashMap;
 ///
 /// ```rust,no_run
 /// use code_g::client::providers::openai::client::OpenAIClient;
-/// use code_g::client::model::{ChatMessage, Model};
+/// use code_g::client::models::{ChatMessage, Model};
 /// use code_g::client::providers::openai::schema::Model as OpenAiModel;
 /// use code_g::client::traits::ChatClient;
 /// use tokio::runtime::Runtime;
@@ -115,7 +115,7 @@ impl ChatClient for OpenAIClient {
     ///
     /// ```rust,no_run
     /// use code_g::client::providers::openai::client::OpenAIClient;
-    /// use code_g::client::model::{ChatMessage, ChatResult, Model};
+    /// use code_g::client::models::{ChatMessage, ChatResult, Model};
     /// use code_g::client::providers::openai::schema::Model as OpenAiModel;
     /// use code_g::client::traits::ChatClient;
     /// use tokio::runtime::Runtime;

@@ -129,7 +129,7 @@ impl TryFrom<ChatMessage> for ChatMessageRequest {
     ///
     /// ```rust
     /// use std::convert::TryFrom;
-    /// use code_g::client::model::ChatMessage;
+    /// use code_g::client::models::ChatMessage;
     /// use code_g::client::providers::openai::schema::ChatMessageRequest;
     ///
     /// let chat_msg = ChatMessage::User { content: "Hello".to_string() };
@@ -210,7 +210,7 @@ impl TryFrom<ChatMessageRequest> for ChatMessage {
     /// ```rust
     /// use std::convert::TryFrom;
     /// use code_g::client::providers::openai::schema::{ChatMessageRequest, Role};
-    /// use code_g::client::model::ChatMessage;
+    /// use code_g::client::models::ChatMessage;
     ///
     /// let request = ChatMessageRequest {
     ///     role: Role::User,
@@ -484,7 +484,7 @@ impl TryFrom<&str> for ContentResponse {
 ///
 /// ```rust
 /// use code_g::client::providers::openai::schema::{ToolCallResponse, FunctionResponse};
-/// use code_g::client::model::ToolType;
+/// use code_g::client::models::ToolType;
 ///
 /// let tool_call = ToolCallResponse {
 ///     id: "call_123".to_string(),
@@ -530,7 +530,7 @@ impl TryFrom<ToolCall> for ToolCallResponse {
     /// ```rust
     /// use std::convert::TryFrom;
     /// use std::collections::HashMap;
-    /// use code_g::client::model::ToolCall;
+    /// use code_g::client::models::ToolCall;
     /// use code_g::client::providers::openai::schema::ToolCallResponse;
     ///
     /// let mut arguments = HashMap::new();
@@ -582,7 +582,7 @@ impl TryFrom<ToolCallResponse> for ToolCall {
     /// ```rust
     /// use std::convert::TryFrom;
     /// use code_g::client::providers::openai::schema::{ToolCallResponse, FunctionResponse};
-    /// use code_g::client::model::{ToolCall, ToolType};
+    /// use code_g::client::models::{ToolCall, ToolType};
     ///
     /// let response = ToolCallResponse {
     ///     id: "call_123".to_string(),

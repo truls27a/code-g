@@ -107,7 +107,9 @@ impl Tool for MockTool {
     }
 
     fn status(&self, _args: &HashMap<String, String>) -> Status {
-        Status::ExecutingTool { tool_name: self.name.clone() }
+        Status::ExecutingTool {
+            tool_name: self.name.clone(),
+        }
     }
 
     fn summary_message(&self, _args: &HashMap<String, String>, result: &str) -> String {
@@ -151,10 +153,7 @@ impl MockToolRegistry {
         tools: Vec<Box<dyn Tool>>,
         calls: Arc<Mutex<Vec<(String, HashMap<String, String>)>>>,
     ) -> Self {
-        Self {
-            tools,
-            calls,
-        }
+        Self { tools, calls }
     }
 
     /// Get the calls made to the registry.
